@@ -2,6 +2,11 @@
 
 Internet Computer Protocol (ICP) とMotoko言語の学習プロジェクト
 
+## 📝 プロジェクト概要
+ICP（Internet Computer）上で動作する「継続カウンター」アプリを開発。
+dfxのバージョン問題、Motokoの型システム、Cycles Walletの設定など、
+実際の開発で遭遇した課題と解決策を詳細に記録しています。
+
 ## 🎯 学習目的
 - ブロックチェーン技術（ICP）の理解
 - Motoko言語によるスマートコントラクト開発
