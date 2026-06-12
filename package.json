@@ -45,5 +45,8 @@
     "last 2 firefox version",
     "last 2 safari version",
     "last 2 edge version"
-  ]
+  ],
+  "overrides": {
+    "serialize-javascript": "^7.0.3"
+  }
 }
