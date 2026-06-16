@@ -25,9 +25,9 @@
     "style-loader": "^3.3.3",
     "ts-loader": "^9.5.0",
     "typescript": "^5.2.2",
-    "webpack": "^5.89.0",
+    "webpack": "^5.104.0",
     "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^4.15.1",
+    "webpack-dev-server": "^5.2.1",
     "assert": "^2.0.0",
     "buffer": "^6.0.3",
     "events": "^3.3.0",
@@ -47,6 +47,13 @@
     "last 2 edge version"
   ],
   "overrides": {
-    "serialize-javascript": "^7.0.3"
+    "serialize-javascript": "^7.0.5",
+    "http-proxy-middleware": "^2.0.8",
+    "on-headers": "^1.1.0",
+    "qs": "^6.14.1",
+    "picomatch": "^2.3.2",
+    "follow-redirects": "^1.16.0",
+    "postcss": "^8.5.10",
+    "uuid": "^11.1.1"
   }
 }
