@@ -3,41 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>禁欲カウンター (謎の倍増仕様?)</title> <!-- タイトルも少し変更 -->
+    <meta name="theme-color" content="#04050a">
+    <meta name="description" content="今日の自制を、誰にも消せない場所へ。Internet Computer 上で完全オンチェーン稼働する禁欲カウンター。">
+    <meta property="og:title" content="禁欲カウンター — On-Chain Discipline Counter">
+    <meta property="og:description" content="今日の自制を、誰にも消せない場所へ。Internet Computer 上で完全オンチェーン稼働。">
+    <meta property="og:type" content="website">
+    <title>禁欲カウンター — On-Chain Discipline Counter</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='32' y2='32' gradientUnits='userSpaceOnUse'%3E%3Cstop stop-color='%2329ABE2'/%3E%3Cstop offset='.34' stop-color='%237B5CFF'/%3E%3Cstop offset='.68' stop-color='%23ED1E79'/%3E%3Cstop offset='1' stop-color='%23F7931E'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%2304050A'/%3E%3Cpath d='M9 11c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.9 0 5-2.5 7-5 2-2.5 4.1-5 7-5 2.8 0 5 2.2 5 5s-2.2 5-5 5c-2.9 0-5-2.5-7-5-2-2.5-4.1-5-7-5Z' stroke='url(%23g)' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header>
-        <h1>禁欲カウンター</h1>
-        <p>～ 謎の倍増と共に高みを目指そう？ ～</p> <!-- サブタイトル変更 -->
-    </header>
+    <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="grain" aria-hidden="true"></div>
 
-    <main>
-        <section class="description">
-            <h2>なぜ禁欲なのか？</h2>
-            <p>
-                日々の小さな自制は、集中力の向上、自己肯定感の強化、そして新たな時間の創出へと繋がります。
-                このカウンターは、そんなあなたの努力を（匿名で）記録し、同じ目標を持つ仲間がいることを可視化します。
-            </p>
-            <p>
-                今日、目標を達成できたなら、ボタンを押してその一歩を刻みましょう！
-                <br><small>（なぜか気合が入りすぎて <strong>+2</strong> されちゃうかもしれないけど、気にしない！）</small> <!-- 注釈追加 -->
-            </p>
-        </section>
+    <div class="wrap">
+        <header class="site-header">
+            <a class="brand" href="/">
+                <svg class="brand-mark" viewBox="0 0 48 24" fill="none" aria-hidden="true">
+                    <defs>
+                        <linearGradient id="ic" x1="0" y1="0" x2="48" y2="24" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#29ABE2"/>
+                            <stop offset="0.34" stop-color="#7B5CFF"/>
+                            <stop offset="0.68" stop-color="#ED1E79"/>
+                            <stop offset="1" stop-color="#F7931E"/>
+                        </linearGradient>
+                    </defs>
+                    <path d="M12 4c-4.4 0-8 3.6-8 8s3.6 8 8 8c4.6 0 8-4 12-8 4-4 7.4-8 12-8 4.4 0 8 3.6 8 8s-3.6 8-8 8c-4.6 0-8-4-12-8C20 8 16.6 4 12 4Z"
+                          stroke="url(#ic)" stroke-width="2.6" stroke-linecap="round"/>
+                </svg>
+                <span class="brand-text">KINYOKU<b>.IC</b></span>
+            </a>
+            <span class="badge"><i></i>ON-CHAIN</span>
+        </header>
 
-        <section class="counter-section">
-            <h2>現在の総達成パワー:</h2> <!-- 見出し変更 -->
-            <div id="count-display">Loading...</div>
-            <!-- ボタンテキスト変更 -->
-            <button id="increment-button">達成！ (+2 ?)</button>
-        </section>
-    </main>
+        <main>
+            <section class="hero">
+                <h1>今日の自制を、<br>誰にも消せない場所へ。</h1>
+                <p>サーバーもデータベースも持たない。この数字は <em>Internet Computer 上のキャニスター</em> だけに存在します。</p>
+            </section>
 
-    <footer>
-        <!-- 注意書き変更 -->
-        <p><small>※これは自己申告制のカウンターです。正直な心でクリックしましょう。(倍増は仕様です)</small></p>
-    </footer>
+            <section class="console" aria-labelledby="counter-label">
+                <div class="console-top">
+                    <span id="counter-label">TOTAL ACHIEVEMENTS</span>
+                    <span class="net">Internet&nbsp;Computer&nbsp;/&nbsp;mainnet</span>
+                </div>
 
-    <script src="index.js"></script>
+                <div class="count-wrap">
+                    <div class="count-ring" aria-hidden="true"></div>
+                    <div id="count-display" class="count" aria-busy="true">—</div>
+                </div>
+                <p id="count-sr" class="sr-only" role="status" aria-live="polite"></p>
+                <p class="count-caption">世界中の「今日は勝った」の総数</p>
+
+                <button id="increment-button" class="cta" type="button">
+                    <span class="spinner" aria-hidden="true"></span>
+                    <span class="cta-label">達成した</span>
+                </button>
+
+                <p id="status-line" class="status">押した瞬間、ブロックチェーンに直接刻まれます</p>
+            </section>
+
+            <h2 class="section-title">WHY IT WORKS</h2>
+            <div class="cards">
+                <article class="card">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#29ABE2" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.6" fill="#29ABE2"/>
+                    </svg>
+                    <h3>集中が戻る</h3>
+                    <p>衝動に使っていた注意力が、そのまま目の前の作業に回ります。</p>
+                </article>
+                <article class="card">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#ED1E79" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 20.5 4.8 13.3a4.6 4.6 0 0 1 6.5-6.5l.7.7.7-.7a4.6 4.6 0 0 1 6.5 6.5Z"/>
+                    </svg>
+                    <h3>自分を信じられる</h3>
+                    <p>「決めたことを守れた」という記録が、次の一日を押し出します。</p>
+                </article>
+                <article class="card">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#F7931E" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"/><path d="M12 7v5.4l3.4 2"/>
+                    </svg>
+                    <h3>時間が生まれる</h3>
+                    <p>取り戻した時間は、誰にも奪われないあなたの資産になります。</p>
+                </article>
+            </div>
+
+            <h2 class="section-title">ON-CHAIN</h2>
+            <section class="chain">
+                <dl>
+                    <dt>BACKEND</dt>
+                    <dd><a href="https://dashboard.internetcomputer.org/canister/ifoqp-6iaaa-aaaaj-qnnrq-cai" target="_blank" rel="noopener noreferrer">ifoqp-6iaaa-aaaaj-qnnrq-cai</a></dd>
+                    <dt>FRONTEND</dt>
+                    <dd><a href="https://dashboard.internetcomputer.org/canister/iqjbc-7aaaa-aaaaj-qnnsa-cai" target="_blank" rel="noopener noreferrer">iqjbc-7aaaa-aaaaj-qnnsa-cai</a></dd>
+                    <dt>STACK</dt>
+                    <dd>Motoko canister + Vanilla JS / リバースガスモデル（ガス代不要）</dd>
+                </dl>
+            </section>
+        </main>
+
+        <footer class="site-footer">
+            <p>自己申告制のカウンターです。正直な心でクリックしましょう。<br>
+            HTML・CSS・JS・状態のすべてが Internet Computer 上で動いています。</p>
+        </footer>
+    </div>
 </body>
 </html>
