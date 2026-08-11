@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#04050a">
-    <meta name="description" content="今日の自制を、誰にも消せない場所へ。Internet Computer 上で完全オンチェーン稼働する禁欲カウンター。">
-    <meta property="og:title" content="禁欲カウンター — On-Chain Discipline Counter">
-    <meta property="og:description" content="今日の自制を、誰にも消せない場所へ。Internet Computer 上で完全オンチェーン稼働。">
+    <meta name="theme-color" content="#fff8f3">
+    <meta name="description" content="Tamper-evident scheduling polls. No ads, no sign-up, fully on-chain on the Internet Computer.">
+    <meta property="og:title" content="Kimaru — scheduling nobody can rewrite">
+    <meta property="og:description" content="No ads, no sign-up. Every response is written to a blockchain.">
     <meta property="og:type" content="website">
-    <title>禁欲カウンター — On-Chain Discipline Counter</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='32' y2='32' gradientUnits='userSpaceOnUse'%3E%3Cstop stop-color='%2329ABE2'/%3E%3Cstop offset='.34' stop-color='%237B5CFF'/%3E%3Cstop offset='.68' stop-color='%23ED1E79'/%3E%3Cstop offset='1' stop-color='%23F7931E'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%2304050A'/%3E%3Cpath d='M9 11c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.9 0 5-2.5 7-5 2-2.5 4.1-5 7-5 2.8 0 5 2.2 5 5s-2.2 5-5 5c-2.9 0-5-2.5-7-5-2-2.5-4.1-5-7-5Z' stroke='url(%23g)' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+    <title>Kimaru — scheduling nobody can rewrite</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='32' y2='32' gradientUnits='userSpaceOnUse'%3E%3Cstop stop-color='%2338bdf8'/%3E%3Cstop offset='.34' stop-color='%23a78bfa'/%3E%3Cstop offset='.68' stop-color='%23f472b6'/%3E%3Cstop offset='1' stop-color='%23fbbf24'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%23FFFFFF'/%3E%3Cpath d='M7 16.5 13 22l12-12' stroke='url(%23g)' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,92 +18,228 @@
 
     <div class="wrap">
         <header class="site-header">
-            <a class="brand" href="/">
-                <svg class="brand-mark" viewBox="0 0 48 24" fill="none" aria-hidden="true">
+            <a class="brand" href="#/">
+                <svg class="brand-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
                     <defs>
-                        <linearGradient id="ic" x1="0" y1="0" x2="48" y2="24" gradientUnits="userSpaceOnUse">
-                            <stop stop-color="#29ABE2"/>
-                            <stop offset="0.34" stop-color="#7B5CFF"/>
-                            <stop offset="0.68" stop-color="#ED1E79"/>
-                            <stop offset="1" stop-color="#F7931E"/>
+                        <linearGradient id="ic" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#38bdf8"/>
+                            <stop offset="0.36" stop-color="#a78bfa"/>
+                            <stop offset="0.68" stop-color="#f472b6"/>
+                            <stop offset="1" stop-color="#fbbf24"/>
                         </linearGradient>
                     </defs>
-                    <path d="M12 4c-4.4 0-8 3.6-8 8s3.6 8 8 8c4.6 0 8-4 12-8 4-4 7.4-8 12-8 4.4 0 8 3.6 8 8s-3.6 8-8 8c-4.6 0-8-4-12-8C20 8 16.6 4 12 4Z"
-                          stroke="url(#ic)" stroke-width="2.6" stroke-linecap="round"/>
+                    <path d="M7 16.5 13 22l12-12" stroke="url(#ic)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <span class="brand-text">KINYOKU<b>.IC</b></span>
+                <span class="brand-text">Kimaru</span>
             </a>
-            <span class="badge"><i></i>ON-CHAIN</span>
+            <div class="header-tools">
+                <a class="header-link" href="#/support" data-t="supportNav">Support</a>
+                <button type="button" id="theme-toggle" class="icon-btn" aria-label="theme">
+                    <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4"/>
+                    </svg>
+                    <svg class="i-moon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/>
+                    </svg>
+                </button>
+                <label class="lang">
+                    <span class="sr-only">Language</span>
+                    <select id="lang-select"></select>
+                </label>
+            </div>
         </header>
 
         <main>
-            <section class="hero">
-                <h1>今日の自制を、<br>誰にも消せない場所へ。</h1>
-                <p>サーバーもデータベースも持たない。この数字は <em>Internet Computer 上のキャニスター</em> だけに存在します。</p>
-            </section>
-
-            <section class="console" aria-labelledby="counter-label">
-                <div class="console-top">
-                    <span id="counter-label">TOTAL ACHIEVEMENTS</span>
-                    <span class="net">Internet&nbsp;Computer&nbsp;/&nbsp;mainnet</span>
+            <!-- ============ トップ / 作成 ============ -->
+            <section id="view-home" class="view">
+                <div class="hero">
+                    <h1 data-t="heroTitle"></h1>
+                    <p data-t="heroSub"></p>
                 </div>
 
-                <div class="count-wrap">
-                    <div class="count-ring" aria-hidden="true"></div>
-                    <div id="count-display" class="count" aria-busy="true">—</div>
+                <form id="create-form" class="panel" novalidate>
+                    <h2 class="panel-title" data-t="createHeading"></h2>
+
+                    <label class="field">
+                        <span class="field-label"><span data-t="title"></span><b data-t="required"></b></span>
+                        <input id="f-title" type="text" maxlength="100" data-t-ph="titlePh" required>
+                    </label>
+
+                    <label class="field">
+                        <span class="field-label" data-t="note"></span>
+                        <textarea id="f-note" rows="2" maxlength="500" data-t-ph="notePh"></textarea>
+                    </label>
+
+                    <div class="field">
+                        <span class="field-label"><span data-t="options"></span><b data-t="required"></b></span>
+                        <div id="f-options"></div>
+                        <button type="button" id="add-option" class="btn-ghost" data-t="addOption"></button>
+                    </div>
+
+                    <label class="field">
+                        <span class="field-label" data-t="deadline"></span>
+                        <input id="f-deadline" type="datetime-local">
+                        <span class="field-hint" data-t="deadlineHint"></span>
+                    </label>
+
+                    <div class="field">
+                        <label class="check">
+                            <input id="f-lock" type="checkbox">
+                            <span data-t="lockNames"></span>
+                        </label>
+                        <span class="field-hint" data-t="lockHint"></span>
+                    </div>
+
+                    <button type="submit" id="create-button" class="cta">
+                        <span class="spinner" aria-hidden="true"></span>
+                        <span class="cta-label" data-t="createBtn"></span>
+                    </button>
+                    <p id="create-status" class="status" role="status"></p>
+
+                    <p class="fineprint" data-t="finePrint"></p>
+                </form>
+
+                <h2 class="section-title" data-t="whyHeading"></h2>
+                <div class="cards">
+                    <article class="card">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+                        </svg>
+                        <h3 data-t="why1h"></h3>
+                        <p data-t="why1p"></p>
+                    </article>
+                    <article class="card">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#f472b6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M12 3v9"/><path d="M8.5 6.5 12 3l3.5 3.5"/><rect x="4" y="12" width="16" height="9" rx="2"/>
+                        </svg>
+                        <h3 data-t="why2h"></h3>
+                        <p data-t="why2p"></p>
+                    </article>
+                    <article class="card">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"/><path d="M3.5 12h17M12 3.2a15 15 0 0 1 0 17.6M12 3.2a15 15 0 0 0 0 17.6"/>
+                        </svg>
+                        <h3 data-t="why3h"></h3>
+                        <p data-t="why3p"></p>
+                    </article>
                 </div>
-                <p id="count-sr" class="sr-only" role="status" aria-live="polite"></p>
-                <p class="count-caption">世界中の「今日は勝った」の総数</p>
-
-                <button id="increment-button" class="cta" type="button">
-                    <span class="spinner" aria-hidden="true"></span>
-                    <span class="cta-label">達成した</span>
-                </button>
-
-                <p id="status-line" class="status">押した瞬間、ブロックチェーンに直接刻まれます</p>
             </section>
 
-            <h2 class="section-title">WHY IT WORKS</h2>
-            <div class="cards">
-                <article class="card">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#29ABE2" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.6" fill="#29ABE2"/>
-                    </svg>
-                    <h3>集中が戻る</h3>
-                    <p>衝動に使っていた注意力が、そのまま目の前の作業に回ります。</p>
-                </article>
-                <article class="card">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#ED1E79" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M12 20.5 4.8 13.3a4.6 4.6 0 0 1 6.5-6.5l.7.7.7-.7a4.6 4.6 0 0 1 6.5 6.5Z"/>
-                    </svg>
-                    <h3>自分を信じられる</h3>
-                    <p>「決めたことを守れた」という記録が、次の一日を押し出します。</p>
-                </article>
-                <article class="card">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#F7931E" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <circle cx="12" cy="12" r="9"/><path d="M12 7v5.4l3.4 2"/>
-                    </svg>
-                    <h3>時間が生まれる</h3>
-                    <p>取り戻した時間は、誰にも奪われないあなたの資産になります。</p>
-                </article>
-            </div>
+            <!-- ============ 調整ページ ============ -->
+            <section id="view-poll" class="view is-hidden">
+                <div class="panel">
+                    <div class="poll-head">
+                        <h1 id="poll-title"></h1>
+                        <p id="poll-note" class="poll-note"></p>
+                        <div id="poll-meta" class="poll-meta"></div>
+                    </div>
 
-            <h2 class="section-title">ON-CHAIN</h2>
-            <section class="chain">
-                <dl>
-                    <dt>BACKEND</dt>
-                    <dd><a href="https://dashboard.internetcomputer.org/canister/ifoqp-6iaaa-aaaaj-qnnrq-cai" target="_blank" rel="noopener noreferrer">ifoqp-6iaaa-aaaaj-qnnrq-cai</a></dd>
-                    <dt>FRONTEND</dt>
-                    <dd><a href="https://dashboard.internetcomputer.org/canister/iqjbc-7aaaa-aaaaj-qnnsa-cai" target="_blank" rel="noopener noreferrer">iqjbc-7aaaa-aaaaj-qnnsa-cai</a></dd>
-                    <dt>STACK</dt>
-                    <dd>Motoko canister + Vanilla JS / リバースガスモデル（ガス代不要）</dd>
-                </dl>
+                    <div class="table-scroll">
+                        <table class="tally" id="tally-table">
+                            <thead id="tally-head"></thead>
+                            <tbody id="tally-body"></tbody>
+                            <tfoot id="tally-foot"></tfoot>
+                        </table>
+                    </div>
+                    <p id="tally-empty" class="tally-empty is-hidden" data-t="tallyEmpty"></p>
+                </div>
+
+                <form id="answer-form" class="panel">
+                    <h2 class="panel-title" data-t="answerHeading"></h2>
+                    <label class="field">
+                        <span class="field-label"><span data-t="name"></span><b data-t="required"></b></span>
+                        <input id="a-name" type="text" maxlength="30" data-t-ph="namePh" required>
+                    </label>
+                    <div id="a-options" class="answer-options"></div>
+                    <label class="field">
+                        <span class="field-label" data-t="comment"></span>
+                        <input id="a-comment" type="text" maxlength="200" data-t-ph="commentPh">
+                    </label>
+                    <button type="submit" id="answer-button" class="cta">
+                        <span class="spinner" aria-hidden="true"></span>
+                        <span class="cta-label" data-t="submit"></span>
+                    </button>
+                    <p id="answer-status" class="status" role="status"></p>
+                    <p class="fineprint"><span data-t="resendNote"></span> <span id="my-tag" class="device-tag"></span></p>
+                </form>
+
+                <div class="panel share-panel">
+                    <h2 class="panel-title" data-t="shareHeading"></h2>
+                    <div class="share-row">
+                        <input id="share-url" type="text" readonly>
+                        <button type="button" id="copy-url" class="btn-ghost" data-t="copy"></button>
+                    </div>
+                    <div id="owner-tools" class="owner-tools is-hidden">
+                        <button type="button" id="toggle-close" class="btn-ghost"></button>
+                        <button type="button" id="delete-poll" class="btn-ghost btn-danger" data-t="deletePoll"></button>
+                    </div>
+                    <p id="owner-status" class="status" role="status"></p>
+                </div>
+
+                <details class="panel history">
+                    <summary data-t="historyHeading"></summary>
+                    <ol id="history-list" class="history-list"></ol>
+                </details>
+            </section>
+
+            <!-- ============ 支援 ============ -->
+            <section id="view-support" class="view is-hidden">
+                <div class="panel">
+                    <h2 class="panel-title" data-t="supportHeading"></h2>
+                    <p class="support-intro" data-t="supportIntro"></p>
+
+                    <div class="metrics">
+                        <div class="metric">
+                            <span class="metric-label" data-t="supportBalance"></span>
+                            <b id="m-cycles" class="metric-value">—</b>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label" data-t="supportPolls"></span>
+                            <b id="m-polls" class="metric-value">—</b>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label" data-t="supportAnswers"></span>
+                            <b id="m-entries" class="metric-value">—</b>
+                        </div>
+                    </div>
+
+                    <h3 class="support-sub" data-t="supportHow"></h3>
+                    <p class="support-text" data-t="supportHow1"></p>
+                    <div class="share-row">
+                        <input id="backend-id" type="text" readonly>
+                        <button type="button" id="copy-backend" class="btn-ghost" data-t="copy"></button>
+                    </div>
+                    <p class="support-text" data-t="supportHow2"></p>
+                    <pre class="code" id="wallet-cmd"></pre>
+                    <p class="support-thanks" data-t="supportThanks"></p>
+                    <p><a class="btn-ghost" href="#/" data-t="backHome"></a></p>
+                </div>
+            </section>
+
+            <!-- ============ 見つからない ============ -->
+            <section id="view-missing" class="view is-hidden">
+                <div class="panel panel-center">
+                    <h1 data-t="missingH"></h1>
+                    <p data-t="missingP"></p>
+                    <a class="cta" href="#/"><span class="cta-label" data-t="createNew"></span></a>
+                </div>
             </section>
         </main>
 
         <footer class="site-footer">
-            <p>自己申告制のカウンターです。正直な心でクリックしましょう。<br>
-            HTML・CSS・JS・状態のすべてが Internet Computer 上で動いています。</p>
+            <p data-t="footerAll"></p>
+            <p>
+                <a href="https://dashboard.internetcomputer.org/canister/ifoqp-6iaaa-aaaaj-qnnrq-cai" target="_blank" rel="noopener noreferrer">backend</a>
+                ・
+                <a href="https://dashboard.internetcomputer.org/canister/iqjbc-7aaaa-aaaaj-qnnsa-cai" target="_blank" rel="noopener noreferrer">frontend</a>
+                ・
+                <a href="https://github.com/yasumorishima/icp-counter-learning" target="_blank" rel="noopener noreferrer" data-t="source"></a>
+            </p>
+            <p class="legacy">
+                <button type="button" id="legacy-counter" class="legacy-counter" title="">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 20.5 4.8 13.3a4.6 4.6 0 0 1 6.5-6.5l.7.7.7-.7a4.6 4.6 0 0 1 6.5 6.5Z"/></svg><span id="legacy-count">—</span>
+                </button>
+            </p>
         </footer>
     </div>
 </body>
