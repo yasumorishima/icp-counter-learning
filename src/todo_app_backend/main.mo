@@ -2,11 +2,11 @@
 import Nat "mo:base/Nat";
 
 // シンプルなカウンター Actor
-actor CounterBackend {
+persistent actor CounterBackend {
 
     // カウンター値を保持する変数 (最初は 0)
     // stable を外しているので、アップグレードで値はリセットされます
-    var count : Nat = 0;
+    transient var count : Nat = 0;
 
     // カウンターを 1 増やす公開関数
     public func increment() : async () {
