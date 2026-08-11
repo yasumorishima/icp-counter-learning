@@ -50,6 +50,24 @@ HtmlWebpackPlugin が同じバンドルを自動注入していたため、同�
 このディレクトリは `dfx.json` の assets ソースとしてキャニスタールートへ配信されるため、
 webpack のコピー設定に依存せず確実に届きます。
 
+## 🚀 デプロイ
+
+```bash
+bash scripts/deploy-frontend.sh
+```
+
+frontend キャニスターだけを更新します。ビルド → 生成物の検証 → 更新 →
+カウント値が変わっていないかの確認まで、このスクリプトが行います。
+
+### ⚠️ `dfx deploy --network ic` を使わない理由
+
+`count` は非 stable 変数なので、backend キャニスターを upgrade すると
+**カウント値が 0 にリセット**されます。そして `dfx deploy --network ic todo_app_frontend`
+のように canister 名を指定しても、dfx は依存先の backend まで install しようとします。
+そのため frontend だけを対象にできる `dfx canister install` を使っています。
+
+必要な dfx は 0.24 以降です（`persistent actor` / `transient` 構文のため）。
+
 ## 🌐 デモ
 https://iqjbc-7aaaa-aaaaj-qnnsa-cai.icp0.io/
 
