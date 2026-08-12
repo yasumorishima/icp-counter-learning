@@ -45,6 +45,19 @@ check("default language follows the browser", (await page.locator("#lang-select"
 await page.screenshot({ path: `${shots}/01-home.png`, fullPage: true });
 
 await page.fill("#f-title", "Team practice in August");
+
+// 日付を選んで押すだけで候補が入るか
+await page.fill("#f-date", "2026-09-05");
+await page.fill("#f-time", "10:30");
+await page.click("#add-from-date");
+const picked = await page.locator(".option-input").first().inputValue();
+const expected = await page.evaluate(() =>
+  new Intl.DateTimeFormat("en", {
+    month: "short", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit",
+  }).format(new Date(2026, 8, 5, 10, 30))
+);
+check("picking a date fills an option row", picked === expected, picked);
+
 const optionInputs = page.locator(".option-input");
 await optionInputs.nth(0).fill("Sun 17 Aug, 9:00");
 await optionInputs.nth(1).fill("Sat 23 Aug, 13:00");

@@ -200,6 +200,31 @@ function optionRow() {
   return row;
 }
 
+/** 選んだ日付と時刻を、その言語で自然な一行にする */
+function formatOptionLabel(dateValue, timeValue) {
+  const [y, m, d] = dateValue.split("-").map(Number);
+  const [hh, mm] = (timeValue || "00:00").split(":").map(Number);
+  const when = new Date(y, m - 1, d, hh, mm);
+  return new Intl.DateTimeFormat(lang, {
+    month: "short",
+    day: "numeric",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(when);
+}
+
+/** 空いている候補欄を探す。無ければ 1 行足す */
+function firstEmptyOptionInput() {
+  const inputs = [...$("f-options").querySelectorAll(".option-input")];
+  const empty = inputs.find(input => !input.value.trim());
+  if (empty) return empty;
+  if (inputs.length >= OPTION_LIMIT) return null;
+  $("f-options").appendChild(optionRow());
+  syncAddButton();
+  return $("f-options").lastElementChild.querySelector("input");
+}
+
 function syncAddButton() {
   $("add-option").disabled = $("f-options").children.length >= OPTION_LIMIT;
 }
@@ -208,6 +233,22 @@ function setupCreateForm() {
   const container = $("f-options");
   [0, 1, 2].forEach(() => container.appendChild(optionRow()));
   syncAddButton();
+
+  $("add-from-date").addEventListener("click", () => {
+    const dateValue = $("f-date").value;
+    if (!dateValue) {
+      $("f-date").focus();
+      return;
+    }
+    const target = firstEmptyOptionInput();
+    if (!target) return;
+    target.value = formatOptionLabel(dateValue, $("f-time").value);
+    // 続けて足しやすいよう、翌日に送っておく（時差でずれないよう数値で組む）
+    const [ny, nm, nd] = dateValue.split("-").map(Number);
+    const next = new Date(ny, nm - 1, nd + 1);
+    const pad = value => String(value).padStart(2, "0");
+    $("f-date").value = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`;
+  });
 
   $("add-option").addEventListener("click", () => {
     container.appendChild(optionRow());
