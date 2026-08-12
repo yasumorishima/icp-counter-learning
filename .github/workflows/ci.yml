@@ -1,0 +1,96 @@
+name: CI
+
+# 鍵は一切使わない。ビルドが壊れていないかと、実ブラウザで動くかだけを見る。
+# 本番への反映は scripts/deploy.sh を人が実行する（配備鍵は RPi5 から出さない）。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      memo:
+        description: 実行の意図
+        required: false
+        default: 手動確認
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: 依存をインストール
+        run: npm ci
+
+      - name: dfx を導入
+        run: |
+          DFXVM_INIT_YES=true sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
+          echo "$HOME/.local/share/dfx/bin" >> "$GITHUB_PATH"
+
+      - name: dfx の版を確認
+        run: dfx --version
+
+      - name: ローカル replica を起動
+        run: |
+          dfx start --clean --background
+          for i in $(seq 1 30); do
+            if dfx ping >/dev/null 2>&1; then echo "replica ready"; exit 0; fi
+            sleep 2
+          done
+          echo "replica did not become ready" >&2
+          exit 1
+
+      - name: バックエンドを配置して宣言を生成
+        run: |
+          dfx deploy todo_app_backend
+          dfx generate todo_app_backend
+
+      # 本番と同じ条件（最小化あり・network=ic）で作った成果物を検証する。
+      # HTML 圧縮が type="text" を削るなど、本番ビルドでしか出ない不具合をここで捕まえる。
+      - name: 本番向けビルドを検証
+        run: |
+          rm -rf dist
+          DFX_NETWORK=ic CANISTER_ID_TODO_APP_BACKEND=ifoqp-6iaaa-aaaaj-qnnrq-cai npx webpack --mode production
+          tags=$(grep -c '<script' dist/todo_app_frontend/index.html)
+          test "$tags" -eq 1 || { echo "script タグが ${tags} 個。1 個であるべき" >&2; exit 1; }
+          grep -q 'ic0.app' dist/todo_app_frontend/index.js || { echo "バンドルが ic0.app を向いていない" >&2; exit 1; }
+          grep -q 'ifoqp-6iaaa-aaaaj-qnnrq-cai' dist/todo_app_frontend/index.js || { echo "backend canister id が無い" >&2; exit 1; }
+          echo "OK: script タグ 1 個 / ic0.app / backend canister id"
+
+      - name: ローカル replica 向けにビルドして配置
+        run: |
+          rm -rf dist
+          npx webpack --mode production
+          dfx deploy todo_app_frontend
+
+      - name: ブラウザを用意
+        run: |
+          npm install --no-save playwright@1
+          npx playwright install --with-deps chromium
+
+      - name: 実ブラウザで通しテスト
+        run: |
+          url="http://$(dfx canister id todo_app_frontend).localhost:4943/"
+          echo "target: $url"
+          node e2e/e2e.mjs "$url"
+
+      - name: 失敗したときだけ画面を残す
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-shots
+          path: e2e-shots/
+          retention-days: 5
+          if-no-files-found: ignore
