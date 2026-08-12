@@ -434,6 +434,7 @@ function setupPollPage() {
 
   $("copy-url").addEventListener("click", () => copyToClipboard($("share-url"), $("copy-url"), "copied"));
   $("copy-backend").addEventListener("click", () => copyToClipboard($("backend-id"), $("copy-backend"), "copied"));
+  $("copy-frontend").addEventListener("click", () => copyToClipboard($("frontend-id"), $("copy-frontend"), "copied"));
 
   $("toggle-close").addEventListener("click", async () => {
     const status = $("owner-status");
@@ -472,8 +473,15 @@ function formatCycles(value) {
   return `${trillions.toLocaleString(lang, { maximumFractionDigits: 3 })} T`;
 }
 
+/** このページを配信しているキャニスター。ローカルでも本番でも URL から分かる */
+function frontendCanisterId() {
+  const first = location.hostname.split(".")[0];
+  return /-cai$/.test(first) ? first : "iqjbc-7aaaa-aaaaj-qnnsa-cai";
+}
+
 async function loadSupport() {
   $("backend-id").value = canisterId;
+  $("frontend-id").value = frontendCanisterId();
   $("wallet-cmd").textContent = `dfx wallet --network ic send ${canisterId} 1000000000000`;
   try {
     const health = await backend.health();

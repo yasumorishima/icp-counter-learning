@@ -136,8 +136,8 @@ body {
   min-height: 100dvh;
   padding: 0 clamp(14px, 4vw, 28px) 72px;
   font-family: var(--font);
-  font-size: 16px;
-  line-height: 1.85;
+  font-size: 18px;
+  line-height: 1.9;
   color: var(--ink);
   background: var(--bg);
   overflow-x: hidden;
@@ -253,20 +253,21 @@ body {
 .field-label {
   display: flex; align-items: center; gap: 8px;
   margin-bottom: 7px;
-  font-size: 0.86rem; font-weight: 800; color: var(--ink);
+  font-size: 0.98rem; font-weight: 800; color: var(--ink);
 }
 .field-label b {
   padding: 1px 9px; border-radius: 999px;
   background: var(--req-bg); color: var(--req-fg);
   font-size: 0.64rem; font-weight: 800; letter-spacing: 0.08em;
 }
-.field-hint { display: block; margin-top: 6px; font-size: 0.78rem; color: var(--dim); }
+.field-hint { display: block; margin-top: 6px; font-size: 0.88rem; color: var(--dim); }
 
 /* type 属性に頼らない。本番ビルドの HTML 圧縮は type="text" を既定値として削るため */
 input:not([type="checkbox"]):not([type="radio"]),
 textarea {
   width: 100%;
-  padding: 0.8em 1em;
+  padding: 0.85em 1em;
+  min-height: 56px;
   border: 2px solid var(--line-strong);
   border-radius: 16px;
   background: var(--field);
@@ -289,7 +290,7 @@ input[readonly] { color: var(--muted); }
 
 .btn-icon {
   flex: none;
-  width: 46px;
+  width: 52px; min-height: 52px;
   border: 2px solid var(--line-strong); border-radius: 16px;
   background: var(--card); color: var(--dim);
   font-size: 1.15rem; line-height: 1; cursor: pointer;
@@ -298,11 +299,12 @@ input[readonly] { color: var(--muted); }
 .btn-icon:hover { color: var(--bad-fg); border-color: var(--bad-fg); background: var(--bad-bg); transform: rotate(8deg); }
 
 .btn-ghost {
-  padding: 0.62em 1.3em;
+  padding: 0.7em 1.4em;
+  min-height: 50px;
   white-space: nowrap;
   border: 2px solid var(--line-strong); border-radius: 999px;
   background: var(--card); color: var(--muted);
-  font: inherit; font-size: 0.9rem; font-weight: 800; cursor: pointer;
+  font: inherit; font-size: 1rem; font-weight: 800; cursor: pointer;
   transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
 }
 .btn-ghost:hover { color: var(--grape); border-color: var(--grape); background: var(--soft); transform: translateY(-1px); }
@@ -337,7 +339,7 @@ input[readonly] { color: var(--muted); }
 
 .status {
   margin: 14px 0 0; min-height: 1.7em;
-  color: var(--muted); font-size: 0.86rem; font-weight: 700;
+  color: var(--muted); font-size: 0.95rem; font-weight: 700;
 }
 .status.is-ok { color: var(--ok-fg); }
 .status.is-error { color: var(--err-fg); }
@@ -347,7 +349,7 @@ input[readonly] { color: var(--muted); }
   padding: 14px 16px;
   border-radius: 18px;
   background: var(--soft);
-  color: var(--muted); font-size: 0.79rem; line-height: 1.9;
+  color: var(--muted); font-size: 0.92rem; line-height: 1.9;
 }
 .fineprint b { color: var(--req-fg); }
 
@@ -365,29 +367,29 @@ input[readonly] { color: var(--muted); }
 .pill { padding: 3px 12px; border-radius: 999px; font-size: 0.72rem; font-weight: 800; }
 .pill-open { background: var(--ok-bg); color: var(--ok-fg); }
 .pill-closed { background: var(--chip); color: var(--dim); }
-.meta-item { color: var(--dim); font-size: 0.78rem; }
+.meta-item { color: var(--dim); font-size: 0.88rem; }
 
 .table-scroll { overflow-x: auto; margin: 0 -4px; padding: 0 4px 4px; }
 
-.tally { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.92rem; }
+.tally { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 1rem; }
 .tally th, .tally td {
   padding: 10px 12px;
   border-bottom: 2px solid var(--line);
   text-align: center; white-space: nowrap;
 }
 .tally thead th {
-  color: var(--muted); font-size: 0.8rem; font-weight: 800;
-  white-space: normal; min-width: 92px; vertical-align: bottom;
+  color: var(--muted); font-size: 0.9rem; font-weight: 800;
+  white-space: normal; min-width: 104px; vertical-align: bottom;
 }
 .tally .col-name {
   position: sticky; left: 0;
   background: var(--card);
-  text-align: left; font-weight: 800; max-width: 150px;
-  overflow: hidden; text-overflow: ellipsis;
+  text-align: left; font-weight: 800; max-width: 220px;
+  white-space: normal; overflow-wrap: anywhere;
 }
 .tally .col-comment {
-  text-align: left; color: var(--muted); font-size: 0.84rem;
-  white-space: normal; min-width: 120px; max-width: 220px;
+  text-align: left; color: var(--muted); font-size: 0.92rem;
+  white-space: normal; min-width: 130px; max-width: 230px;
 }
 .tally .mark { font-size: 1.2rem; font-weight: 800; }
 .mark-yes { color: var(--ok-fg); }
@@ -412,17 +414,17 @@ input[readonly] { color: var(--muted); }
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 12px 0; border-bottom: 2px dotted var(--line);
 }
-.answer-label { font-size: 0.95rem; font-weight: 700; overflow-wrap: anywhere; }
+.answer-label { font-size: 1.05rem; font-weight: 700; overflow-wrap: anywhere; }
 
 .segmented { display: inline-flex; flex: none; gap: 4px; padding: 4px; border-radius: 999px; background: var(--seg-bg); }
 .seg {
   display: inline-flex; align-items: center; gap: 5px;
-  padding: 7px 14px; border-radius: 999px;
-  color: var(--dim); font-size: 0.84rem; font-weight: 800; cursor: pointer;
+  padding: 10px 16px; border-radius: 999px;
+  color: var(--dim); font-size: 0.95rem; font-weight: 800; cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.3, 1.5, 0.5, 1);
 }
 .seg input { position: absolute; opacity: 0; width: 0; height: 0; }
-.seg .seg-text { font-size: 0.78rem; }
+.seg .seg-text { font-size: 0.9rem; }
 .seg:hover { color: var(--ink); }
 .seg:has(input:checked) { background: var(--card); color: var(--ink); box-shadow: 0 4px 10px -4px rgba(96, 71, 140, 0.4); transform: scale(1.04); }
 .seg-yes:has(input:checked) { background: var(--ok-bg); color: var(--ok-fg); }
@@ -440,7 +442,7 @@ input[readonly] { color: var(--muted); }
 
 .history summary { cursor: pointer; color: var(--grape); font-size: 0.88rem; font-weight: 800; }
 .history summary:focus-visible { outline: 3px solid var(--grape); outline-offset: 4px; }
-.history-list { margin: 16px 0 0; padding: 0 0 0 18px; color: var(--muted); font-size: 0.86rem; }
+.history-list { margin: 16px 0 0; padding: 0 0 0 18px; color: var(--muted); font-size: 0.94rem; }
 .history-list li { margin-bottom: 8px; }
 .history-list time { margin-right: 8px; color: var(--dim); font-family: var(--mono); font-size: 0.76rem; }
 .history-marks { margin-left: 8px; }
@@ -467,13 +469,13 @@ input[readonly] { color: var(--muted); }
 .card:hover { transform: translateY(-4px) rotate(-0.6deg); box-shadow: var(--shadow-lift); }
 .card svg { width: 28px; height: 28px; margin-bottom: 12px; }
 .card h3 { margin: 0 0 6px; font-size: 1.04rem; font-weight: 800; }
-.card p { margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.8; }
+.card p { margin: 0; color: var(--muted); font-size: 0.98rem; line-height: 1.85; }
 
 /* --- ヘッダーの道具 ------------------------------------------------------ */
 
 .header-tools { display: flex; align-items: center; gap: 8px; }
 .header-link {
-  color: var(--muted); font-size: 0.85rem; font-weight: 800; text-decoration: none;
+  color: var(--muted); font-size: 0.98rem; font-weight: 800; text-decoration: none;
   padding: 7px 12px; border-radius: 999px; transition: color 0.2s ease, background 0.2s ease;
 }
 .header-link:hover { color: var(--grape); background: var(--soft); }
@@ -483,7 +485,7 @@ input[readonly] { color: var(--muted); }
   padding: 7px 12px;
   border: 2px solid var(--line-strong); border-radius: 999px;
   background: var(--card); color: var(--muted);
-  font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer;
+  font: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer;
 }
 .lang select:focus-visible { outline: 3px solid var(--grape); outline-offset: 2px; }
 .lang option { background: var(--card); color: var(--ink); }
@@ -509,8 +511,8 @@ input[readonly] { color: var(--muted); }
 
 /* --- チェックボックス ---------------------------------------------------- */
 
-.check { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 0.9rem; font-weight: 700; }
-.check input { flex: none; width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--grape); cursor: pointer; }
+.check { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; font-size: 1rem; font-weight: 700; }
+.check input { flex: none; width: 26px; height: 26px; margin: 2px 0 0; accent-color: var(--grape); cursor: pointer; }
 
 /* --- 端末タグ ------------------------------------------------------------ */
 
@@ -525,7 +527,7 @@ input[readonly] { color: var(--muted); }
 
 .support-intro { margin: 0 0 22px; color: var(--muted); font-size: 0.96rem; }
 .support-sub { margin: 26px 0 10px; font-size: 1rem; font-weight: 800; }
-.support-text { margin: 0 0 12px; color: var(--muted); font-size: 0.9rem; }
+.support-text { margin: 0 0 12px; color: var(--muted); font-size: 1rem; }
 .support-thanks {
   margin: 24px 0 18px; padding: 14px 18px; border-radius: 18px;
   background: var(--ok-bg); color: var(--ok-fg); font-size: 0.95rem; font-weight: 800; text-align: center;
@@ -537,7 +539,7 @@ input[readonly] { color: var(--muted); }
   background: linear-gradient(180deg, var(--soft), var(--card) 72%);
   border: 1px solid var(--line);
 }
-.metric-label { display: block; color: var(--dim); font-size: 0.76rem; font-weight: 700; }
+.metric-label { display: block; color: var(--dim); font-size: 0.88rem; font-weight: 700; }
 .metric-value {
   display: block; margin-top: 4px;
   font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums;
@@ -553,7 +555,7 @@ input[readonly] { color: var(--muted); }
 
 /* --- フッター ------------------------------------------------------------ */
 
-.site-footer { margin-top: 40px; color: var(--dim); font-size: 0.8rem; text-align: center; line-height: 1.9; }
+.site-footer { margin-top: 40px; color: var(--dim); font-size: 0.9rem; text-align: center; line-height: 1.9; }
 .site-footer a { color: var(--muted); text-decoration-color: var(--line-strong); }
 .site-footer a:hover { color: var(--grape); }
 
@@ -575,6 +577,29 @@ input[readonly] { color: var(--muted); }
 [dir="rtl"] .tally .col-name { left: auto; right: 0; }
 [dir="rtl"] .history-list { padding: 0 18px 0 0; }
 [dir="rtl"] .history-list time { margin: 0 0 0 8px; }
+
+/* --- 支援ページ：キャニスター ID と入手先 -------------------------------- */
+
+.id-label { margin: 16px 0 6px; color: var(--dim); font-size: 0.88rem; font-weight: 800; }
+
+.support-note {
+  margin: 20px 0 4px; padding: 14px 16px;
+  border-radius: 18px; background: var(--warn-bg); color: var(--warn-fg);
+  font-size: 0.98rem; font-weight: 700;
+}
+
+.ways { margin: 0 0 18px; padding: 0; list-style: none; }
+.ways li { margin-bottom: 10px; }
+.ways a {
+  display: block;
+  padding: 14px 18px;
+  border: 2px solid var(--line-strong); border-radius: 18px;
+  background: var(--card); color: var(--muted);
+  font-size: 0.98rem; text-decoration: none;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+.ways a:hover { color: var(--ink); border-color: var(--grape); background: var(--soft); transform: translateY(-2px); }
+.ways a:focus-visible { outline: 3px solid var(--grape); outline-offset: 2px; }
 
 /* --- 狭い画面 / a11y ----------------------------------------------------- */
 
