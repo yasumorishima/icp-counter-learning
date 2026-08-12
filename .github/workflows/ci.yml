@@ -77,7 +77,7 @@ jobs:
 
       - name: ブラウザを用意
         run: |
-          npm install --no-save playwright@1
+          npm install --no-save playwright@1 jsqr@1
           npx playwright install --with-deps chromium
 
       - name: 実ブラウザで通しテスト

@@ -7,6 +7,7 @@
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { createRequire } from "node:module";
 
 const BASE = process.argv[2];
 if (!BASE) {
@@ -114,7 +115,9 @@ check("owner tools are shown for the creator", await page.locator("#owner-tools"
 
 // ---- 4b. QR は共有 URL を指しているか --------------------------------------
 
-await page.addScriptTag({ path: "node_modules/jsqr/dist/jsQR.js" });
+// jsQR は実行場所に関係なく解決する（テストのときだけ使う）
+const jsqrPath = createRequire(import.meta.url).resolve("jsqr");
+await page.addScriptTag({ path: jsqrPath });
 const decoded = await page.evaluate(() => {
   const canvas = document.getElementById("share-qr");
   const ctx = canvas.getContext("2d");
