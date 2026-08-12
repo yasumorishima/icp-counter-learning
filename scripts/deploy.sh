@@ -16,6 +16,12 @@ BACKEND="todo_app_backend"
 FRONTEND="todo_app_frontend"
 SITE="https://iqjbc-7aaaa-aaaaj-qnnsa-cai.icp0.io/"
 
+# 実行に使う identity。RPi5 から動かすときは KIMARU_IDENTITY=kimaru-deploy を渡す
+IDENTITY="${KIMARU_IDENTITY:-}"
+dfxx() {
+  if [ -n "$IDENTITY" ]; then dfx --identity "$IDENTITY" "$@"; else dfx "$@"; fi
+}
+
 mode="frontend"
 case "${1:-}" in
   "") ;;
@@ -53,24 +59,24 @@ grep -q "$BACKEND_ID" dist/todo_app_frontend/index.js || { echo "    NG: バン�
 echo "    OK: script タグ 1 個 / ic0.app / backend canister id"
 
 echo "==> ビルド"
-dfx build --network ic "$FRONTEND"
+dfxx build --network ic "$FRONTEND"
 
 case "$mode" in
   backend)
     echo "==> バックエンドを upgrade"
-    dfx canister install "$BACKEND" --network ic --mode upgrade
+    dfxx canister install "$BACKEND" --network ic --mode upgrade
     ;;
   reset)
     echo "==> バックエンドを作り直し"
-    dfx canister install "$BACKEND" --network ic --mode reinstall --yes
+    dfxx canister install "$BACKEND" --network ic --mode reinstall --yes
     ;;
 esac
 
 echo "==> フロントエンドを更新"
-dfx canister install "$FRONTEND" --network ic --mode upgrade
+dfxx canister install "$FRONTEND" --network ic --mode upgrade
 
 echo "==> 稼働確認"
-dfx canister --network ic call "$BACKEND_ID" health '()' --query
+dfxx canister --network ic call "$BACKEND_ID" health '()' --query
 
 echo
 echo "完了: ${SITE}"
