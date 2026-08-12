@@ -217,6 +217,24 @@ await page.waitForFunction(
 const after = await page.locator("#legacy-count").textContent();
 check("the old counter still counts", Number(after.replace(/[^0-9]/g, "")) === Number(before.replace(/[^0-9]/g, "")) + 1, `${before} -> ${after}`);
 
+// ---- 7b. ホーム画面に追加できるか ------------------------------------------
+
+const manifestResponse = await page.request.get(new URL("manifest.json", BASE).href);
+check("the manifest is served", manifestResponse.status() === 200, String(manifestResponse.status()));
+const manifest = await manifestResponse.json();
+check("the manifest is standalone with a start url", manifest.display === "standalone" && manifest.start_url === "/");
+
+const iconStatuses = [];
+for (const icon of manifest.icons) {
+  const iconResponse = await page.request.get(new URL(icon.src, BASE).href);
+  iconStatuses.push(icon.src + "=" + iconResponse.status());
+}
+check(
+  "every icon in the manifest exists",
+  iconStatuses.every(entry => entry.endsWith("=200")),
+  iconStatuses.join(" ")
+);
+
 // ---- 8. 存在しない ID ------------------------------------------------------
 
 await page.goto(`${BASE}#/p/zzzzzzzz`, { waitUntil: "domcontentloaded" });
