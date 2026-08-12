@@ -6,6 +6,7 @@
  */
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
+import { resolve } from "node:path";
 
 const BASE = process.argv[2];
 if (!BASE) {
@@ -13,7 +14,8 @@ if (!BASE) {
   process.exit(2);
 }
 
-const shots = "/workspaces/icp-counter-learning/e2e-shots";
+// 画面の保存先。実行した場所からの相対で作る（環境に依存させない）
+const shots = resolve(process.env.E2E_SHOTS || "e2e-shots");
 mkdirSync(shots, { recursive: true });
 
 const results = [];
