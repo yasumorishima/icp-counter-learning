@@ -150,6 +150,27 @@ await page.screenshot({ path: `${shots}/03-arabic.png`, fullPage: true });
 await page.selectOption("#lang-select", "ja");
 await page.screenshot({ path: `${shots}/04-japanese.png`, fullPage: true });
 
+// ---- 5a. どの言語でも文字が空にならず、横にはみ出さないか -------------------
+
+const langCodes = await page.evaluate(() =>
+  [...document.querySelectorAll("#lang-select option")].map(option => option.value)
+);
+const langProblems = [];
+for (const code of langCodes) {
+  await page.selectOption("#lang-select", code);
+  const report = await page.evaluate(() => {
+    const de = document.documentElement;
+    const empty = [...document.querySelectorAll("[data-t]")]
+      .filter(el => el.offsetParent !== null && !el.textContent.trim())
+      .map(el => el.dataset.t);
+    return { overflow: de.scrollWidth - de.clientWidth, empty };
+  });
+  if (report.overflow > 0 || report.empty.length) {
+    langProblems.push(code + ": overflow=" + report.overflow + " empty=[" + report.empty.join(",") + "]");
+  }
+}
+check("every language fits and has no empty label", langProblems.length === 0, langProblems.join(" | ") || langCodes.length + " languages");
+
 // ---- 5b. 明るい / 暗い -----------------------------------------------------
 
 const themeBefore = await page.evaluate(() => document.documentElement.dataset.theme || "");
