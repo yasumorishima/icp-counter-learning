@@ -74,8 +74,23 @@ bash scripts/deploy.sh --backend        # バックエンドも upgrade（デー
 bash scripts/deploy.sh --reset-backend  # バックエンドを作り直す（データは消える）
 ```
 
-`dfx deploy` を直接使わないのは、canister 名を指定しても依存先まで install してしまうため。
-必要な dfx は 0.24 以降（`persistent actor` / `transient` 構文のため）。
+`dfx deploy` を直接使わないのは、**canister 名を指定しても依存先まで install してしまう**ため。
+フロントエンドだけ直したつもりでバックエンドの状態を触るのを避けたい。
+
+配備に使う identity を指定したいときは `KIMARU_IDENTITY` を渡す。
+
+```bash
+KIMARU_IDENTITY=kimaru-deploy bash scripts/deploy.sh
+```
+
+### dfx のバージョン
+
+| 環境 | 使える dfx | 理由 |
+|---|---|---|
+| 一般 | 0.24 以降 | `persistent actor` / `transient` 構文 |
+| Raspberry Pi 5 (Debian bookworm) | **0.29.2 まで** | 0.32 は glibc 2.38/2.39 を要求し、bookworm の 2.36 では起動しない |
+
+0.29.2 でも `persistent actor` のコンパイルとフロントのビルドは通る（実機で確認済み）。
 
 ## このサイトの費用について
 
