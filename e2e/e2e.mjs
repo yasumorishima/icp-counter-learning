@@ -1,6 +1,6 @@
 /**
  * ローカル replica に載せた本物のサイトを、本物のブラウザで通しで動かす。
- * 作成 → 回答 → 集計 → 変更（履歴に残るか）→ 言語切替 → 支援ページ → カウンター。
+ * 作成 → 回答 → 集計 → 変更（履歴に残るか）→ 取り消し → 言語切替 → 支援ページ → カウンター。
  *
  *   node e2e.mjs <frontend-url>
  */
@@ -126,6 +126,34 @@ await page.reload();
 await page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 check("owner tools are shown for the creator", await page.locator("#owner-tools").isVisible());
 
+// ---- 4c. 自分が書いた回答は自分で取り消せる --------------------------------
+
+// 2 台目から Bob として回答し、その端末から取り消す
+await second.page.fill("#a-name", "Bob");
+await second.page.locator(".answer-row").nth(0).locator(".seg-yes").click();
+await second.page.click("#answer-button");
+await second.page.waitForSelector("#answer-status.is-ok", { timeout: 30000 });
+const rowsBefore = await second.page.locator("#tally-body tr").count();
+
+const bobRow = second.page.locator("#tally-body tr", { hasText: "Bob" });
+check("a withdraw button is offered on my own row", (await bobRow.locator(".withdraw").count()) === 1);
+await bobRow.locator(".withdraw").click();
+check("the first press only arms the button", (await bobRow.locator(".withdraw.is-armed").count()) === 1);
+await bobRow.locator(".withdraw").click();
+await second.page.waitForSelector("#answer-status.is-ok", { timeout: 30000 });
+await second.page.waitForFunction(
+  count => document.querySelectorAll("#tally-body tr").length === count - 1,
+  rowsBefore,
+  { timeout: 30000 }
+);
+check("my own answer disappears after withdrawing", (await second.page.locator("#tally-body tr", { hasText: "Bob" }).count()) === 0);
+
+// 作成した端末から見ても消えている（画面だけの見かけではない）
+await page.reload();
+await page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+check("the withdrawal is visible to everyone", (await page.locator("#tally-body tr", { hasText: "Bob" }).count()) === 0);
+check("other people's rows cannot be withdrawn", (await page.locator("#tally-body tr", { hasText: "Alice" }).locator(".withdraw").count()) === 0);
+
 // ---- 4b. QR は共有 URL を指しているか --------------------------------------
 
 // jsQR は実行場所に関係なく解決する（テストのときだけ使う）
@@ -173,6 +201,16 @@ check("every language fits and has no empty label", langProblems.length === 0, l
 
 // ---- 5b. 明るい / 暗い -----------------------------------------------------
 
+const darkPreferring = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: "dark" });
+const darkPage = await darkPreferring.newPage();
+await darkPage.goto(BASE, { waitUntil: "domcontentloaded" });
+await darkPage.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+const forcedLight = await darkPage.evaluate(() => document.documentElement.dataset.theme);
+const forcedLightBg = await darkPage.evaluate(() => getComputedStyle(document.body).backgroundColor);
+check("light mode is the default even when the device prefers dark", forcedLight === "light", String(forcedLight));
+check("the default page really is painted light", forcedLightBg === "rgb(255, 248, 243)", forcedLightBg);
+await darkPreferring.close();
+
 const themeBefore = await page.evaluate(() => document.documentElement.dataset.theme || "");
 await page.click("#theme-toggle");
 const themeAfter = await page.evaluate(() => document.documentElement.dataset.theme);
@@ -199,12 +237,15 @@ check("a closed poll hides the form for everyone", await second.page.locator("#a
 
 // ---- 7. 支援ページとカウンター ---------------------------------------------
 
-await page.goto(`${BASE}#/support`, { waitUntil: "domcontentloaded" });
+// 支援はヘッダではなくフッターから辿れる（使いに来た人の視界に入れない）
+await page.goto(BASE, { waitUntil: "domcontentloaded" });
 await page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
-await page.waitForFunction(() => document.getElementById("m-cycles").textContent !== "—", null, { timeout: 30000 });
-const cycles = await page.locator("#m-cycles").textContent();
-check("support page shows the cycle balance", /T$/.test(cycles.trim()), cycles.trim());
-check("support page counts stored polls", Number((await page.locator("#m-polls").textContent()).replace(/[^0-9]/g, "")) >= 1);
+check("support is not in the header", (await page.locator(".header-tools a[href='#/support']").count()) === 0);
+const footerSupport = page.locator(".site-footer a[href='#/support']");
+check("support is reachable from the footer", (await footerSupport.count()) === 1);
+await footerSupport.click();
+await page.waitForSelector("#view-support:not(.is-hidden)", { timeout: 30000 });
+check("support page no longer shows any fuel figures", (await page.locator("#m-cycles, #m-polls, #m-entries").count()) === 0);
 await page.screenshot({ path: `${shots}/05-support.png`, fullPage: true });
 
 const before = await page.locator("#legacy-count").textContent();

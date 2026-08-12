@@ -82,12 +82,11 @@ function setupLangSelect() {
 
 const THEME_KEY = "kimaru.theme";
 
-function systemTheme() {
-  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
+/** 既定はライト。端末が暗い設定でも、選ばれるまでは明るいままにする */
+const DEFAULT_THEME = "light";
 
 function currentTheme() {
-  return document.documentElement.dataset.theme || systemTheme();
+  return document.documentElement.dataset.theme || DEFAULT_THEME;
 }
 
 function applyTheme(theme) {
@@ -101,9 +100,9 @@ function setupTheme() {
   try {
     stored = localStorage.getItem(THEME_KEY);
   } catch (error) {
-    /* 保存できない環境では端末の設定にまかせる */
+    /* 保存できない環境では既定のライトのままにする */
   }
-  if (stored === "dark" || stored === "light") applyTheme(stored);
+  applyTheme(stored === "dark" || stored === "light" ? stored : DEFAULT_THEME);
 
   $("theme-toggle").addEventListener("click", () => {
     const next = currentTheme() === "dark" ? "light" : "dark";
@@ -333,7 +332,11 @@ function renderTally(poll) {
       const badges =
         (revisions > 1 ? `<span class="revision">${escapeHtml(t("changed", revisions - 1))}</span>` : "") +
         (moved ? `<span class="revision revision-alert" title="${escapeHtml(t("otherDevice"))}">!</span>` : "");
-      return `<tr><th class="col-name">${escapeHtml(entry.name)}${badges}</th>${cells}<td class="col-comment">${escapeHtml(entry.comment)}</td></tr>`;
+      // 自分がこの端末から書いた行だけ、取り消せるようにする
+      const withdraw = entry.mine
+        ? `<button type="button" class="withdraw" data-name="${escapeHtml(entry.name)}">${escapeHtml(t("withdraw"))}</button>`
+        : "";
+      return `<tr><th class="col-name">${escapeHtml(entry.name)}${badges}${withdraw}</th>${cells}<td class="col-comment">${escapeHtml(entry.comment)}</td></tr>`;
     })
     .join("");
 
@@ -506,6 +509,42 @@ function setupPollPage() {
     }
   });
 
+  // 取り消し: 1 回目で「本当に消す？」に変わり、2 回目で消す
+  $("tally-body").addEventListener("click", async event => {
+    const button = event.target.closest(".withdraw");
+    if (!button || !currentPoll) return;
+
+    if (button.dataset.armed !== "1") {
+      document.querySelectorAll(".withdraw").forEach(other => {
+        delete other.dataset.armed;
+        other.textContent = t("withdraw");
+        other.classList.remove("is-armed");
+      });
+      button.dataset.armed = "1";
+      button.textContent = t("withdrawSure");
+      button.classList.add("is-armed");
+      return;
+    }
+
+    const status = $("answer-status");
+    button.disabled = true;
+    setStatus(status, t("writing"));
+    try {
+      const result = await backend.withdrawAnswer(currentPoll.id, button.dataset.name);
+      if ("err" in result) {
+        setStatus(status, errorMessage(result.err, lang), "is-error");
+        button.disabled = false;
+        return;
+      }
+      await loadPoll(currentPoll.id);
+      setStatus(status, t("withdrawDone"), "is-ok");
+    } catch (error) {
+      console.error(error);
+      setStatus(status, errorMessage("network", lang), "is-error");
+      button.disabled = false;
+    }
+  });
+
   $("copy-url").addEventListener("click", () => copyToClipboard($("share-url"), $("copy-url"), "copied"));
   $("copy-backend").addEventListener("click", () => copyToClipboard($("backend-id"), $("copy-backend"), "copied"));
   $("copy-frontend").addEventListener("click", () => copyToClipboard($("frontend-id"), $("copy-frontend"), "copied"));
@@ -541,12 +580,6 @@ function setupPollPage() {
 
 // --- 支援ページ -------------------------------------------------------------
 
-/** cycles は桁が大きいので T（兆）単位に丸めて見せる */
-function formatCycles(value) {
-  const trillions = Number(BigInt(value) / 1_000_000_000n) / 1000;
-  return `${trillions.toLocaleString(lang, { maximumFractionDigits: 3 })} T`;
-}
-
 /** このページを配信しているキャニスター。ローカルでも本番でも URL から分かる */
 function frontendCanisterId() {
   const first = location.hostname.split(".")[0];
@@ -557,16 +590,7 @@ async function loadSupport() {
   $("backend-id").value = canisterId;
   $("frontend-id").value = frontendCanisterId();
   $("wallet-cmd").textContent = `dfx wallet --network ic send ${canisterId} 1000000000000`;
-  try {
-    const health = await backend.health();
-    $("m-cycles").textContent = formatCycles(health.cycles);
-    $("m-polls").textContent = formatNumber(health.polls);
-    $("m-entries").textContent = formatNumber(health.entries);
-    $("legacy-count").textContent = formatNumber(health.legacyCount);
-  } catch (error) {
-    console.error(error);
-    $("m-cycles").textContent = "—";
-  }
+  // 燃料の残量や件数は、使いに来た人に見せるものではないので出さない
 }
 
 // --- 前身のカウンター（フッターの小さいやつ） -------------------------------

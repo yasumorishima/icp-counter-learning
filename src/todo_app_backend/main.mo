@@ -46,6 +46,7 @@ persistent actor Kimaru {
     choices : [Choice];
     at : Int;
     tag : Text;
+    mine : Bool; // この端末が書いた回答か（取り消しボタンの出し分けに使う）
   };
 
   type Poll = {
@@ -189,12 +190,13 @@ persistent actor Kimaru {
     };
   };
 
-  func toEntry(r : Record) : Entry = {
+  func toEntry(r : Record, caller : Principal) : Entry = {
     name = r.name;
     comment = r.comment;
     choices = r.choices;
     at = r.at;
     tag = tagOf(r.by);
+    mine = Principal.equal(r.by, caller);
   };
 
   func view(p : Poll, caller : Principal, now : Int) : PollView = {
@@ -208,7 +210,7 @@ persistent actor Kimaru {
     lockNames = p.lockNames;
     isOwner = Principal.equal(p.owner, caller);
     myTag = tagOf(caller);
-    entries = Array.map<Record, Entry>(p.entries, toEntry);
+    entries = Array.map<Record, Entry>(p.entries, func(r : Record) : Entry = toEntry(r, caller));
   };
 
   /// 同じ名前を最初に使った端末。lockNames のときの照合に使う
@@ -312,6 +314,28 @@ persistent actor Kimaru {
 
         let record : Record = { name; comment; choices; at = now; by = msg.caller };
         save({ p with entries = Array.append(p.entries, [record]) });
+        #ok();
+      };
+    };
+  };
+
+  /// 自分がこの端末から書いた回答を消す。
+  /// 名前を間違えた・もう関わりたくない、という当たり前の要求に応えるためのもので、
+  /// 締め切り後でも消せる（自分の書いたものは自分で引き取れる、という考え方）。
+  public shared (msg) func withdrawAnswer(id : Text, name : Text) : async Result.Result<(), Text> {
+    if (Principal.isAnonymous(msg.caller)) return #err("e_anonymous");
+
+    switch (find id) {
+      case null { #err("e_not_found") };
+      case (?p) {
+        let kept = Array.filter<Record>(
+          p.entries,
+          func(r : Record) : Bool {
+            not (Principal.equal(r.by, msg.caller) and Text.equal(r.name, name));
+          },
+        );
+        if (kept.size() == p.entries.size()) return #err("e_nothing_to_withdraw");
+        save({ p with entries = kept });
         #ok();
       };
     };

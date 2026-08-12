@@ -411,6 +411,18 @@ input[readonly] { color: var(--muted); }
 }
 .tally-empty { margin: 14px 0 0; color: var(--dim); font-size: 0.9rem; text-align: center; }
 
+/* 自分が書いた行を取り消すボタン。1 回目で赤くなり、2 回目で消える */
+.withdraw {
+  display: inline-block; margin-left: 8px; padding: 8px 14px; min-height: 44px;
+  border: 1px solid var(--line-strong); border-radius: 999px;
+  background: var(--card); color: var(--muted);
+  font-size: 0.9rem; font-weight: 700; cursor: pointer;
+}
+.withdraw:hover { color: var(--ink); border-color: var(--dim); }
+.withdraw.is-armed { background: var(--bad-bg); border-color: var(--bad-fg); color: var(--bad-fg); }
+.withdraw:disabled { opacity: 0.6; cursor: default; }
+.footer-sep { margin: 0 8px; color: var(--dim); }
+
 /* --- 回答フォーム -------------------------------------------------------- */
 
 .answer-options { margin-bottom: 18px; }
