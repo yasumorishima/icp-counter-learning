@@ -112,6 +112,18 @@ await page.reload();
 await page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 check("owner tools are shown for the creator", await page.locator("#owner-tools").isVisible());
 
+// ---- 4b. QR は共有 URL を指しているか --------------------------------------
+
+await page.addScriptTag({ path: "node_modules/jsqr/dist/jsQR.js" });
+const decoded = await page.evaluate(() => {
+  const canvas = document.getElementById("share-qr");
+  const ctx = canvas.getContext("2d");
+  const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const found = window.jsQR(image.data, canvas.width, canvas.height);
+  return found ? found.data : null;
+});
+check("the QR code encodes the share URL", decoded === pollUrl, String(decoded));
+
 // ---- 5. 言語切替 -----------------------------------------------------------
 
 await page.selectOption("#lang-select", "ja");

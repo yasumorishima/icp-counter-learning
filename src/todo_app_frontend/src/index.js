@@ -1,6 +1,7 @@
 import { Actor, HttpAgent } from "@icp-sdk/core/agent";
 import { Ed25519KeyIdentity } from "@icp-sdk/core/identity";
 import { idlFactory, canisterId as localCanisterId } from "../../declarations/todo_app_backend";
+import qrcode from "qrcode-generator";
 import { LANGS, RTL, makeT, detectLang, saveLang, errorMessage } from "./i18n";
 
 // --- 接続 -------------------------------------------------------------------
@@ -366,12 +367,44 @@ function renderOwnerTools(poll) {
   $("toggle-close").textContent = t(poll.closed ? "reopenPoll" : "closePoll");
 }
 
+/**
+ * 共有 URL の QR を描く。カメラで読めればよいので、白地に黒で固定する
+ * （画面の明暗を切り替えても読み取りやすさが変わらない）。
+ */
+function renderQr(canvas, text) {
+  const qr = qrcode(0, "M");
+  qr.addData(text);
+  qr.make();
+
+  const modules = qr.getModuleCount();
+  const scale = 6;
+  const margin = 4; // 読み取りに必要な余白（4 モジュール）
+  const size = (modules + margin * 2) * scale;
+
+  canvas.width = size;
+  canvas.height = size;
+  canvas.setAttribute("aria-label", text);
+
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = "#000000";
+  for (let row = 0; row < modules; row += 1) {
+    for (let col = 0; col < modules; col += 1) {
+      if (qr.isDark(row, col)) {
+        ctx.fillRect((col + margin) * scale, (row + margin) * scale, scale, scale);
+      }
+    }
+  }
+}
+
 function renderPoll(poll) {
   currentPoll = poll;
   $("poll-title").textContent = poll.title;
   $("poll-note").textContent = poll.note;
   $("poll-note").classList.toggle("is-hidden", !poll.note);
   $("share-url").value = location.href;
+  renderQr($("share-qr"), location.href);
   renderMeta(poll);
   renderTally(poll);
   renderAnswerForm(poll);
