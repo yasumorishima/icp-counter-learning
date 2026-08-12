@@ -1,5 +1,7 @@
 # キマル / Kimaru
 
+[![CI](https://github.com/yasumorishima/icp-counter-learning/actions/workflows/ci.yml/badge.svg)](https://github.com/yasumorishima/icp-counter-learning/actions/workflows/ci.yml)
+
 **書き換えられない日程調整。** 広告なし、ログイン不要、集計はすべて Internet Computer 上。
 
 Tamper-evident scheduling polls. No ads, no sign-up, and every response is written on-chain.
@@ -60,11 +62,27 @@ dfx deploy todo_app_frontend
 ### 動作確認（実ブラウザ）
 
 ```bash
-node e2e/e2e.mjs http://<frontend-canister-id>.localhost:4943/
+npm install --no-save playwright@1
+npx playwright install --with-deps chromium
+node e2e/e2e.mjs http://$(dfx canister id todo_app_frontend).localhost:4943/
 ```
 
-作成 → 回答 → 変更の履歴 → 別端末からの書き換え検知 → 言語切替 → 明暗切替 →
-締め切り → 支援ページ → 携帯幅での横あふれまでを、実際のブラウザで通しで確認する。
+作成 → 回答 → 変更の履歴 → 別端末からの書き換え検知 → 主催者だけの操作 → 締め切り →
+言語切替（アラビア語の RTL 含む）→ 明暗切替と再読み込み後の保持 → 支援ページ →
+不明な ID → 携帯幅での横あふれまで、27 項目を実際のブラウザで通す。
+画面は `e2e-shots/` に残る（`E2E_SHOTS` で変更可）。
+
+### CI
+
+`.github/workflows/ci.yml` が push と Pull Request のたびに走る。**secrets は使わない**。
+
+1. **本番と同じ条件でビルドして成果物を検証** — 最小化あり・`DFX_NETWORK=ic`。
+   `<script>` タグが 1 個か、バンドルが `ic0.app` と backend canister id を持つか。
+   HTML 圧縮が `type="text"` を削るような、本番ビルドでしか出ない不具合をここで捕まえる
+2. **ローカル replica に配置して実ブラウザで 27 項目**
+
+失敗したときだけスクリーンショットを artifact に残す（5 日）。
+配備鍵を CI に置いていないので、**反映は CI からは行わない**（`scripts/deploy.sh` を人が実行する）。
 
 ## デプロイ
 
