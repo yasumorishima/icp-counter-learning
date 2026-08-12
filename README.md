@@ -101,6 +101,32 @@ bash scripts/deploy.sh --reset-backend  # バックエンドを作り直す（�
 KIMARU_IDENTITY=kimaru-deploy bash scripts/deploy.sh
 ```
 
+配備鍵は平文で保存されているため dfx がメインネット向けのコマンドを警告で止めるが、
+`scripts/deploy.sh` の中で `DFX_WARNING` を設定してあるので追加の操作は要らない。
+
+端末を持たない環境（ssh 越しなど）からバックエンドを作り直すときは、確認を環境変数で明示する。
+
+```bash
+KIMARU_RESET_CONFIRM=yes bash scripts/deploy.sh --reset-backend
+```
+
+### 初めてその identity で配備するとき
+
+アセットキャニスターは controller とは別に権限を持っている。
+controller に加えただけでは `Caller does not have Prepare permission` で止まるので、
+一度だけ Prepare と Commit を渡す。
+
+```bash
+dfx --identity kimaru-deploy canister --network ic call iqjbc-7aaaa-aaaaj-qnnsa-cai grant_permission '(record { to_principal = principal "<配備する principal>"; permission = variant { Prepare } })'
+dfx --identity kimaru-deploy canister --network ic call iqjbc-7aaaa-aaaaj-qnnsa-cai grant_permission '(record { to_principal = principal "<配備する principal>"; permission = variant { Commit } })'
+```
+
+付与できたかは `list_permitted` で確認する（`--query` は付かない。update メソッドのため）。
+
+```bash
+dfx --identity kimaru-deploy canister --network ic call iqjbc-7aaaa-aaaaj-qnnsa-cai list_permitted '(record { permission = variant { Prepare } })'
+```
+
 ### dfx のバージョン
 
 | 環境 | 使える dfx | 理由 |
