@@ -11,6 +11,10 @@
 #
 set -euo pipefail
 
+# RPi5 に置いている配備鍵は平文保存のため、dfx が mainnet 向けコマンドを警告で止める。
+# 鍵を RPi5 の外へ出さない方針なのでここで明示的に黙らせる。
+export DFX_WARNING=-mainnet_plaintext_identity
+
 BACKEND_ID="ifoqp-6iaaa-aaaaj-qnnrq-cai"
 BACKEND="todo_app_backend"
 FRONTEND="todo_app_frontend"
@@ -34,8 +38,13 @@ cd "$(dirname "$0")/.."
 
 if [ "$mode" = "reset" ]; then
   echo "!! バックエンドを作り直します。保存されている調整と回答はすべて消えます。"
-  printf "続けるなら yes と入力してください: "
-  read -r answer
+  if [ -t 0 ]; then
+    printf "続けるなら yes と入力してください: "
+    read -r answer
+  else
+    # ssh 越しなど端末が無いときは環境変数で明示させる（黙って作り直さない）
+    answer="${KIMARU_RESET_CONFIRM:-}"
+  fi
   [ "$answer" = "yes" ] || { echo "中止しました"; exit 1; }
 fi
 
