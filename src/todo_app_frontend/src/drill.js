@@ -116,6 +116,31 @@ export function initDrill(options) {
 
   $("daily-card").addEventListener("click", startDaily);
 
+  $("challenge-box").addEventListener("click", event => {
+    const act = event.target.closest("[data-challenge]");
+    if (!act) return;
+    if (act.dataset.challenge === "summer") {
+      const year = new Date().getFullYear();
+      records.startChallenge("なつやすみ チャレンジ", year + "-07-21", year + "-08-31");
+    } else if (act.dataset.challenge === "month") {
+      const now = new Date();
+      const from = todayKey(now);
+      const end = new Date(now.getTime() + 29 * 24 * 60 * 60 * 1000);
+      records.startChallenge("30日 チャレンジ", from, todayKey(end));
+    } else if (act.dataset.challenge === "award") {
+      location.hash = "#/shoujou";
+      return;
+    } else if (act.dataset.challenge === "stop") {
+      if (act.dataset.armed !== "1") {
+        act.dataset.armed = "1";
+        act.textContent = "ほんとうに やめる？";
+        return;
+      }
+      records.clearChallenge();
+    }
+    renderHome();
+  });
+
   $("quiz-quit").addEventListener("click", () => {
     session = null;
     location.hash = "#/";
@@ -153,6 +178,8 @@ export function initDrill(options) {
       renderKiroku();
     }
   });
+
+  $("award-print").addEventListener("click", () => window.print());
 
   $("kiroku-export").addEventListener("click", exportRecords);
   $("kiroku-import").addEventListener("click", () => $("kiroku-file").click());
@@ -199,6 +226,7 @@ export function renderHome() {
   $("weak-row").classList.toggle("is-hidden", weak.length === 0);
 
   renderWhoPanel();
+  renderChallenge();
   renderDaily();
   renderLevel();
 
@@ -275,6 +303,42 @@ function renderWhoPanel() {
 function todayKey(now) {
   const d = now || new Date();
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+/** 期間を決めた チャレンジ。始める前は 誘い、始めたら 進み具合を出す */
+function renderChallenge() {
+  const box = $("challenge-box");
+  const state = records.challenge();
+  box.classList.remove("is-hidden");
+
+  if (!state) {
+    box.innerHTML =
+      '<p class="challenge-title">つづける チャレンジ</p>' +
+      '<p class="challenge-line">まいにち 1まい やって、さいごに しょうじょうを もらおう。</p>' +
+      '<div class="challenge-actions">' +
+      '<button type="button" class="btn-ghost" data-challenge="summer">なつやすみ（7/21〜8/31）</button>' +
+      '<button type="button" class="btn-ghost" data-challenge="month">30日 チャレンジ</button>' +
+      "</div>";
+    return;
+  }
+
+  const percent = Math.min(100, Math.round((state.done / state.total) * 100));
+  const line = state.complete
+    ? '<p class="challenge-line challenge-done">ぜんぶ たっせい！ しょうじょうを もらおう</p>'
+    : state.finished
+      ? '<p class="challenge-line">おしまい。' + state.done + " / " + state.total + "日 やったよ</p>"
+      : '<p class="challenge-line">' + state.done + " / " + state.total + "日 ／ のこり " + state.left + "日</p>";
+
+  box.innerHTML =
+    '<p class="challenge-title">' + escapeText(state.name) + "</p>" +
+    line +
+    '<div class="challenge-bar"><span class="challenge-fill" style="width:' + percent + '%"></span></div>' +
+    '<div class="challenge-actions">' +
+    (state.complete || state.finished
+      ? '<button type="button" class="cta" data-challenge="award"><span class="cta-label">しょうじょうを みる</span></button>'
+      : "") +
+    '<button type="button" class="btn-ghost" data-challenge="stop">やめる</button>' +
+    "</div>";
 }
 
 function renderDaily() {
@@ -614,4 +678,32 @@ function renderCalendar() {
     blanks +
     cells +
     "</div>";
+}
+
+/** しょうじょう。紙に出せるように 余計なものを 省いた作りにする */
+export function renderAward() {
+  const person = records.currentProfile();
+  const state = records.challenge();
+  const box = $("award-body");
+
+  if (!person || !state) {
+    box.innerHTML = '<p class="award-body">まだ チャレンジを していません。</p>';
+    return;
+  }
+
+  const today = new Date();
+  const date = today.getFullYear() + "年 " + (today.getMonth() + 1) + "月 " + today.getDate() + "日";
+  const title = state.complete ? "しょうじょう" : "がんばったで しょう";
+  const level = records.level();
+
+  box.innerHTML =
+    '<p class="award-title">' + title + "</p>" +
+    '<p class="award-name">' + escapeText(person.name) + " どの</p>" +
+    '<p class="award-body">' +
+    escapeText(state.name) + " で<br>" +
+    state.total + "日 のうち <b>" + state.done + "日</b> やりました。<br>" +
+    "★を " + level.stars + "こ あつめて レベル " + level.rank + " に なりました。<br>" +
+    "その がんばりを ここに たたえます。" +
+    "</p>" +
+    '<p class="award-body">' + date + "</p>";
 }

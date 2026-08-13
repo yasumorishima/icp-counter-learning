@@ -1,7 +1,7 @@
 import { Actor, HttpAgent } from "@icp-sdk/core/agent";
 import { idlFactory, canisterId as localCanisterId } from "../../declarations/todo_app_backend";
 import { LANGS, RTL, makeT, detectLang, saveLang } from "./i18n";
-import { initDrill, renderHome as renderDrillHome, renderKiroku } from "./drill";
+import { initDrill, renderHome as renderDrillHome, renderKiroku, renderAward } from "./drill";
 
 // --- 接続 -------------------------------------------------------------------
 
@@ -225,10 +225,10 @@ async function setupLegacyCounter() {
 
 // --- 画面切り替え -----------------------------------------------------------
 
-const VIEWS = ["view-drill", "view-quiz", "view-result", "view-kiroku", "view-support"];
+const VIEWS = ["view-drill", "view-quiz", "view-result", "view-kiroku", "view-award", "view-support"];
 
 // ドリルは日本語のこどもむけ。言語の切り替えは支援ページだけに出す
-const DRILL_VIEWS = ["view-drill", "view-quiz", "view-result", "view-kiroku"];
+const DRILL_VIEWS = ["view-drill", "view-quiz", "view-result", "view-kiroku", "view-award"];
 
 function showView(id) {
   VIEWS.forEach(view => $(view).classList.toggle("is-hidden", view !== id));
@@ -242,6 +242,12 @@ async function route() {
   if (hash === "#/kiroku") {
     showView("view-kiroku");
     renderKiroku();
+    return;
+  }
+
+  if (hash === "#/shoujou") {
+    showView("view-award");
+    renderAward();
     return;
   }
 

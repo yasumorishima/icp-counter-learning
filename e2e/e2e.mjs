@@ -353,6 +353,29 @@ await drill.page.goto(`${BASE}#/kiroku`, { waitUntil: "domcontentloaded" });
 await drill.page.waitForSelector("#view-kiroku:not(.is-hidden)", { timeout: 30000 });
 check("the calendar marks the days done", (await drill.page.locator(".calendar-cell.is-done").count()) >= 1);
 
+// チャレンジ（期間を決めて 毎日 1まい）
+await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+check("a challenge is offered", (await drill.page.locator('[data-challenge="summer"]').count()) === 1);
+await drill.page.locator('[data-challenge="month"]').click();
+await drill.page.waitForSelector(".challenge-fill", { timeout: 30000 });
+const challengeLine = (await drill.page.locator(".challenge-line").textContent()).trim();
+check("the challenge counts the days", /\d+ \/ 30日/.test(challengeLine), challengeLine);
+const filled = await drill.page.evaluate(() => document.querySelector(".challenge-fill").style.width);
+check("today already counts toward the challenge", filled !== "0%", filled);
+
+// しょうじょうは 期間の途中でも 記録から作れる（画面としての検査）
+await drill.page.goto(`${BASE}#/shoujou`, { waitUntil: "domcontentloaded" });
+await drill.page.waitForSelector("#view-award:not(.is-hidden)", { timeout: 30000 });
+const awardText = (await drill.page.locator("#award-body").textContent()).replace(/\s+/g, " ").trim();
+check("the certificate names the person and the days", /ゆうた どの/.test(awardText) && /30日 のうち/.test(awardText), awardText.slice(0, 60));
+
+await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await drill.page.locator('[data-challenge="stop"]').click();
+await drill.page.locator('[data-challenge="stop"]').click();
+check("a challenge can be given up", (await drill.page.locator('[data-challenge="month"]').count()) === 1);
+
 // 九九は段をえらべる
 await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
 await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });

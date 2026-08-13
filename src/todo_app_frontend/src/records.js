@@ -38,6 +38,7 @@ function normalize(p) {
     stars: Number.isFinite(p.stars) ? p.stars : 0,
     days: Array.isArray(p.days) ? p.days.filter(d => typeof d === "string").slice(-400) : [],
     units: p.units && typeof p.units === "object" ? p.units : {},
+    challenge: p.challenge && typeof p.challenge === "object" ? p.challenge : undefined,
   };
 }
 
@@ -240,6 +241,53 @@ export function level() {
 export function totalDays() {
   const p = currentProfile();
   return p ? p.days.length : 0;
+}
+
+// --- チャレンジ（夏休みなど 期間を決めて 毎日 1まい）-----------------------
+
+/**
+ * 期間を決めて 毎日 1まい やる遊び。
+ * 期間・日数だけを覚えておき、達成の判定は やった日の記録から出す
+ * （二重に持たないので ずれない）。
+ */
+export function startChallenge(name, from, to) {
+  const p = currentProfile();
+  if (!p) return null;
+  p.challenge = { name: String(name).slice(0, 20), from, to };
+  write(state);
+  return { ...p.challenge };
+}
+
+export function clearChallenge() {
+  const p = currentProfile();
+  if (!p) return;
+  delete p.challenge;
+  write(state);
+}
+
+export function challenge(now) {
+  const p = currentProfile();
+  if (!p || !p.challenge) return null;
+
+  const from = new Date(p.challenge.from + "T00:00:00");
+  const to = new Date(p.challenge.to + "T00:00:00");
+  const base = now || new Date();
+  const oneDay = 24 * 60 * 60 * 1000;
+
+  const total = Math.round((to - from) / oneDay) + 1;
+  const done = p.days.filter(d => d >= p.challenge.from && d <= p.challenge.to).length;
+  const passed = Math.min(total, Math.max(0, Math.round((base - from) / oneDay) + 1));
+  const left = Math.max(0, total - passed);
+
+  return {
+    ...p.challenge,
+    total,
+    done,
+    passed,
+    left,
+    finished: base > to,
+    complete: done >= total,
+  };
 }
 
 export const LIMITS = { MAX_PROFILES, MAX_NAME };
