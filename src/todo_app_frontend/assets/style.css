@@ -664,12 +664,14 @@ body.on-drill .lang { display: none; }
 .who {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   background: none; border: none; padding: 6px; border-radius: 18px; cursor: pointer; text-align: left;
+  color: var(--ink); font-family: inherit;
 }
 .who:hover { background: var(--soft); }
 .who-caret { font-size: 0.8rem; font-weight: 800; color: var(--grape); }
 .who-face {
   width: 56px; height: 56px; border-radius: 18px; border: 3px solid var(--line-strong);
-  background: var(--soft); font-size: 1.8rem; cursor: pointer; line-height: 1;
+  background: var(--soft); font-size: 1.8rem; line-height: 1; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
 }
 .who-text b { display: block; font-size: 1.1rem; }
 .who-streak { color: var(--dim); font-size: 0.85rem; font-weight: 700; }
@@ -683,7 +685,8 @@ body.on-drill .lang { display: none; }
 .face-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 12px 0; }
 .face {
   width: 56px; height: 56px; border-radius: 18px; font-size: 1.7rem; line-height: 1;
-  border: 3px solid var(--line-strong); background: var(--card); cursor: pointer;
+  border: 3px solid var(--line-strong); background: var(--card); cursor: pointer; color: var(--ink);
+  display: inline-flex; align-items: center; justify-content: center;
 }
 .face.is-on { border-color: var(--grape); background: var(--chip); }
 

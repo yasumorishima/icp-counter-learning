@@ -65,6 +65,48 @@ check("the theme choice survives a reload", (await page.evaluate(() => document.
 await page.click("#theme-toggle");
 check("switching back returns to light", (await page.evaluate(() => document.documentElement.dataset.theme)) === "light");
 
+// 暗い画面で 文字が読めるか（黒文字のまま残っていないか）を 数字で見る
+await page.click("#theme-toggle");
+const contrast = await page.evaluate(() => {
+  const toRgb = text => text.match(/[0-9.]+/g).slice(0, 3).map(Number);
+  const lum = ([r, g, b]) =>
+    [r, g, b]
+      .map(v => v / 255)
+      .map(v => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)))
+      .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+  const ratio = (a, b) => {
+    const la = lum(a);
+    const lb = lum(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  };
+  const results = {};
+  const pairs = [
+    ["name", "#who-name", ".drill-top"],
+    ["streak", "#who-streak", ".drill-top"],
+    ["gradeTab", ".grade-tab", ".drill-top"],
+  ];
+  for (const [label, fg, bg] of pairs) {
+    const el = document.querySelector(fg);
+    const box = document.querySelector(bg);
+    if (!el || !box) continue;
+    results[label] = Math.round(ratio(toRgb(getComputedStyle(el).color), toRgb(getComputedStyle(box).backgroundColor)) * 10) / 10;
+  }
+  return results;
+});
+check(
+  "text stays readable in dark mode",
+  Object.values(contrast).every(v => v >= 4.5),
+  Object.entries(contrast).map(([k, v]) => `${k}=${v}`).join(" ")
+);
+
+const faceCentered = await page.evaluate(() => {
+  const face = document.getElementById("who-face");
+  const style = getComputedStyle(face);
+  return style.display.includes("flex") && style.alignItems === "center" && style.justifyContent === "center";
+});
+check("the face sits in the middle of its box", faceCentered);
+await page.click("#theme-toggle");
+
 // ---- 3. 支援ページ と カウンター --------------------------------------------
 
 const footerSupport = page.locator(".site-footer a[href='#/support']");
