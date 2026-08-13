@@ -141,7 +141,6 @@ body {
   color: var(--ink);
   background: var(--bg);
   overflow-x: hidden;
-  transition: background 0.35s ease, color 0.35s ease;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
