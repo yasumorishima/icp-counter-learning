@@ -150,7 +150,12 @@ async function showFuel() {
 
     const totalCycles = pairs.reduce((sum, [cycles]) => sum + Number(cycles), 0);
     const totalPerDay = pairs.reduce((sum, [, perDay]) => sum + Number(perDay), 0);
-    detail.textContent = t("fuelDetail", trillions(BigInt(Math.round(totalCycles))), trillions(BigInt(Math.round(totalPerDay))));
+    // 1 日ぶんは小さすぎて 0 に丸まるので、1 年ぶんで見せる
+    detail.textContent = t(
+      "fuelDetail",
+      trillions(BigInt(Math.round(totalCycles))),
+      trillions(BigInt(Math.round(totalPerDay * 365)))
+    );
 
     // 10 年ぶんを満タンとして、どれくらい入っているかを見せる
     fill.style.width = Math.max(2, Math.min(100, (years / 10) * 100)) + "%";

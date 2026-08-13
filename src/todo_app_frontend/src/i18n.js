@@ -94,7 +94,7 @@ const en = {
   fuelHeading: "How long it can keep running",
   fuelYears: "about {0} years",
   fuelMonths: "about {0} months",
-  fuelDetail: "{0} left, using {1} a day",
+  fuelDetail: "{0} left, using {1} a year",
   fuelUnknown: "cannot check right now",
   supportHeading: "SUPPORT",
   supportIntro:
@@ -216,7 +216,7 @@ const ja = {
   fuelHeading: "いま どれくらい うごかせるか",
   fuelYears: "{0} 年ぶん",
   fuelMonths: "{0} か月ぶん",
-  fuelDetail: "のこり {0} ／ 1日に {1} つかいます",
+  fuelDetail: "のこり {0} ／ 1年に {1} つかいます",
   fuelUnknown: "いま しらべられません",
   supportHeading: "このサイトについて",
   supportIntro:

@@ -122,6 +122,7 @@ const fuelMain = (await page.locator("#fuel-main").textContent()).trim();
 const fuelDetail = (await page.locator("#fuel-detail").textContent()).trim();
 check("the support page shows how long it can run", /年ぶん|か月ぶん|years|months/.test(fuelMain), fuelMain);
 check("the amount left is shown too", /T/.test(fuelDetail), fuelDetail);
+check("the yearly use is not rounded away", !/(0 T|0,0 T) a year/.test(fuelDetail) && !/1年に 0 T/.test(fuelDetail), fuelDetail);
 const fillWidth = await page.evaluate(() => document.getElementById("fuel-fill").style.width);
 check("the gauge is filled", fillWidth !== "" && fillWidth !== "0", fillWidth);
 check("the folded part is closed by default", !(await page.locator(".support-more").evaluate(el => el.open)));
