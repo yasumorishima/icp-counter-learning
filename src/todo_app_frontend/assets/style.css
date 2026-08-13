@@ -869,3 +869,30 @@ summary:focus-visible {
 body { line-height: 1.75; letter-spacing: 0.02em; }
 .quiz-text { letter-spacing: 0.04em; }
 .unit-name, .who-text b { letter-spacing: 0.03em; }
+
+/* ---- 見やすさの手当て（CI の全数検査で見つかったところ） ---------------- */
+
+/* 文字として読ませる紫は、白地でも 4.5:1 を満たす濃さにする */
+:root { --grape-ink: #6b3fd4; --amber-ink: #8a5a00; }
+:root[data-theme="dark"] { --grape-ink: #cbb6ff; --amber-ink: #ffcf70; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --grape-ink: #cbb6ff; --amber-ink: #ffcf70; }
+}
+
+.panel-title { color: var(--grape-ink); }
+.who-caret { color: var(--grape-ink); }
+.unit-more { color: var(--grape-ink); }
+.star-chip { color: var(--amber-ink); }
+.weak-title, .weak-score { color: var(--amber-ink); }
+.legacy-counter { color: var(--muted); }
+.site-footer { color: var(--muted); }
+
+/* 押すところを 44px 以上にする */
+.brand { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; }
+.legacy-counter { min-height: 44px; padding: 8px 16px; }
+.site-footer a { display: inline-block; padding: 12px 6px; min-height: 44px; }
+.support-more summary { min-height: 44px; padding: 10px 4px; }
+
+/* 暗い画面で アイコンのボタンの中身が沈まないように */
+.icon-btn { color: var(--ink); }
+.icon-btn:hover { color: var(--sun); }

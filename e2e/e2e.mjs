@@ -189,6 +189,18 @@ const contrastSweep = async () =>
         .map(v => v / 255)
         .map(v => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)))
         .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+    // グラデーションは 1 色に決まらないので、その上の文字は検査から外す
+    const onGradient = el => {
+      let node = el;
+      while (node && node !== document.documentElement) {
+        const style = getComputedStyle(node);
+        if (style.backgroundImage && style.backgroundImage.includes("gradient")) return true;
+        const bg = style.backgroundColor;
+        if (bg && !bg.includes("rgba(0, 0, 0, 0)")) return false;
+        node = node.parentElement;
+      }
+      return false;
+    };
     const behind = el => {
       let node = el;
       while (node && node !== document.documentElement) {
@@ -206,6 +218,8 @@ const contrastSweep = async () =>
       if (box.width === 0 || box.height === 0) return;
       const style = getComputedStyle(el);
       if (style.visibility === "hidden" || style.opacity === "0") return;
+      if (style.webkitTextFillColor === "rgba(0, 0, 0, 0)") return; // 文字自体がグラデーション
+      if (onGradient(el)) return;
       const fg = toRgb(style.color);
       const bg = behind(el);
       const la = lum(fg);
