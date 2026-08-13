@@ -686,10 +686,24 @@ async function init() {
   setupPollPage();
   initDrill({ show: showView });
   window.addEventListener("hashchange", route);
-  await ensureAgentReady();
+
+  // ドリルは通信が要らない。つながらなくても画面は出す
+  // （キャニスターへの問い合わせが要るのは キマル と フッターのカウンターだけ）
+  try {
+    await ensureAgentReady();
+  } catch (error) {
+    console.warn("offline: the canister is unreachable", error);
+  }
+
   document.body.dataset.ready = "1";
   await route();
-  setupLegacyCounter();
+
+  try {
+    await setupLegacyCounter();
+  } catch (error) {
+    console.warn("offline: the counter is unavailable", error);
+  }
+
   registerOffline();
 }
 
