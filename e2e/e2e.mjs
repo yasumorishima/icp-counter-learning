@@ -252,8 +252,8 @@ await drill.context.setOffline(false);
 
 const drillOverflow = await drill.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 check("the drill fits a phone-sized screen", drillOverflow <= 0, `overflowX=${drillOverflow}px`);
+await drill.page.screenshot({ path: `${shots}/06-drill-phone.png`, fullPage: true });
 await drill.context.close();
-await mobile.page.screenshot({ path: `${shots}/06-mobile.png`, fullPage: true });
 
 await browser.close();
 
