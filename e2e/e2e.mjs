@@ -228,7 +228,13 @@ const contrastSweep = async () =>
       const size = parseFloat(style.fontSize);
       const bold = Number(style.fontWeight) >= 700;
       const need = size >= 24 || (bold && size >= 18.66) ? 3 : 4.5;
-      if (ratio < need) bad.push((el.id || el.className || el.tagName) + "=" + ratio.toFixed(1));
+      if (ratio < need) {
+        bad.push(
+          (el.id || el.className || el.tagName) +
+            "=" + ratio.toFixed(1) +
+            "(fg:" + fg.join(",") + " bg:" + bg.join(",") + " size:" + Math.round(size) + ")"
+        );
+      }
     });
     return bad;
   });
