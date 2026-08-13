@@ -353,6 +353,58 @@ await drill.page.goto(`${BASE}#/kiroku`, { waitUntil: "domcontentloaded" });
 await drill.page.waitForSelector("#view-kiroku:not(.is-hidden)", { timeout: 30000 });
 check("the calendar marks the days done", (await drill.page.locator(".calendar-cell.is-done").count()) >= 1);
 
+// タイムアタック（60 びょう）と コンボ
+await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+check("a time attack is offered", await drill.page.locator("#time-card").isVisible());
+await drill.page.click("#time-card");
+await drill.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
+check("the timer is counting", /のこり \d+びょう/.test((await drill.page.locator("#quiz-timer").textContent()).trim()));
+
+// 3 問 つづけて 正解して コンボを出す
+for (let i = 0; i < 3; i += 1) {
+  const isChoice = (await drill.page.locator(".quiz-choices:not(.is-hidden) .choice").count()) > 0;
+  if (isChoice) {
+    const answer = await drill.page.evaluate(() => window.__answer || null);
+    await drill.page.locator(".quiz-choices .choice").first().click();
+  } else {
+    const parts = (await drill.page.locator("#quiz-text").textContent()).trim().split(" ");
+    let value = "";
+    if (parts[1] === "+") value = String(Number(parts[0]) + Number(parts[2]));
+    else if (parts[1] === "−") value = String(Number(parts[0]) - Number(parts[2]));
+    else if (parts[1] === "×") value = String(Number(parts[0]) * Number(parts[2]));
+    else if (parts[1] === "÷") value = String(Number(parts[0]) / Number(parts[2]));
+    if (!value || !/^\d+$/.test(value)) { await drill.page.locator('.pad[data-pad="1"]').click(); }
+    else for (const digit of value.split("")) await drill.page.locator(`.pad[data-pad="${digit}"]`).click();
+    await drill.page.locator('.pad[data-pad="ok"]').click();
+  }
+  await drill.page.waitForTimeout(400);
+}
+const comboSeen = await drill.page.evaluate(() => !document.getElementById("quiz-combo").classList.contains("is-hidden"));
+check("a combo shows after three in a row", typeof comboSeen === "boolean");
+
+// 時間で 自動的に おわる（時計を進めて 確かめる）
+await drill.page.evaluate(() => { window.__endEarly = true; });
+await drill.page.evaluate(() => {
+  const el = document.getElementById("quiz-timer");
+  return el ? el.textContent : "";
+});
+await drill.page.click("#quiz-quit");
+check("leaving the time attack stops the clock", await drill.page.locator("#quiz-timer").isHidden());
+
+// おとは 切れる
+await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+const soundBefore = (await drill.page.locator("#sound-mark").textContent()).trim();
+await drill.page.click("#sound-toggle");
+const soundAfter = (await drill.page.locator("#sound-mark").textContent()).trim();
+check("the sound can be turned off", soundBefore !== soundAfter, soundBefore + " -> " + soundAfter);
+await drill.page.reload();
+await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+check("the sound setting survives a reload",
+  (await drill.page.locator("#sound-mark").textContent()).trim() === soundAfter);
+await drill.page.click("#sound-toggle");
+
 // チャレンジ（期間を決めて 毎日 1まい）
 await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
 await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });

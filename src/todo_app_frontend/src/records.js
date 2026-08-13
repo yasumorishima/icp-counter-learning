@@ -39,6 +39,7 @@ function normalize(p) {
     days: Array.isArray(p.days) ? p.days.filter(d => typeof d === "string").slice(-400) : [],
     units: p.units && typeof p.units === "object" ? p.units : {},
     challenge: p.challenge && typeof p.challenge === "object" ? p.challenge : undefined,
+    times: p.times && typeof p.times === "object" ? p.times : {},
   };
 }
 
@@ -241,6 +242,27 @@ export function level() {
 export function totalDays() {
   const p = currentProfile();
   return p ? p.days.length : 0;
+}
+
+/** タイムアタックの さいこう記録（学年ごと） */
+export function bestTime(grade) {
+  const p = currentProfile();
+  if (!p || !p.times) return 0;
+  return p.times["g" + grade] || 0;
+}
+
+export function recordTime(grade, count) {
+  const p = currentProfile();
+  if (!p) return 0;
+  if (!p.times) p.times = {};
+  const key = "g" + grade;
+  const best = Math.max(p.times[key] || 0, count);
+  p.times[key] = best;
+  p.stars += count;
+  const day = today();
+  if (p.days[p.days.length - 1] !== day) p.days.push(day);
+  write(state);
+  return best;
 }
 
 // --- チャレンジ（夏休みなど 期間を決めて 毎日 1まい）-----------------------

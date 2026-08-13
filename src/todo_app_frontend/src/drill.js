@@ -3,6 +3,7 @@
  */
 import { GRADES, unitsOf, unitById, isCorrect, makeSet, makeDaily } from "./drill-data";
 import * as records from "./records";
+import { sounds, confetti, soundOn, toggleSound } from "./effects";
 
 const $ = id => document.getElementById(id);
 const FACES = ["🐻", "🐰", "🐱", "🐶", "🦊", "🐼", "🐸", "🐧"];
@@ -13,6 +14,8 @@ let grade = 1;
 let session = null;
 let typed = "";
 let panelMode = "";
+let combo = 0;
+let timer = null;
 
 export function initDrill(options) {
   show = options.show;
@@ -115,6 +118,14 @@ export function initDrill(options) {
   });
 
   $("daily-card").addEventListener("click", startDaily);
+  $("time-card").addEventListener("click", startTimeAttack);
+
+  $("sound-toggle").addEventListener("click", () => {
+    const on = toggleSound();
+    $("sound-mark").textContent = on ? "♪" : "×";
+    if (on) sounds.tick();
+  });
+  $("sound-mark").textContent = soundOn() ? "♪" : "×";
 
   $("challenge-box").addEventListener("click", event => {
     const act = event.target.closest("[data-challenge]");
@@ -142,6 +153,7 @@ export function initDrill(options) {
   });
 
   $("quiz-quit").addEventListener("click", () => {
+    stopTimer();
     session = null;
     location.hash = "#/";
   });
@@ -228,6 +240,7 @@ export function renderHome() {
   renderWhoPanel();
   renderChallenge();
   renderDaily();
+  renderTimeCard();
   renderLevel();
 
   $("grade-tabs").innerHTML = GRADES.map(
@@ -341,6 +354,59 @@ function renderChallenge() {
     "</div>";
 }
 
+/** 60 びょうで 何問 とけるか。まちがえても 進む（止まらない方が たのしい） */
+function startTimeAttack() {
+  const list = makeSet(unitsOf(grade)[0], 1); // 形をそろえるための ひな型
+  session = {
+    unit: { id: "time-" + grade, name: "タイムアタック（" + grade + "年）", kind: "num" },
+    variant: undefined,
+    time: true,
+    endsAt: Date.now() + 60000,
+    list: [],
+    at: 0,
+    right: 0,
+    done: [],
+  };
+  combo = 0;
+  typed = "";
+  pushTimeQuestion();
+  show("view-quiz");
+  renderQuestion();
+  startTimer();
+  void list;
+}
+
+/** タイムアタックは 1 問ずつ その場で作る（終わりが 時間で決まるため） */
+function pushTimeQuestion() {
+  const units = unitsOf(grade).filter(u => u.kind === "num" || u.kind === "choice");
+  const unit = units[Math.floor(Math.random() * units.length)];
+  const q = unit.make();
+  session.list.push({ ...q, kind: unit.kind, unitId: unit.id, unitName: unit.name });
+}
+
+function startTimer() {
+  stopTimer();
+  const label = $("quiz-timer");
+  label.classList.remove("is-hidden");
+  const tick = () => {
+    const left = Math.max(0, Math.ceil((session.endsAt - Date.now()) / 1000));
+    label.textContent = "のこり " + left + "びょう";
+    label.classList.toggle("is-low", left <= 10);
+    if (left <= 0) {
+      stopTimer();
+      finish();
+    }
+  };
+  tick();
+  timer = setInterval(tick, 250);
+}
+
+function stopTimer() {
+  if (timer) clearInterval(timer);
+  timer = null;
+  $("quiz-timer").classList.add("is-hidden");
+}
+
 function renderDaily() {
   const done = records.doneToday();
   const card = $("daily-card");
@@ -354,6 +420,11 @@ function renderDaily() {
       ? "つづけると " + (days + 1) + "日 めだよ"
       : "10もん やってみよう";
   card.querySelector(".daily-go").textContent = done ? "もういちど" : "やる";
+}
+
+function renderTimeCard() {
+  const best = records.bestTime(grade);
+  $("time-best").textContent = best ? "いままでの さいこう " + best + "もん" : "60びょうで 何もん とける？";
 }
 
 function renderLevel() {
@@ -394,6 +465,7 @@ function startQuiz(unitId, variant) {
 }
 
 function renderQuestion() {
+  if (session.time && !session.list[session.at]) pushTimeQuestion();
   const q = session.list[session.at];
   // きょうの 1まい は 単元が混ざるので、入れ方は 問題ごとに決める
   const unit = { ...session.unit, kind: q.kind || session.unit.kind };
@@ -402,7 +474,9 @@ function renderQuestion() {
   $("quiz-hint").textContent = q.hint || "";
   $("quiz-feedback").textContent = "";
   $("quiz-feedback").className = "quiz-feedback";
-  $("quiz-count").textContent = session.at + 1 + " / " + session.list.length;
+  $("quiz-count").textContent = session.time
+    ? session.right + "もん せいかい"
+    : session.at + 1 + " / " + session.list.length;
   $("quiz-dots").innerHTML = session.list
     .map((_, i) => {
       const mark = session.done[i] === true ? " is-ok" : session.done[i] === false ? " is-ng" : "";
@@ -461,14 +535,30 @@ function answer(given) {
   const feedback = $("quiz-feedback");
   feedback.textContent = ok ? "せいかい！" : "こたえは " + q.answer;
   feedback.className = "quiz-feedback " + (ok ? "is-ok" : "is-ng");
+
+  // つづけて 正解すると コンボが たまる
+  combo = ok ? combo + 1 : 0;
+  const comboLabel = $("quiz-combo");
+  comboLabel.classList.toggle("is-hidden", combo < 3);
+  if (combo >= 3) comboLabel.textContent = combo + "れんぞく！";
+
+  if (ok) sounds.right();
+  else sounds.wrong();
   renderDots();
 
+  const wait = session.time ? (ok ? 260 : 700) : ok ? 550 : 1500;
   setTimeout(() => {
     session.locked = false;
+    if (session.time) {
+      if (Date.now() >= session.endsAt) return;
+      session.at += 1;
+      pushTimeQuestion();
+      return renderQuestion();
+    }
     if (session.at + 1 >= session.list.length) return finish();
     session.at += 1;
     renderQuestion();
-  }, ok ? 550 : 1500);
+  }, wait);
 }
 
 function renderDots() {
@@ -481,8 +571,21 @@ function renderDots() {
 }
 
 function finish() {
+  stopTimer();
   const total = session.list.length;
   const right = session.right;
+
+  if (session.time) {
+    const best = records.recordTime(grade, right);
+    $("result-face").textContent = right >= best && right > 0 ? "🏆" : "⏱";
+    $("result-title").textContent = right >= best && right > 0 ? "さいこう記録！" : "おしまい";
+    $("result-score").textContent = "60びょうで " + right + "もん せいかい";
+    $("result-note").textContent = "いままでの さいこう " + best + "もん";
+    sounds.finish();
+    if (right >= best && right > 0) confetti($("result-confetti"));
+    show("view-result");
+    return;
+  }
 
   if (session.daily) {
     // まざっているので、単元ごとに 分けて 記録する
@@ -499,11 +602,20 @@ function finish() {
     records.record(session.unit.id, right, total);
   }
 
+  const beforeLevel = records.level().rank;
   const perfect = right === total;
   $("result-face").textContent = perfect ? "🎉" : right >= total * 0.8 ? "😊" : "💪";
   $("result-title").textContent = perfect ? "ぜんもん せいかい！" : right >= total * 0.8 ? "よく できました" : "もう いっかい やってみよう";
   $("result-score").textContent = total + "もんちゅう " + right + "もん せいかい";
-  $("result-note").textContent = "★を " + right + "こ もらったよ";
+  const afterLevel = records.level().rank;
+  const levelUp = afterLevel > beforeLevel;
+  $("result-note").textContent = levelUp
+    ? "★を " + right + "こ もらって レベル " + afterLevel + " に なった！"
+    : "★を " + right + "こ もらったよ";
+
+  if (levelUp) sounds.levelUp();
+  else sounds.finish();
+  if (perfect || levelUp) confetti($("result-confetti"));
   show("view-result");
 }
 
