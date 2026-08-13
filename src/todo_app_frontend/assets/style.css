@@ -913,3 +913,7 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
   :root:not([data-theme="light"]) { --footer-ink: #b3adcf; }
 }
 .site-footer, .site-footer a, .legacy-counter { color: var(--footer-ink); }
+
+/* 乗せたときの色も 読める濃さにする（黄色は 白地で 1.7:1 しかない） */
+.icon-btn:hover, .icon-btn:focus-visible { color: var(--amber-ink); border-color: var(--amber-ink); }
+.legacy-counter:hover { color: var(--amber-ink); border-color: var(--amber-ink); }
