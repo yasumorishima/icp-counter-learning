@@ -85,7 +85,11 @@
                 </div>
 
                 <div id="drill-main">
-                    <div id="challenge-box" class="challenge is-hidden"></div>
+                    <button type="button" id="daily-card" class="daily-card">
+                        <span class="daily-label">きょうの 1まい</span>
+                        <span id="daily-state" class="daily-state"></span>
+                        <span class="daily-go">やる</span>
+                    </button>
 
                     <button type="button" id="time-card" class="time-card">
                         <span class="time-label">タイムアタック</span>
@@ -93,11 +97,7 @@
                         <span class="time-go">60びょう</span>
                     </button>
 
-                    <button type="button" id="daily-card" class="daily-card">
-                        <span class="daily-label">きょうの 1まい</span>
-                        <span id="daily-state" class="daily-state"></span>
-                        <span class="daily-go">やる</span>
-                    </button>
+                    <div id="challenge-box" class="challenge is-hidden"></div>
 
                     <div class="level-row">
                         <span id="level-rank" class="level-rank">レベル 1</span>

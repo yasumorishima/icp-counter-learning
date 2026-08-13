@@ -219,7 +219,7 @@ export function renderHome() {
     $("who-name").textContent = profile.name;
     $("who-stars").textContent = profile.stars;
     const days = records.streak();
-    $("who-streak").textContent = days > 1 ? days + "日 つづいているよ" : "きょうも やってみよう";
+    $("who-streak").textContent = days > 1 ? days + "日 つづいているよ" : "きょうも やろう";
     grade = profile.grade || grade;
   }
 
