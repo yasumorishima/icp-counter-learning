@@ -44,6 +44,14 @@ check("default language follows the browser", (await page.locator("#lang-select"
 
 await page.screenshot({ path: `${shots}/01-home.png`, fullPage: true });
 
+// トップはドリル。日程調整はフッターの入口から
+check("the top page is the drill", await page.locator("#view-drill").isVisible());
+check("the drill hides the language switch", await page.locator(".lang").isHidden());
+const kimaruLink = page.locator(".site-footer a[href='#/kimaru']");
+check("kimaru is reachable from the footer", (await kimaruLink.count()) === 1);
+await kimaruLink.click();
+await page.waitForSelector("#f-title", { state: "visible", timeout: 30000 });
+
 await page.fill("#f-title", "Team practice in August");
 
 // 日付を選んで押すだけで候補が入るか
@@ -289,6 +297,72 @@ await mobile.page.goto(pollUrl, { waitUntil: "domcontentloaded" });
 await mobile.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 const overflow = await mobile.page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 check("no horizontal overflow on a phone-sized screen", overflow <= 0, `overflowX=${overflow}px`);
+
+// ---- 10. ドリル -------------------------------------------------------------
+
+const drill = await newPage(420, 900);
+await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+
+check("a new device is asked for a name first", await drill.page.locator("#who-empty").isVisible());
+await drill.page.fill("#who-input", "ゆうた");
+await drill.page.click("#who-add");
+await drill.page.waitForSelector("#drill-main:not(.is-hidden)", { timeout: 30000 });
+check("the name is kept on the device", (await drill.page.locator("#who-name").textContent()) === "ゆうた");
+check("six grades are offered", (await drill.page.locator(".grade-tab").count()) === 6);
+
+const unitCount = await drill.page.locator(".unit-card").count();
+check("grade 1 has units", unitCount >= 5, `units=${unitCount}`);
+
+// 6 学年ぶんの単元がすべて開けるか（空の学年が無いこと）
+const perGrade = [];
+for (let g = 1; g <= 6; g += 1) {
+  await drill.page.locator(`.grade-tab[data-grade="${g}"]`).click();
+  perGrade.push(await drill.page.locator(".unit-card").count());
+}
+check("every grade has units", perGrade.every(n => n >= 5), perGrade.join("/"));
+
+await drill.page.locator('.grade-tab[data-grade="1"]').click();
+await drill.page.locator(".unit-card").first().click();
+await drill.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
+check("the drill starts", await drill.page.locator("#quiz-text").isVisible());
+
+// 10 問を計算して答える（式を読んで自分で解く）
+for (let i = 0; i < 10; i += 1) {
+  const text = (await drill.page.locator("#quiz-text").textContent()).trim();
+  const parts = text.split(" ");
+  const a = Number(parts[0]);
+  const b = Number(parts[2]);
+  const value = String(parts[1] === "+" ? a + b : a - b);
+  for (const digit of value.split("")) {
+    await drill.page.locator(`.pad[data-pad="${digit}"]`).click();
+  }
+  await drill.page.locator('.pad[data-pad="ok"]').click();
+  if (i < 9) await drill.page.waitForFunction(n => document.getElementById("quiz-count").textContent.startsWith(String(n)), i + 2, { timeout: 30000 });
+}
+
+await drill.page.waitForSelector("#view-result:not(.is-hidden)", { timeout: 30000 });
+check("answering every question correctly scores 10", (await drill.page.locator("#result-score").textContent()).includes("10もん せいかい"));
+await drill.page.screenshot({ path: `${shots}/06-drill.png`, fullPage: true });
+
+// 記録は端末に残り、リロードしても消えない
+await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+check("stars are kept after a reload", (await drill.page.locator("#who-stars").textContent()) === "10");
+check("the unit shows the last score", (await drill.page.locator(".unit-card").first().textContent()).includes("100点"));
+
+// 記録はサーバーではなく端末の中にある
+const stored = await drill.page.evaluate(() => localStorage.getItem("drill.records.v1"));
+check("the record lives in this device only", Boolean(stored) && stored.includes("ゆうた"));
+
+await drill.page.goto(`${BASE}#/kiroku`, { waitUntil: "domcontentloaded" });
+await drill.page.waitForSelector("#view-kiroku:not(.is-hidden)", { timeout: 30000 });
+check("the record page lists the person", (await drill.page.locator("#kiroku-people").textContent()).includes("ゆうた"));
+check("the record page lists the unit", (await drill.page.locator(".kiroku-table").count()) === 1);
+
+const drillOverflow = await drill.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+check("the drill fits a phone-sized screen", drillOverflow <= 0, `overflowX=${drillOverflow}px`);
+await drill.context.close();
 await mobile.page.screenshot({ path: `${shots}/06-mobile.png`, fullPage: true });
 
 await browser.close();
