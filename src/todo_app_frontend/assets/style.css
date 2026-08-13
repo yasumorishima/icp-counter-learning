@@ -895,3 +895,21 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
 /* 暗い画面で アイコンのボタンの中身が沈まないように */
 .icon-btn { color: var(--ink); }
 .icon-btn:hover { color: var(--sun); }
+
+/* ---- テーマ切替のときに 色が中途半端な時間を作らない -------------------- */
+/*
+ * 明るい ⇄ 暗い を切り替えると、色に 遷移が掛かっている所だけ 前の色のまま残り、
+ * その 0.2〜0.35 秒は 文字と背景の コントラストが崩れる（CI の全数検査で検出）。
+ * 押したときの 動き（形・影）は残し、色の変化だけ 即時にする。
+ */
+* {
+  transition-property: transform, box-shadow, opacity, outline-color, filter, background-position !important;
+}
+
+/* フッターの小さな文字が 暗い画面で 3.3:1 しか無かった */
+:root { --footer-ink: #5d5878; }
+:root[data-theme="dark"] { --footer-ink: #b3adcf; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --footer-ink: #b3adcf; }
+}
+.site-footer, .site-footer a, .legacy-counter { color: var(--footer-ink); }
