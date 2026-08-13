@@ -193,4 +193,49 @@ export function importAll(text) {
   }
 }
 
+/** きょう すでに やったか */
+export function doneToday(now) {
+  const p = currentProfile();
+  if (!p) return false;
+  return p.days[p.days.length - 1] === today(now);
+}
+
+/** 今月の どの日に やったか（カレンダー用） */
+export function monthMarks(now) {
+  const p = currentProfile();
+  const base = now || new Date();
+  const year = base.getFullYear();
+  const month = base.getMonth();
+  const first = new Date(year, month, 1);
+  const days = new Date(year, month + 1, 0).getDate();
+  const set = new Set(p ? p.days : []);
+  const marks = [];
+  for (let d = 1; d <= days; d += 1) {
+    const key = today(new Date(year, month, d));
+    marks.push({ day: d, done: set.has(key), future: new Date(year, month, d) > base });
+  }
+  return { year, month: month + 1, startWeekday: first.getDay(), marks };
+}
+
+/** ★の合計から レベルを出す。上がるたびに 必要な数が すこし増える */
+export function level() {
+  const p = currentProfile();
+  const stars = p ? p.stars : 0;
+  let need = 30;
+  let rank = 1;
+  let rest = stars;
+  while (rest >= need && rank < 99) {
+    rest -= need;
+    rank += 1;
+    need = Math.round(need * 1.15);
+  }
+  return { rank, into: rest, need, stars };
+}
+
+/** これまでに やった 日数（のべ） */
+export function totalDays() {
+  const p = currentProfile();
+  return p ? p.days.length : 0;
+}
+
 export const LIMITS = { MAX_PROFILES, MAX_NAME };

@@ -917,3 +917,36 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
 /* 乗せたときの色も 読める濃さにする（黄色は 白地で 1.7:1 しかない） */
 .icon-btn:hover, .icon-btn:focus-visible { color: var(--amber-ink); border-color: var(--amber-ink); }
 .legacy-counter:hover { color: var(--amber-ink); border-color: var(--amber-ink); }
+
+/* ---- きょうの 1まい / レベル / カレンダー ------------------------------- */
+.daily-card {
+  width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center;
+  padding: 16px 18px; margin-bottom: 12px; cursor: pointer; text-align: left;
+  border: 3px solid var(--line-strong); border-radius: 22px; background: var(--card); color: var(--ink);
+}
+.daily-card.is-done { border-color: var(--ok-fg); background: var(--ok-bg); }
+.daily-label { font-size: 1.15rem; font-weight: 900; }
+.daily-state { grid-column: 1; font-size: 0.9rem; font-weight: 800; color: var(--muted); }
+.daily-card.is-done .daily-state { color: var(--ok-fg); }
+.daily-go {
+  grid-column: 2; grid-row: 1 / span 2; align-self: center;
+  padding: 12px 20px; min-height: 48px; display: inline-flex; align-items: center;
+  border-radius: 999px; background: var(--chip); color: var(--grape-ink); font-weight: 900;
+}
+
+.level-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.level-rank { font-weight: 900; color: var(--ink); white-space: nowrap; }
+.level-bar { flex: 1; height: 14px; border-radius: 999px; background: var(--chip); overflow: hidden; }
+.level-fill { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--sky), var(--grape)); }
+.level-need { font-size: 0.8rem; font-weight: 800; color: var(--muted); white-space: nowrap; }
+
+.calendar { margin: 12px 0 18px; }
+.calendar-head { font-weight: 900; margin-bottom: 8px; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.calendar-cell {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  border-radius: 12px; background: var(--chip); color: var(--muted); font-weight: 800; font-size: 0.85rem;
+}
+.calendar-cell.is-done { background: var(--ok-bg); color: var(--ok-fg); }
+.calendar-cell.is-future { opacity: 0.45; }
+.calendar-cell.is-blank { background: none; }

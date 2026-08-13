@@ -308,6 +308,51 @@ await drill.page.waitForSelector("#view-kiroku:not(.is-hidden)", { timeout: 3000
 check("the record page lists the person", (await drill.page.locator("#kiroku-people").textContent()).includes("ゆうた"));
 check("the record page lists the unit", (await drill.page.locator(".kiroku-table").count()) === 1);
 
+// きょうの 1まい は 毎日 かわり、その日のうちは 同じ
+await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+check("today's sheet is offered", await drill.page.locator("#daily-card").isVisible());
+const levelBefore = await drill.page.locator("#level-rank").textContent();
+check("a level is shown", /レベル \d+/.test(levelBefore), levelBefore);
+
+const firstDaily = await drill.page.evaluate(() => {
+  const key = new Date();
+  return key.toISOString();
+});
+await drill.page.click("#daily-card");
+await drill.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
+const dailyFirstText = (await drill.page.locator("#quiz-text").textContent()).trim();
+const dailyUnitLabel = (await drill.page.locator("#quiz-unit").textContent()).trim();
+check("today's sheet mixes real units", dailyUnitLabel.length > 0, dailyUnitLabel);
+
+// 10 問 とにかく答える（正解でも まちがいでも 記録は残る）
+for (let i = 0; i < 10; i += 1) {
+  const choices = await drill.page.locator(".quiz-choices:not(.is-hidden) .choice").count();
+  if (choices > 0) {
+    await drill.page.locator(".quiz-choices .choice").first().click();
+  } else {
+    await drill.page.locator('.pad[data-pad="1"]').click();
+    await drill.page.locator('.pad[data-pad="ok"]').click();
+  }
+  if (i < 9) await drill.page.waitForFunction(n => document.getElementById("quiz-count").textContent.startsWith(String(n)), i + 2, { timeout: 30000 });
+}
+await drill.page.waitForSelector("#view-result:not(.is-hidden)", { timeout: 30000 });
+await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+check("today's sheet is marked as done", await drill.page.locator("#daily-card.is-done").isVisible());
+
+// もう一度ひらいても 同じ問題（その日のうちは 変わらない）
+await drill.page.click("#daily-card");
+await drill.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
+check("today's sheet stays the same all day",
+  (await drill.page.locator("#quiz-text").textContent()).trim() === dailyFirstText, dailyFirstText);
+await drill.page.click("#quiz-quit");
+
+// カレンダーに きょうの印が つく
+await drill.page.goto(`${BASE}#/kiroku`, { waitUntil: "domcontentloaded" });
+await drill.page.waitForSelector("#view-kiroku:not(.is-hidden)", { timeout: 30000 });
+check("the calendar marks the days done", (await drill.page.locator(".calendar-cell.is-done").count()) >= 1);
+
 // 九九は段をえらべる
 await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
 await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });

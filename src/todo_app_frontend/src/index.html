@@ -82,6 +82,18 @@
                 </div>
 
                 <div id="drill-main">
+                    <button type="button" id="daily-card" class="daily-card">
+                        <span class="daily-label">きょうの 1まい</span>
+                        <span id="daily-state" class="daily-state"></span>
+                        <span class="daily-go">やる</span>
+                    </button>
+
+                    <div class="level-row">
+                        <span id="level-rank" class="level-rank">レベル 1</span>
+                        <span class="level-bar"><span id="level-fill" class="level-fill"></span></span>
+                        <span id="level-need" class="level-need"></span>
+                    </div>
+
                     <div id="weak-row" class="weak-row is-hidden"></div>
                     <div class="grade-tabs" id="grade-tabs"></div>
                     <div class="unit-grid" id="unit-grid"></div>
@@ -129,6 +141,7 @@
                     <h2 class="panel-title">きろく</h2>
                     <p class="lede">きろくは この たんまつの なかだけに あります。ほかへは 送られません。</p>
                     <div id="kiroku-people" class="people"></div>
+                    <div id="kiroku-calendar" class="calendar"></div>
                     <div id="kiroku-stats" class="kiroku-stats"></div>
                     <h3 class="support-sub">たんまつを かえるとき</h3>
                     <div class="share-row">

@@ -1,7 +1,7 @@
 /**
  * ドリルの画面。問題は端末の中で作り、記録も端末の中だけに置く。
  */
-import { GRADES, unitsOf, unitById, isCorrect, makeSet } from "./drill-data";
+import { GRADES, unitsOf, unitById, isCorrect, makeSet, makeDaily } from "./drill-data";
 import * as records from "./records";
 
 const $ = id => document.getElementById(id);
@@ -114,6 +114,8 @@ export function initDrill(options) {
     if (button) startQuiz(button.dataset.unit);
   });
 
+  $("daily-card").addEventListener("click", startDaily);
+
   $("quiz-quit").addEventListener("click", () => {
     session = null;
     location.hash = "#/";
@@ -197,6 +199,8 @@ export function renderHome() {
   $("weak-row").classList.toggle("is-hidden", weak.length === 0);
 
   renderWhoPanel();
+  renderDaily();
+  renderLevel();
 
   $("grade-tabs").innerHTML = GRADES.map(
     g => '<button type="button" class="grade-tab' + (g === grade ? " is-on" : "") + '" data-grade="' + g + '">' + g + "年</button>"
@@ -267,6 +271,52 @@ function renderWhoPanel() {
   });
 }
 
+/** きょうの 日付。端末の時計で決める */
+function todayKey(now) {
+  const d = now || new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+function renderDaily() {
+  const done = records.doneToday();
+  const card = $("daily-card");
+  card.classList.toggle("is-done", done);
+  const days = records.streak();
+  $("daily-state").textContent = done
+    ? days > 1
+      ? "きょうは おわり！ " + days + "日 つづいているよ"
+      : "きょうは おわり！"
+    : days > 0
+      ? "つづけると " + (days + 1) + "日 めだよ"
+      : "10もん やってみよう";
+  card.querySelector(".daily-go").textContent = done ? "もういちど" : "やる";
+}
+
+function renderLevel() {
+  const state = records.level();
+  $("level-rank").textContent = "レベル " + state.rank;
+  $("level-fill").style.width = Math.round((state.into / state.need) * 100) + "%";
+  $("level-need").textContent = "あと ★" + (state.need - state.into);
+}
+
+/** きょうの 1まい。その日ごとに 決まった 10 問 */
+function startDaily() {
+  const list = makeDaily(grade, todayKey(), QUESTIONS);
+  if (!list.length) return;
+  session = {
+    unit: { id: "daily-" + grade, name: "きょうの 1まい（" + grade + "年）", kind: "num" },
+    variant: undefined,
+    daily: true,
+    list,
+    at: 0,
+    right: 0,
+    done: [],
+  };
+  typed = "";
+  show("view-quiz");
+  renderQuestion();
+}
+
 // --- 問題 -------------------------------------------------------------------
 
 function startQuiz(unitId, variant) {
@@ -280,9 +330,10 @@ function startQuiz(unitId, variant) {
 }
 
 function renderQuestion() {
-  const unit = session.unit;
   const q = session.list[session.at];
-  $("quiz-unit").textContent = unit.name;
+  // きょうの 1まい は 単元が混ざるので、入れ方は 問題ごとに決める
+  const unit = { ...session.unit, kind: q.kind || session.unit.kind };
+  $("quiz-unit").textContent = q.unitName || unit.name;
   $("quiz-text").textContent = q.text;
   $("quiz-hint").textContent = q.hint || "";
   $("quiz-feedback").textContent = "";
@@ -338,7 +389,7 @@ function press(pad) {
 function answer(given) {
   if (!session || session.locked) return;
   const q = session.list[session.at];
-  const ok = isCorrect(session.unit, given, q.answer);
+  const ok = isCorrect({ kind: q.kind || session.unit.kind }, given, q.answer);
   session.done[session.at] = ok;
   if (ok) session.right += 1;
   session.locked = true;
@@ -368,7 +419,21 @@ function renderDots() {
 function finish() {
   const total = session.list.length;
   const right = session.right;
-  records.record(session.unit.id, right, total);
+
+  if (session.daily) {
+    // まざっているので、単元ごとに 分けて 記録する
+    const perUnit = new Map();
+    session.list.forEach((q, i) => {
+      const id = q.unitId || session.unit.id;
+      const stat = perUnit.get(id) || { right: 0, total: 0 };
+      stat.total += 1;
+      if (session.done[i]) stat.right += 1;
+      perUnit.set(id, stat);
+    });
+    perUnit.forEach((stat, id) => records.record(id, stat.right, stat.total));
+  } else {
+    records.record(session.unit.id, right, total);
+  }
 
   const perfect = right === total;
   $("result-face").textContent = perfect ? "🎉" : right >= total * 0.8 ? "😊" : "💪";
@@ -400,8 +465,11 @@ export function renderKiroku() {
 
   if (!current) {
     $("kiroku-stats").innerHTML = "";
+    $("kiroku-calendar").innerHTML = "";
     return;
   }
+
+  renderCalendar();
 
   const rows = Object.keys(current.units)
     .map(id => {
@@ -525,4 +593,25 @@ function drawClock(clock) {
   g.beginPath();
   g.arc(c, c, 6, 0, Math.PI * 2);
   g.fill();
+}
+
+/** 今月の カレンダー。やった日に 色が つく */
+function renderCalendar() {
+  const { year, month, startWeekday, marks } = records.monthMarks();
+  const week = ["日", "月", "火", "水", "木", "金", "土"];
+  const blanks = Array.from({ length: startWeekday }, () => '<span class="calendar-cell is-blank"></span>').join("");
+  const cells = marks
+    .map(m => {
+      const state = m.done ? " is-done" : m.future ? " is-future" : "";
+      return '<span class="calendar-cell' + state + '">' + m.day + "</span>";
+    })
+    .join("");
+  const doneCount = marks.filter(m => m.done).length;
+  $("kiroku-calendar").innerHTML =
+    '<p class="calendar-head">' + year + "年 " + month + "月 ／ " + doneCount + "日 やったよ</p>" +
+    '<div class="calendar-grid">' +
+    week.map(w => '<span class="calendar-cell is-blank">' + w + "</span>").join("") +
+    blanks +
+    cells +
+    "</div>";
 }

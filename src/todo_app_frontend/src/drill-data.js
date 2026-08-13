@@ -243,3 +243,58 @@ export function makeSet(unit, count, variant) {
   while (out.length < count) out.push(unit.make(variant));
   return out;
 }
+
+
+/**
+ * その日ごとに 決まった問題を作るための サイコロ。
+ * 同じ日・同じ学年なら 同じ問題になり、日が変われば 変わる。
+ */
+function seededRandom(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a += 0x6d2b79f5;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function seedOf(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i += 1) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * きょうの 1 まい。その学年の 単元から まんべんなく 10 問。
+ * 問題そのものは 日付で決まるので、同じ日に 何度ひらいても 同じ。
+ */
+export function makeDaily(grade, dateKey, count) {
+  const units = unitsOf(grade);
+  if (!units.length) return [];
+
+  const random = seededRandom(seedOf(dateKey + "/" + grade));
+  const original = Math.random;
+  Math.random = random; // 生成器の中の ゆらぎも その日ごとに固定する
+  try {
+    const out = [];
+    const seen = new Set();
+    let guard = 0;
+    while (out.length < count && guard < count * 40) {
+      guard += 1;
+      const unit = units[Math.floor(random() * units.length)];
+      const q = unit.make();
+      const key = keyOf(q);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ ...q, kind: unit.kind, unitId: unit.id, unitName: unit.name });
+    }
+    return out;
+  } finally {
+    Math.random = original;
+  }
+}
