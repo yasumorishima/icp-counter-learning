@@ -3,6 +3,7 @@ import { Ed25519KeyIdentity } from "@icp-sdk/core/identity";
 import { idlFactory, canisterId as localCanisterId } from "../../declarations/todo_app_backend";
 import qrcode from "qrcode-generator";
 import { LANGS, RTL, makeT, detectLang, saveLang, errorMessage } from "./i18n";
+import { initDrill, renderHome as renderDrillHome, renderKiroku } from "./drill";
 
 // --- 接続 -------------------------------------------------------------------
 
@@ -620,15 +621,40 @@ async function setupLegacyCounter() {
 
 // --- 画面切り替え -----------------------------------------------------------
 
-const VIEWS = ["view-home", "view-poll", "view-support", "view-missing"];
+const VIEWS = ["view-drill", "view-quiz", "view-result", "view-kiroku", "view-home", "view-poll", "view-support", "view-missing"];
+
+// ドリルは日本語のこどもむけなので、言語の切り替えはキマル側の画面にだけ出す
+const DRILL_VIEWS = ["view-drill", "view-quiz", "view-result", "view-kiroku"];
 
 function showView(id) {
   VIEWS.forEach(view => $(view).classList.toggle("is-hidden", view !== id));
+  document.body.classList.toggle("on-drill", DRILL_VIEWS.indexOf(id) >= 0);
   window.scrollTo(0, 0);
 }
 
 async function route() {
   const hash = location.hash;
+
+  if (hash === "" || hash === "#" || hash === "#/") {
+    currentPoll = null;
+    showView("view-drill");
+    renderDrillHome();
+    return;
+  }
+
+  if (hash === "#/kiroku") {
+    currentPoll = null;
+    showView("view-kiroku");
+    renderKiroku();
+    return;
+  }
+
+  if (hash === "#/kimaru") {
+    currentPoll = null;
+    showView("view-home");
+    return;
+  }
+
   if (hash === "#/support") {
     currentPoll = null;
     showView("view-support");
@@ -639,7 +665,8 @@ async function route() {
   const match = hash.match(/^#\/p\/([a-z0-9]+)$/);
   if (!match) {
     currentPoll = null;
-    showView("view-home");
+    showView("view-drill");
+    renderDrillHome();
     return;
   }
 
@@ -657,6 +684,7 @@ async function init() {
   applyLang();
   setupCreateForm();
   setupPollPage();
+  initDrill({ show: showView });
   window.addEventListener("hashchange", route);
   await ensureAgentReady();
   document.body.dataset.ready = "1";

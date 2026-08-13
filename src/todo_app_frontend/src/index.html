@@ -51,6 +51,88 @@
         </header>
 
         <main>
+            <!-- ============ ドリル（トップ） ============ -->
+            <section id="view-drill" class="view">
+                <div class="drill-top">
+                    <div class="who">
+                        <button type="button" id="who-face" class="who-face" aria-label="つかう人">🐻</button>
+                        <div class="who-text">
+                            <b id="who-name">はじめまして</b>
+                            <span id="who-streak" class="who-streak"></span>
+                        </div>
+                    </div>
+                    <div class="who-right">
+                        <span class="star-chip"><span class="star-mark">★</span><b id="who-stars">0</b></span>
+                        <a class="btn-ghost" href="#/kiroku">きろく</a>
+                    </div>
+                </div>
+
+                <div id="who-empty" class="panel panel-center is-hidden">
+                    <h2 class="panel-title">なまえを きめよう</h2>
+                    <p class="lede">この きろくは この たんまつの なかだけに のこります。</p>
+                    <div class="face-row" id="face-row"></div>
+                    <input id="who-input" type="text" maxlength="12" placeholder="なまえ">
+                    <button type="button" id="who-add" class="cta"><span class="cta-label">はじめる</span></button>
+                </div>
+
+                <div id="drill-main">
+                    <div class="grade-tabs" id="grade-tabs"></div>
+                    <div class="unit-grid" id="unit-grid"></div>
+                </div>
+            </section>
+
+            <!-- ============ 問題 ============ -->
+            <section id="view-quiz" class="view is-hidden">
+                <div class="quiz-bar">
+                    <button type="button" id="quiz-quit" class="btn-ghost">やめる</button>
+                    <div id="quiz-dots" class="quiz-dots"></div>
+                    <span id="quiz-count" class="quiz-count"></span>
+                </div>
+
+                <div class="quiz-card">
+                    <span id="quiz-unit" class="quiz-unit"></span>
+                    <p id="quiz-text" class="quiz-text"></p>
+                    <div id="quiz-answer" class="quiz-answer">?</div>
+                    <p id="quiz-hint" class="quiz-hint"></p>
+                    <p id="quiz-feedback" class="quiz-feedback" role="status"></p>
+                </div>
+
+                <div id="quiz-choices" class="quiz-choices is-hidden"></div>
+                <div id="quiz-keypad" class="keypad"></div>
+            </section>
+
+            <!-- ============ けっか ============ -->
+            <section id="view-result" class="view is-hidden">
+                <div class="panel panel-center">
+                    <div id="result-face" class="result-face">🎉</div>
+                    <h2 id="result-title" class="panel-title"></h2>
+                    <p id="result-score" class="result-score"></p>
+                    <p id="result-note" class="lede"></p>
+                    <div class="result-actions">
+                        <button type="button" id="result-again" class="cta"><span class="cta-label">もういちど</span></button>
+                        <a class="btn-ghost" href="#/">ほかの もんだい</a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ きろく ============ -->
+            <section id="view-kiroku" class="view is-hidden">
+                <div class="panel">
+                    <h2 class="panel-title">きろく</h2>
+                    <p class="lede">きろくは この たんまつの なかだけに あります。ほかへは 送られません。</p>
+                    <div id="kiroku-people" class="people"></div>
+                    <div id="kiroku-stats" class="kiroku-stats"></div>
+                    <h3 class="support-sub">たんまつを かえるとき</h3>
+                    <div class="share-row">
+                        <button type="button" id="kiroku-export" class="btn-ghost">かきだす</button>
+                        <button type="button" id="kiroku-import" class="btn-ghost">よみこむ</button>
+                        <input id="kiroku-file" type="file" accept="application/json" class="is-hidden">
+                    </div>
+                    <p id="kiroku-status" class="status" role="status"></p>
+                    <p><a class="btn-ghost" href="#/">もどる</a></p>
+                </div>
+            </section>
+
             <!-- ============ トップ / 作成 ============ -->
             <section id="view-home" class="view">
                 <div class="hero">
@@ -246,6 +328,8 @@
                 <a href="https://github.com/yasumorishima/icp-counter-learning" target="_blank" rel="noopener noreferrer" data-t="source"></a>
                 <span class="footer-sep">·</span>
                 <a href="#/support" data-t="supportNav"></a>
+                <span class="footer-sep">·</span>
+                <a href="#/kimaru">キマル（日程調整）</a>
             </p>
             <p class="legacy">
                 <button type="button" id="legacy-counter" class="legacy-counter" title="">
