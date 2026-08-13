@@ -702,9 +702,9 @@ body.on-drill .lang { display: none; }
 
 .quiz-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
 .quiz-dots { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
-.dot { width: 12px; height: 12px; border-radius: 999px; background: var(--chip); display: inline-block; }
-.dot.is-ok { background: var(--ok-fg); }
-.dot.is-ng { background: var(--bad-fg); }
+.dot { width: 14px; height: 14px; border-radius: 999px; background: var(--card); border: 2px solid var(--line-strong); display: inline-block; }
+.dot.is-ok { background: var(--ok-fg); border-color: var(--ok-fg); }
+.dot.is-ng { background: var(--bad-fg); border-color: var(--bad-fg); }
 .dot.is-now { outline: 3px solid var(--grape); outline-offset: 2px; }
 .quiz-count { font-weight: 800; color: var(--dim); }
 
@@ -741,7 +741,8 @@ body.on-drill .lang { display: none; }
 .pad-ok { grid-column: 1 / -1; font-size: 1.3rem; background: linear-gradient(90deg, var(--sky), var(--grape)); color: #fff; border-color: transparent; }
 .pad-blank { visibility: hidden; }
 
-.result-face { font-size: 3.4rem; }
+.result-face { font-size: 3.4rem; line-height: 1.1; }
+#result-title { font-size: 1.5rem; color: var(--ink); margin: 6px 0 2px; }
 .result-score { font-size: 1.3rem; font-weight: 900; margin: 6px 0; }
 .result-actions { display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 14px; }
 
