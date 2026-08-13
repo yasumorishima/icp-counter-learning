@@ -91,6 +91,11 @@ const en = {
   missingP: "It may have been deleted, or passed the 90-day retention period.",
   createNew: "Create a new one",
   supportNav: "Support",
+  fuelHeading: "How long it can keep running",
+  fuelYears: "about {0} years",
+  fuelMonths: "about {0} months",
+  fuelDetail: "{0} left, using {1} a day",
+  fuelUnknown: "cannot check right now",
   supportHeading: "SUPPORT",
   supportIntro:
     "This site has no ads and no sign-up. It costs a little to keep running, and for now the person who made it pays for that.",
@@ -208,6 +213,11 @@ const ja = {
   missingP: "削除されたか、保存期間の 90 日を過ぎた可能性があります。",
   createNew: "新しく作る",
   supportNav: "支援",
+  fuelHeading: "いま どれくらい うごかせるか",
+  fuelYears: "{0} 年ぶん",
+  fuelMonths: "{0} か月ぶん",
+  fuelDetail: "のこり {0} ／ 1日に {1} つかいます",
+  fuelUnknown: "いま しらべられません",
   supportHeading: "このサイトについて",
   supportIntro:
     "このサイトは 広告も 会員登録も ありません。動かすのに すこしだけ お金が かかっていて、いまは 作った人が はらっています。",

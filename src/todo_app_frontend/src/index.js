@@ -118,7 +118,48 @@ async function loadSupport() {
   $("backend-id").value = canisterId;
   $("frontend-id").value = frontendCanisterId();
   $("wallet-cmd").textContent = `dfx wallet --network ic send ${canisterId} 1000000000000`;
-  // 燃料の残量や件数は、使いに来た人に見せるものではないので出さない
+  await showFuel();
+}
+
+/** 兆（T）でまるめる。桁が大きすぎて そのままでは意味が取れないため */
+function trillions(value) {
+  return (Number(BigInt(value) / 1_000_000_000n) / 1000).toLocaleString(lang, { maximumFractionDigits: 2 }) + " T";
+}
+
+/**
+ * あと どれくらい 動かせるか。
+ * データの置き場所とページの置き場所の うち、先に尽きるほうで見る。
+ */
+async function showFuel() {
+  const main = $("fuel-main");
+  const detail = $("fuel-detail");
+  const fill = $("fuel-fill");
+  try {
+    const fuel = await backend.fuel();
+    const pairs = [[fuel.dataCycles, fuel.dataPerDay]];
+    if (fuel.pageCycles.length && fuel.pagePerDay.length) pairs.push([fuel.pageCycles[0], fuel.pagePerDay[0]]);
+
+    const days = pairs
+      .filter(([, perDay]) => Number(perDay) > 0)
+      .map(([cycles, perDay]) => Number(cycles) / Number(perDay));
+    if (!days.length) throw new Error("no burn rate");
+
+    const shortest = Math.min(...days);
+    const years = shortest / 365;
+    main.textContent = years >= 1 ? t("fuelYears", years.toFixed(1)) : t("fuelMonths", Math.round(shortest / 30));
+
+    const totalCycles = pairs.reduce((sum, [cycles]) => sum + Number(cycles), 0);
+    const totalPerDay = pairs.reduce((sum, [, perDay]) => sum + Number(perDay), 0);
+    detail.textContent = t("fuelDetail", trillions(BigInt(Math.round(totalCycles))), trillions(BigInt(Math.round(totalPerDay))));
+
+    // 10 年ぶんを満タンとして、どれくらい入っているかを見せる
+    fill.style.width = Math.max(2, Math.min(100, (years / 10) * 100)) + "%";
+  } catch (error) {
+    console.warn("fuel is unavailable", error);
+    main.textContent = t("fuelUnknown");
+    detail.textContent = "";
+    fill.style.width = "0";
+  }
 }
 
 // --- 前身のカウンター（フッターの小さいやつ） -------------------------------

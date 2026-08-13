@@ -115,6 +115,15 @@ await footerSupport.click();
 await page.waitForSelector("#view-support:not(.is-hidden)", { timeout: 30000 });
 check("support page shows no fuel figures", (await page.locator("#m-cycles, #m-polls, #m-entries").count()) === 0);
 check("the technical part is folded away", (await page.locator(".support-more").count()) === 1);
+
+// あと どれくらい 動かせるか が 出るか（ローカルでも 実際の数字が返る）
+await page.waitForFunction(() => document.getElementById("fuel-main").textContent !== "—", null, { timeout: 30000 });
+const fuelMain = (await page.locator("#fuel-main").textContent()).trim();
+const fuelDetail = (await page.locator("#fuel-detail").textContent()).trim();
+check("the support page shows how long it can run", /年ぶん|か月ぶん|years|months/.test(fuelMain), fuelMain);
+check("the amount left is shown too", /T/.test(fuelDetail), fuelDetail);
+const fillWidth = await page.evaluate(() => document.getElementById("fuel-fill").style.width);
+check("the gauge is filled", fillWidth !== "" && fillWidth !== "0", fillWidth);
 check("the folded part is closed by default", !(await page.locator(".support-more").evaluate(el => el.open)));
 
 const before = await page.locator("#legacy-count").textContent();

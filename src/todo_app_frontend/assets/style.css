@@ -813,3 +813,15 @@ body.on-drill .lang { display: none; }
 .who-pick.is-on { border-color: var(--grape); background: var(--chip); }
 .who-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .who-panel input[type="text"] { width: 100%; }
+
+/* 支援ページ: あと どれくらい うごくか */
+.fuel {
+  display: grid; gap: 6px; justify-items: center; text-align: center;
+  background: var(--soft); border: 3px solid var(--line-strong); border-radius: 22px;
+  padding: 18px 16px; margin: 14px 0;
+}
+.fuel-label { font-weight: 800; color: var(--muted); }
+.fuel-main { font-size: 2rem; font-weight: 900; color: var(--ink); line-height: 1.2; }
+.fuel-detail { font-size: 0.9rem; color: var(--dim); font-weight: 700; }
+.fuel-bar { width: 100%; height: 14px; border-radius: 999px; background: var(--chip); overflow: hidden; margin-top: 4px; }
+.fuel-fill { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--mint), var(--sky)); }

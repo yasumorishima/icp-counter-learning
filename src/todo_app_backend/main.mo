@@ -26,6 +26,18 @@ import Trie "mo:base/Trie";
 
 persistent actor Kimaru {
 
+  /// ページを配っているキャニスター。燃料の残りを一緒に見せるために持つ
+  let FRONTEND_ID = "iqjbc-7aaaa-aaaaj-qnnsa-cai";
+
+  /// 管理キャニスター。自分（と、controller に入っている相手）の状態を読むのに使う
+  transient let IC = actor "aaaaa-aa" : actor {
+    canister_status : ({ canister_id : Principal }) -> async {
+      cycles : Nat;
+      idle_cycles_burned_per_day : Nat;
+    };
+  };
+
+
   // ---- 型 ------------------------------------------------------------------
 
   public type Choice = { #yes; #maybe; #no };
@@ -74,6 +86,14 @@ persistent actor Kimaru {
     isOwner : Bool;
     myTag : Text;
     entries : [Entry];
+  };
+
+  /// 支援ページに出す 燃料の話
+  public type Fuel = {
+    dataCycles : Nat;
+    dataPerDay : Nat;
+    pageCycles : ?Nat;
+    pagePerDay : ?Nat;
   };
 
   public type NewPoll = {
@@ -374,6 +394,23 @@ persistent actor Kimaru {
     };
   };
 
+  /// 残りの燃料と、1 日あたりの減り。支援ページで「あと何年ぶん」を出すために使う。
+  /// 自分の状態は自分で読める。ページを配る側の状態も読めるよう、controller に入れてある。
+  public func fuel() : async Fuel {
+    let self = await IC.canister_status({ canister_id = Principal.fromActor(Kimaru) });
+    let page = try {
+      ?(await IC.canister_status({ canister_id = Principal.fromText(FRONTEND_ID) }));
+    } catch (_) {
+      null; // 読めないときは黙って省く（表示側で「—」にする）
+    };
+    {
+      dataCycles = self.cycles;
+      dataPerDay = self.idle_cycles_burned_per_day;
+      pageCycles = switch (page) { case (?p) { ?p.cycles }; case null { null } };
+      pagePerDay = switch (page) { case (?p) { ?p.idle_cycles_burned_per_day }; case null { null } };
+    };
+  };
+
   public query func health() : async Health {
     var entries = 0;
     for ((_, p) in Trie.iter(polls)) { entries += p.entries.size() };
@@ -385,6 +422,8 @@ persistent actor Kimaru {
       legacyCount;
     };
   };
+
+  // ---- 燃料の読み取り ------------------------------------------------------
 
   // ---- 前身のカウンター（フッターに小さく残してある） ----------------------
 
