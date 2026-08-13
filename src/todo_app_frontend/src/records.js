@@ -274,9 +274,10 @@ export function challenge(now) {
   const base = now || new Date();
   const oneDay = 24 * 60 * 60 * 1000;
 
-  const total = Math.round((to - from) / oneDay) + 1;
+  const total = Math.round((to - from) / oneDay) + 1; // 夏時間の無い日本では ちょうど割り切れる
   const done = p.days.filter(d => d >= p.challenge.from && d <= p.challenge.to).length;
-  const passed = Math.min(total, Math.max(0, Math.round((base - from) / oneDay) + 1));
+  // 何日めか は 切り捨てで数える（四捨五入だと 初日の夜に 2日めになってしまう）
+  const passed = Math.min(total, Math.max(0, Math.floor((base - from) / oneDay) + 1));
   const left = Math.max(0, total - passed);
 
   return {

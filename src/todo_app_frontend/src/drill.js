@@ -693,7 +693,7 @@ export function renderAward() {
 
   const today = new Date();
   const date = today.getFullYear() + "年 " + (today.getMonth() + 1) + "月 " + today.getDate() + "日";
-  const title = state.complete ? "しょうじょう" : "がんばったで しょう";
+  const title = state.complete ? "しょうじょう" : "がんばりカード";
   const level = records.level();
 
   box.innerHTML =
