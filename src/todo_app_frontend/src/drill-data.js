@@ -23,6 +23,17 @@ function shuffle(list) {
   return copy;
 }
 
+/**
+ * 「3じ」「3じ15ふん」。ふん / ぷん の読み分けを 1 か所に閉じ込める。
+ * 一のくらいが 0・1・3・4・6・8 なら「ぷん」、それ以外は「ふん」。
+ */
+function clockLabel(h, m) {
+  if (m === 0) return h + "じ";
+  const tail = m % 10;
+  const pun = tail === 0 || tail === 1 || tail === 3 || tail === 4 || tail === 6 || tail === 8;
+  return h + "じ" + m + (pun ? "ぷん" : "ふん");
+}
+
 function frac(n, d) {
   const g = gcd(Math.abs(n), Math.abs(d)) || 1;
   return n / g + "/" + d / g;
@@ -45,11 +56,14 @@ export const UNITS = [
   { id: "g1-clock", grade: 1, name: "とけい（なんじ・なんじはん）", kind: "choice",
     make: () => {
       const h = ri(1, 12);
-      const half = ri(0, 1) === 1;
-      const label = half ? h + "じ30ぷん" : h + "じ";
-      const answer = half ? ((h % 12) + 1) + "じ" : h + "じ30ぷん";
-      const wrongs = [h + "じ15ふん", ((h % 12) + 1) + "じ30ぷん", (h === 1 ? 12 : h - 1) + "じ"].filter(w => w !== answer);
-      return { text: label + " の 30ぷんあと は？", answer, choices: shuffle([answer, wrongs[0], wrongs[1], wrongs[2]]) };
+      const m = ri(0, 1) === 1 ? 30 : 0;
+      const answer = clockLabel(h, m);
+      const others = [
+        clockLabel((h % 12) + 1, m),
+        clockLabel(h, m === 0 ? 30 : 0),
+        clockLabel(h === 1 ? 12 : h - 1, m === 0 ? 30 : 0),
+      ].filter(w => w !== answer);
+      return { text: "なんじ？", clock: { h, m }, answer, choices: shuffle([answer, others[0], others[1], others[2]]) };
     } },
 
   // ---- 2年 ----------------------------------------------------------------
@@ -58,8 +72,25 @@ export const UNITS = [
   { id: "g2-sub2", grade: 2, name: "2けたの ひきざん", kind: "num",
     make: () => { const a = ri(20, 99), b = ri(10, a - 1); return { text: a + " − " + b, answer: String(a - b) }; } },
   { id: "g2-kuku", grade: 2, name: "九九", kind: "num",
-    make: () => { const a = ri(1, 9), b = ri(1, 9); return { text: a + " × " + b, answer: String(a * b) }; } },
-  { id: "g2-clock", grade: 2, name: "とけい（なんぷん）", kind: "num",
+    variants: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => ({ key: n, name: n === 0 ? "ぜんぶ" : n + "の だん" })),
+    make: variant => {
+      const a = variant ? Number(variant) : ri(1, 9);
+      const b = ri(1, 9);
+      return { text: a + " × " + b, answer: String(a * b) };
+    } },
+  { id: "g2-clock", grade: 2, name: "とけい（なんじなんぷん）", kind: "choice",
+    make: () => {
+      const h = ri(1, 12);
+      const m = ri(1, 11) * 5;
+      const answer = clockLabel(h, m);
+      const others = [
+        clockLabel(h, m === 55 ? 5 : m + 5),
+        clockLabel((h % 12) + 1, m),
+        clockLabel(h, m === 5 ? 55 : m - 5),
+      ].filter(w => w !== answer);
+      return { text: "なんじ なんぷん？", clock: { h, m }, answer, choices: shuffle([answer, others[0], others[1], others[2]]) };
+    } },
+  { id: "g2-clock-calc", grade: 2, name: "じかんの けいさん", kind: "num",
     make: () => { const m = ri(1, 11) * 5; return { text: m + "ぷん は、1じかん まで あと なんぷん？", answer: String(60 - m) }; } },
   { id: "g2-length", grade: 2, name: "ながさ（cm と mm）", kind: "num",
     make: () => { const c = ri(1, 20), m = ri(1, 9); return { text: c + "cm" + m + "mm は なんmm？", answer: String(c * 10 + m) }; } },
@@ -188,16 +219,27 @@ export function isCorrect(unit, input, answer) {
   return Number(given) === Number(answer);
 }
 
-/** 1 回ぶんの問題をまとめて作る。同じ式が続かないようにする */
-export function makeSet(unit, count) {
+/**
+ * 同じ問題が重ならないための鍵。
+ * 時計は文言が同じ（「なんじ？」）なので、針の位置まで見ないと重複判定にならない。
+ */
+export function keyOf(q) {
+  return q.text + "|" + (q.clock ? q.clock.h + ":" + q.clock.m : "") + "|" + q.answer;
+}
+
+/** 1 回ぶんの問題をまとめて作る。同じ問題が続かないようにする */
+export function makeSet(unit, count, variant) {
   const out = [];
+  const seen = new Set();
   let guard = 0;
   while (out.length < count && guard < count * 40) {
     guard += 1;
-    const q = unit.make();
-    if (out.some(prev => prev.text === q.text)) continue;
+    const q = unit.make(variant);
+    const key = keyOf(q);
+    if (seen.has(key)) continue;
+    seen.add(key);
     out.push(q);
   }
-  while (out.length < count) out.push(unit.make());
+  while (out.length < count) out.push(unit.make(variant));
   return out;
 }

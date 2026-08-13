@@ -360,6 +360,54 @@ await drill.page.waitForSelector("#view-kiroku:not(.is-hidden)", { timeout: 3000
 check("the record page lists the person", (await drill.page.locator("#kiroku-people").textContent()).includes("ゆうた"));
 check("the record page lists the unit", (await drill.page.locator(".kiroku-table").count()) === 1);
 
+// 九九は段をえらべる
+await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await drill.page.locator('.grade-tab[data-grade="2"]').click();
+const kukuCard = drill.page.locator('.unit-card[data-unit="g2-kuku"]');
+check("the kuku unit offers a chooser", (await kukuCard.locator(".unit-more").count()) === 1);
+await kukuCard.click();
+check("choosing opens the rows of kuku", (await drill.page.locator(".variant").count()) === 10);
+await drill.page.locator('.variant[data-variant="5"]').click();
+await drill.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
+const kukuText = (await drill.page.locator("#quiz-text").textContent()).trim();
+check("the chosen row is the one asked", kukuText.startsWith("5 ×"), kukuText);
+
+// とけいは 絵で出る
+await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await drill.page.locator('.grade-tab[data-grade="1"]').click();
+await drill.page.locator('.unit-card[data-unit="g1-clock"]').click();
+await drill.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
+check("the clock question shows a clock face", await drill.page.locator("#quiz-clock").isVisible());
+const painted = await drill.page.evaluate(() => {
+  const canvas = document.getElementById("quiz-clock");
+  const g = canvas.getContext("2d");
+  const data = g.getImageData(0, 0, canvas.width, canvas.height).data;
+  let ink = 0;
+  for (let i = 0; i < data.length; i += 4) if (data[i + 3] > 10) ink += 1;
+  return ink;
+});
+check("the clock face is actually drawn", painted > 5000, `pixels=${painted}`);
+check("the clock question is answered by choosing", (await drill.page.locator(".choice").count()) === 4);
+
+// まちがえると「にがてを もういちど」が出る
+await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await drill.page.locator('.grade-tab[data-grade="1"]').click();
+await drill.page.locator('.unit-card[data-unit="g1-sub"]').click();
+await drill.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
+for (let i = 0; i < 10; i += 1) {
+  await drill.page.locator('.pad[data-pad="0"]').click();
+  await drill.page.locator('.pad[data-pad="ok"]').click();
+  if (i < 9) await drill.page.waitForFunction(n => document.getElementById("quiz-count").textContent.startsWith(String(n)), i + 2, { timeout: 30000 });
+}
+await drill.page.waitForSelector("#view-result:not(.is-hidden)", { timeout: 30000 });
+await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+check("a weak unit is offered again", await drill.page.locator("#weak-row").isVisible());
+check("the weak card points at the unit just failed", (await drill.page.locator('.weak-card[data-unit="g1-sub"]').count()) === 1);
+
 const drillOverflow = await drill.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 check("the drill fits a phone-sized screen", drillOverflow <= 0, `overflowX=${drillOverflow}px`);
 await drill.context.close();

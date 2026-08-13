@@ -47,8 +47,36 @@ export function initDrill(options) {
   });
 
   $("unit-grid").addEventListener("click", event => {
+    const variantButton = event.target.closest(".variant");
+    if (variantButton) {
+      startQuiz(variantButton.dataset.unit, variantButton.dataset.variant);
+      return;
+    }
     const card = event.target.closest(".unit-card");
-    if (card) startQuiz(card.dataset.unit);
+    if (!card) return;
+    const unit = unitById(card.dataset.unit);
+    if (unit && unit.variants) {
+      // 九九のように「どの段？」があるものは、その場で選べるように開く
+      const open = card.parentElement.querySelector(".variants");
+      if (open) {
+        open.remove();
+        return;
+      }
+      document.querySelectorAll(".variants").forEach(v => v.remove());
+      const box = document.createElement("div");
+      box.className = "variants";
+      box.innerHTML = unit.variants
+        .map(v => '<button type="button" class="variant" data-unit="' + unit.id + '" data-variant="' + v.key + '">' + v.name + "</button>")
+        .join("");
+      card.parentElement.appendChild(box);
+      return;
+    }
+    startQuiz(card.dataset.unit);
+  });
+
+  $("weak-row").addEventListener("click", event => {
+    const button = event.target.closest(".weak-card");
+    if (button) startQuiz(button.dataset.unit);
   });
 
   $("quiz-quit").addEventListener("click", () => {
@@ -67,7 +95,7 @@ export function initDrill(options) {
   });
 
   $("result-again").addEventListener("click", () => {
-    if (session) startQuiz(session.unit.id);
+    if (session) startQuiz(session.unit.id, session.variant);
   });
 
   $("kiroku-people").addEventListener("click", event => {
@@ -119,6 +147,20 @@ export function renderHome() {
     grade = profile.grade || grade;
   }
 
+  const weak = records.weakUnits(3).filter(w => w.last < 100);
+  $("weak-row").innerHTML = weak.length
+    ? '<p class="weak-title">にがてを もういちど</p>' +
+      weak
+        .map(w => {
+          const unit = unitById(w.id);
+          if (!unit) return "";
+          return '<button type="button" class="weak-card" data-unit="' + w.id + '">' + unit.name + '<span class="weak-score">まえは ' + w.last + "点</span></button>";
+        })
+        .filter(Boolean)
+        .join("")
+    : "";
+  $("weak-row").classList.toggle("is-hidden", weak.length === 0);
+
   $("grade-tabs").innerHTML = GRADES.map(
     g => '<button type="button" class="grade-tab' + (g === grade ? " is-on" : "") + '" data-grade="' + g + '">' + g + "年</button>"
   ).join("");
@@ -129,17 +171,23 @@ export function renderHome() {
       const badge = stat
         ? '<span class="unit-score">まえは ' + stat.last + "点</span>"
         : '<span class="unit-score is-new">はじめて</span>';
-      return '<button type="button" class="unit-card" data-unit="' + unit.id + '"><span class="unit-name">' + unit.name + "</span>" + badge + "</button>";
+      const arrow = unit.variants ? '<span class="unit-more">どの だん？</span>' : "";
+      return (
+        '<div class="unit-slot"><button type="button" class="unit-card" data-unit="' + unit.id + '">' +
+        '<span class="unit-name">' + unit.name + "</span>" + badge + arrow +
+        "</button></div>"
+      );
     })
     .join("");
 }
 
 // --- 問題 -------------------------------------------------------------------
 
-function startQuiz(unitId) {
+function startQuiz(unitId, variant) {
   const unit = unitById(unitId);
   if (!unit) return;
-  session = { unit, list: makeSet(unit, QUESTIONS), at: 0, right: 0, done: [] };
+  const chosen = variant === undefined || variant === "0" ? undefined : Number(variant);
+  session = { unit, variant: chosen, list: makeSet(unit, QUESTIONS, chosen), at: 0, right: 0, done: [] };
   typed = "";
   show("view-quiz");
   renderQuestion();
@@ -160,6 +208,8 @@ function renderQuestion() {
       return '<span class="dot' + mark + (i === session.at ? " is-now" : "") + '"></span>';
     })
     .join("");
+
+  drawClock(q.clock);
 
   const choosing = unit.kind === "choice";
   $("quiz-choices").classList.toggle("is-hidden", !choosing);
@@ -313,4 +363,80 @@ function importRecords(event) {
   };
   reader.readAsText(file);
   event.target.value = "";
+}
+
+/** 時計の絵。文字ばんと はり を描くだけなので、外の部品は要らない */
+function drawClock(clock) {
+  const canvas = $("quiz-clock");
+  canvas.classList.toggle("is-hidden", !clock);
+  if (!clock) return;
+
+  const size = 190;
+  const scale = window.devicePixelRatio || 1;
+  canvas.width = size * scale;
+  canvas.height = size * scale;
+  canvas.style.width = size + "px";
+  canvas.style.height = size + "px";
+
+  const ink = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#38344f";
+  const line = getComputedStyle(document.documentElement).getPropertyValue("--line-strong").trim() || "#e2d6ef";
+  const face = getComputedStyle(document.documentElement).getPropertyValue("--card").trim() || "#ffffff";
+
+  const g = canvas.getContext("2d");
+  g.setTransform(scale, 0, 0, scale, 0, 0);
+  g.clearRect(0, 0, size, size);
+
+  const c = size / 2;
+  const r = c - 8;
+
+  g.fillStyle = face;
+  g.strokeStyle = line;
+  g.lineWidth = 6;
+  g.beginPath();
+  g.arc(c, c, r, 0, Math.PI * 2);
+  g.fill();
+  g.stroke();
+
+  // 目もりと 数字
+  g.strokeStyle = line;
+  g.fillStyle = ink;
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  for (let i = 0; i < 60; i += 1) {
+    const angle = (Math.PI / 30) * i - Math.PI / 2;
+    const big = i % 5 === 0;
+    g.lineWidth = big ? 3 : 1;
+    g.beginPath();
+    g.moveTo(c + Math.cos(angle) * (r - (big ? 14 : 8)), c + Math.sin(angle) * (r - (big ? 14 : 8)));
+    g.lineTo(c + Math.cos(angle) * (r - 3), c + Math.sin(angle) * (r - 3));
+    g.stroke();
+  }
+  g.font = "700 17px system-ui, sans-serif";
+  for (let n = 1; n <= 12; n += 1) {
+    const angle = (Math.PI / 6) * n - Math.PI / 2;
+    g.fillText(String(n), c + Math.cos(angle) * (r - 30), c + Math.sin(angle) * (r - 30));
+  }
+
+  // みじかい はり（時）と ながい はり（分）
+  const hourAngle = (Math.PI / 6) * (clock.h % 12) + (Math.PI / 360) * clock.m - Math.PI / 2;
+  const minuteAngle = (Math.PI / 30) * clock.m - Math.PI / 2;
+
+  g.strokeStyle = ink;
+  g.lineCap = "round";
+  g.lineWidth = 8;
+  g.beginPath();
+  g.moveTo(c, c);
+  g.lineTo(c + Math.cos(hourAngle) * (r * 0.5), c + Math.sin(hourAngle) * (r * 0.5));
+  g.stroke();
+
+  g.lineWidth = 5;
+  g.beginPath();
+  g.moveTo(c, c);
+  g.lineTo(c + Math.cos(minuteAngle) * (r * 0.78), c + Math.sin(minuteAngle) * (r * 0.78));
+  g.stroke();
+
+  g.fillStyle = ink;
+  g.beginPath();
+  g.arc(c, c, 6, 0, Math.PI * 2);
+  g.fill();
 }
