@@ -124,11 +124,12 @@ function today(now) {
 export function record(unitId, correct, total, now) {
   const p = currentProfile();
   if (!p) return null;
-  const stat = p.units[unitId] || { tried: 0, right: 0, last: 0, best: 0 };
+  const stat = p.units[unitId] || { tried: 0, right: 0, last: 0, best: 0, at: 0 };
   stat.tried += total;
   stat.right += correct;
   stat.last = total ? Math.round((correct / total) * 100) : 0;
   stat.best = Math.max(stat.best || 0, stat.last);
+  stat.at = (now || new Date()).getTime(); // いつ やったか（にがての 並べ替えに使う）
   p.units[unitId] = stat;
 
   p.stars += correct;
@@ -160,14 +161,17 @@ export function streak(now) {
   return count;
 }
 
-/** 苦手そうな単元。直近の出来が低い順に返す */
+/**
+ * 苦手そうな単元。出来が低い順、同じなら 直近にやったものを先に出す
+ * （さっき まちがえたものが 埋もれないように）
+ */
 export function weakUnits(limit) {
   const p = currentProfile();
   if (!p) return [];
   return Object.keys(p.units)
     .map(id => ({ id, ...p.units[id] }))
     .filter(u => u.tried > 0)
-    .sort((a, b) => a.last - b.last)
+    .sort((a, b) => (a.last === b.last ? (b.at || 0) - (a.at || 0) : a.last - b.last))
     .slice(0, limit || 3);
 }
 
