@@ -1,8 +1,6 @@
 import { Actor, HttpAgent } from "@icp-sdk/core/agent";
-import { Ed25519KeyIdentity } from "@icp-sdk/core/identity";
 import { idlFactory, canisterId as localCanisterId } from "../../declarations/todo_app_backend";
-import qrcode from "qrcode-generator";
-import { LANGS, RTL, makeT, detectLang, saveLang, errorMessage } from "./i18n";
+import { LANGS, RTL, makeT, detectLang, saveLang } from "./i18n";
 import { initDrill, renderHome as renderDrillHome, renderKiroku } from "./drill";
 
 // --- 接続 -------------------------------------------------------------------
@@ -12,30 +10,8 @@ const isLocal = network === "local";
 const host = isLocal ? "http://127.0.0.1:4943" : "https://ic0.app";
 const canisterId = isLocal ? localCanisterId : process.env.CANISTER_ID_TODO_APP_BACKEND;
 
-/**
- * ブラウザごとの鍵。ログインの代わりに使う。
- * 秘密鍵はこの端末の localStorage から出ない。主催者かどうかはこの鍵で決まる。
- */
-const IDENTITY_KEY = "kimaru.identity.v1";
-
-function loadIdentity() {
-  try {
-    const stored = localStorage.getItem(IDENTITY_KEY);
-    if (stored) return Ed25519KeyIdentity.fromJSON(stored);
-  } catch (error) {
-    console.warn("保存された鍵を読めませんでした。作り直します", error);
-  }
-  const created = Ed25519KeyIdentity.generate();
-  try {
-    localStorage.setItem(IDENTITY_KEY, JSON.stringify(created.toJSON()));
-  } catch (error) {
-    console.warn("鍵を保存できませんでした。このタブだけで有効な鍵を使います", error);
-  }
-  return created;
-}
-
-const identity = loadIdentity();
-const agent = HttpAgent.createSync({ host, identity });
+// フッターの小さなカウンターだけが問い合わせを使う。だれとして送るかは要らない
+const agent = new HttpAgent({ host });
 const backend = Actor.createActor(idlFactory, { agent, canisterId });
 
 async function ensureAgentReady() {
@@ -65,7 +41,6 @@ function applyLang() {
   });
 
   $("legacy-counter").title = t("counterNote");
-  if (currentPoll) renderPoll(currentPoll);
 }
 
 function setupLangSelect() {
@@ -119,465 +94,17 @@ function setupTheme() {
 // --- 小さな道具 -------------------------------------------------------------
 
 const $ = id => document.getElementById(id);
-const CHOICE_KEYS = ["yes", "maybe", "no"];
-const MARKS = { yes: "○", maybe: "△", no: "×" };
 
-const choiceKey = variant => Object.keys(variant)[0];
-const toVariant = key => ({ [key]: null });
-const nsToDate = ns => new Date(Number(BigInt(ns) / 1000000n));
 
-function formatDateTime(ns) {
-  return nsToDate(ns).toLocaleString(lang, {
-    year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
-  });
-}
 
 function formatNumber(value) {
   return Number(value).toLocaleString(lang);
 }
 
-function setStatus(el, message, kind) {
-  el.textContent = message || "";
-  el.classList.remove("is-ok", "is-error");
-  if (kind) el.classList.add(kind);
-}
 
-function setBusy(button, busy, busyKey, idleKey) {
-  const label = button.querySelector(".cta-label");
-  button.disabled = busy;
-  button.classList.toggle("is-busy", busy);
-  if (label) label.textContent = t(busy ? busyKey : idleKey);
-}
 
-function escapeHtml(text) {
-  return String(text).replace(/[&<>"']/g, c =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
-  );
-}
 
 /** 同じ名前の回答は最新のものを現在の回答として扱う。過去の分は履歴に残る */
-function latestByName(entries) {
-  const map = new Map();
-  entries.forEach((entry, index) => {
-    const previous = map.get(entry.name);
-    map.set(entry.name, {
-      entry,
-      index,
-      revisions: previous ? previous.revisions + 1 : 1,
-      // 最初に使われた端末と違う端末から書き換えられていたら印を付ける
-      moved: previous ? previous.moved || previous.firstTag !== entry.tag : false,
-      firstTag: previous ? previous.firstTag : entry.tag,
-    });
-  });
-  return [...map.values()].sort((a, b) => a.index - b.index);
-}
-
-// --- 作成画面 ---------------------------------------------------------------
-
-const OPTION_LIMIT = 20;
-
-function optionRow() {
-  const row = document.createElement("div");
-  row.className = "option-row";
-  const input = document.createElement("input");
-  input.type = "text";
-  input.className = "option-input";
-  input.maxLength = 60;
-  input.placeholder = t("optionPh");
-  input.dataset.tPh = "optionPh";
-  const remove = document.createElement("button");
-  remove.type = "button";
-  remove.className = "btn-icon";
-  remove.textContent = "×";
-  remove.setAttribute("aria-label", "remove");
-  remove.addEventListener("click", () => {
-    const container = $("f-options");
-    if (container.children.length > 1) row.remove();
-    else input.value = "";
-    syncAddButton();
-  });
-  row.append(input, remove);
-  return row;
-}
-
-/** 選んだ日付と時刻を、その言語で自然な一行にする */
-function formatOptionLabel(dateValue, timeValue) {
-  const [y, m, d] = dateValue.split("-").map(Number);
-  const [hh, mm] = (timeValue || "00:00").split(":").map(Number);
-  const when = new Date(y, m - 1, d, hh, mm);
-  return new Intl.DateTimeFormat(lang, {
-    month: "short",
-    day: "numeric",
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(when);
-}
-
-/** 空いている候補欄を探す。無ければ 1 行足す */
-function firstEmptyOptionInput() {
-  const inputs = [...$("f-options").querySelectorAll(".option-input")];
-  const empty = inputs.find(input => !input.value.trim());
-  if (empty) return empty;
-  if (inputs.length >= OPTION_LIMIT) return null;
-  $("f-options").appendChild(optionRow());
-  syncAddButton();
-  return $("f-options").lastElementChild.querySelector("input");
-}
-
-function syncAddButton() {
-  $("add-option").disabled = $("f-options").children.length >= OPTION_LIMIT;
-}
-
-function setupCreateForm() {
-  const container = $("f-options");
-  [0, 1, 2].forEach(() => container.appendChild(optionRow()));
-  syncAddButton();
-
-  $("add-from-date").addEventListener("click", () => {
-    const dateValue = $("f-date").value;
-    if (!dateValue) {
-      $("f-date").focus();
-      return;
-    }
-    const target = firstEmptyOptionInput();
-    if (!target) return;
-    target.value = formatOptionLabel(dateValue, $("f-time").value);
-    // 続けて足しやすいよう、翌日に送っておく（時差でずれないよう数値で組む）
-    const [ny, nm, nd] = dateValue.split("-").map(Number);
-    const next = new Date(ny, nm - 1, nd + 1);
-    const pad = value => String(value).padStart(2, "0");
-    $("f-date").value = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`;
-  });
-
-  $("add-option").addEventListener("click", () => {
-    container.appendChild(optionRow());
-    syncAddButton();
-    container.lastElementChild.querySelector("input").focus();
-  });
-
-  $("create-form").addEventListener("submit", async event => {
-    event.preventDefault();
-    const status = $("create-status");
-    const title = $("f-title").value.trim();
-    const note = $("f-note").value.trim();
-    const options = [...container.querySelectorAll(".option-input")]
-      .map(input => input.value.trim())
-      .filter(Boolean);
-
-    if (!title) return setStatus(status, errorMessage("e_title_required", lang), "is-error");
-    if (options.length === 0) return setStatus(status, errorMessage("e_option_required", lang), "is-error");
-
-    const deadlineValue = $("f-deadline").value;
-    const deadline = deadlineValue ? [BigInt(new Date(deadlineValue).getTime()) * 1000000n] : [];
-
-    setBusy($("create-button"), true, "creating", "createBtn");
-    setStatus(status, t("writing"));
-    try {
-      const result = await backend.createPoll({
-        title,
-        note,
-        options,
-        deadline,
-        lockNames: $("f-lock").checked,
-      });
-      if ("err" in result) {
-        setStatus(status, errorMessage(result.err, lang), "is-error");
-        return;
-      }
-      setStatus(status, "");
-      location.hash = `#/p/${result.ok}`;
-    } catch (error) {
-      console.error(error);
-      setStatus(status, errorMessage("network", lang), "is-error");
-    } finally {
-      setBusy($("create-button"), false, "creating", "createBtn");
-    }
-  });
-}
-
-// --- 調整ページ -------------------------------------------------------------
-
-let currentPoll = null;
-
-function renderTally(poll) {
-  const rows = latestByName(poll.entries);
-  const totals = poll.options.map(() => ({ yes: 0, maybe: 0, no: 0 }));
-  rows.forEach(({ entry }) => {
-    entry.choices.forEach((choice, i) => {
-      if (totals[i]) totals[i][choiceKey(choice)] += 1;
-    });
-  });
-
-  const best = totals.reduce(
-    (acc, total, i) => {
-      const score = total.yes * 2 + total.maybe;
-      return score > acc.score ? { score, index: i } : acc;
-    },
-    { score: -1, index: -1 }
-  );
-  const hasAnswers = rows.length > 0;
-
-  $("tally-head").innerHTML = `<tr><th class="col-name">${escapeHtml(t("name"))}</th>${poll.options
-    .map((option, i) => `<th${hasAnswers && i === best.index ? ' class="is-best"' : ""}>${escapeHtml(option)}</th>`)
-    .join("")}<th class="col-comment">${escapeHtml(t("comment"))}</th></tr>`;
-
-  $("tally-body").innerHTML = rows
-    .map(({ entry, revisions, moved }) => {
-      const cells = entry.choices
-        .map(choice => {
-          const key = choiceKey(choice);
-          return `<td class="mark mark-${key}">${MARKS[key] || "?"}</td>`;
-        })
-        .join("");
-      const badges =
-        (revisions > 1 ? `<span class="revision">${escapeHtml(t("changed", revisions - 1))}</span>` : "") +
-        (moved ? `<span class="revision revision-alert" title="${escapeHtml(t("otherDevice"))}">!</span>` : "");
-      // 自分がこの端末から書いた行だけ、取り消せるようにする
-      const withdraw = entry.mine
-        ? `<button type="button" class="withdraw" data-name="${escapeHtml(entry.name)}">${escapeHtml(t("withdraw"))}</button>`
-        : "";
-      return `<tr><th class="col-name">${escapeHtml(entry.name)}${badges}${withdraw}</th>${cells}<td class="col-comment">${escapeHtml(entry.comment)}</td></tr>`;
-    })
-    .join("");
-
-  $("tally-foot").innerHTML = hasAnswers
-    ? `<tr><th class="col-name">${escapeHtml(t("total"))}</th>${totals
-        .map(
-          (total, i) =>
-            `<td${i === best.index ? ' class="is-best"' : ""}><b>${total.yes}</b><small> △${total.maybe} ×${total.no}</small></td>`
-        )
-        .join("")}<td></td></tr>`
-    : "";
-
-  $("tally-empty").classList.toggle("is-hidden", hasAnswers);
-  $("tally-table").classList.toggle("is-hidden", !hasAnswers);
-}
-
-function renderAnswerForm(poll) {
-  $("a-options").innerHTML = poll.options
-    .map(
-      (option, i) => `
-      <div class="answer-row">
-        <span class="answer-label">${escapeHtml(option)}</span>
-        <div class="segmented" role="radiogroup" aria-label="${escapeHtml(option)}">
-          ${CHOICE_KEYS.map(
-            (key, j) => `
-            <label class="seg seg-${key}">
-              <input type="radio" name="opt-${i}" value="${key}"${j === 0 ? " checked" : ""}>
-              <span aria-hidden="true">${MARKS[key]}</span><span class="seg-text">${escapeHtml(t(key))}</span>
-            </label>`
-          ).join("")}
-        </div>
-      </div>`
-    )
-    .join("");
-
-  $("answer-form").classList.toggle("is-hidden", poll.closed);
-  $("my-tag").textContent = t("yourDevice", poll.myTag);
-}
-
-function renderMeta(poll) {
-  const items = [t("createdAt", formatDateTime(poll.createdAt))];
-  if (poll.deadline.length) items.push(t("deadlineAt", formatDateTime(poll.deadline[0])));
-  items.push(t("respondents", formatNumber(latestByName(poll.entries).length)));
-
-  $("poll-meta").innerHTML =
-    `<span class="pill ${poll.closed ? "pill-closed" : "pill-open"}">${escapeHtml(t(poll.closed ? "closed" : "open"))}</span>` +
-    items.map(text => `<span class="meta-item">${escapeHtml(text)}</span>`).join("");
-}
-
-function renderHistory(poll) {
-  $("history-list").innerHTML = poll.entries.length
-    ? poll.entries
-        .map(
-          entry => `<li><time>${escapeHtml(formatDateTime(entry.at))}</time>
-            <b>${escapeHtml(entry.name)}</b>
-            <span class="device-tag">${escapeHtml(entry.tag)}</span>
-            <span class="history-marks">${entry.choices
-              .map(choice => {
-                const key = choiceKey(choice);
-                return `<i class="mark-${key}">${MARKS[key] || "?"}</i>`;
-              })
-              .join("")}</span>
-            ${entry.comment ? `<span class="history-comment">${escapeHtml(entry.comment)}</span>` : ""}</li>`
-        )
-        .join("")
-    : `<li>${escapeHtml(t("historyEmpty"))}</li>`;
-}
-
-function renderOwnerTools(poll) {
-  $("owner-tools").classList.toggle("is-hidden", !poll.isOwner);
-  if (!poll.isOwner) return;
-  $("toggle-close").textContent = t(poll.closed ? "reopenPoll" : "closePoll");
-}
-
-/**
- * 共有 URL の QR を描く。カメラで読めればよいので、白地に黒で固定する
- * （画面の明暗を切り替えても読み取りやすさが変わらない）。
- */
-function renderQr(canvas, text) {
-  const qr = qrcode(0, "M");
-  qr.addData(text);
-  qr.make();
-
-  const modules = qr.getModuleCount();
-  const scale = 6;
-  const margin = 4; // 読み取りに必要な余白（4 モジュール）
-  const size = (modules + margin * 2) * scale;
-
-  canvas.width = size;
-  canvas.height = size;
-  canvas.setAttribute("aria-label", text);
-
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, size, size);
-  ctx.fillStyle = "#000000";
-  for (let row = 0; row < modules; row += 1) {
-    for (let col = 0; col < modules; col += 1) {
-      if (qr.isDark(row, col)) {
-        ctx.fillRect((col + margin) * scale, (row + margin) * scale, scale, scale);
-      }
-    }
-  }
-}
-
-function renderPoll(poll) {
-  currentPoll = poll;
-  $("poll-title").textContent = poll.title;
-  $("poll-note").textContent = poll.note;
-  $("poll-note").classList.toggle("is-hidden", !poll.note);
-  $("share-url").value = location.href;
-  renderQr($("share-qr"), location.href);
-  renderMeta(poll);
-  renderTally(poll);
-  renderAnswerForm(poll);
-  renderHistory(poll);
-  renderOwnerTools(poll);
-}
-
-async function loadPoll(id) {
-  const found = await backend.getPoll(id);
-  if (!found.length) {
-    showView("view-missing");
-    return null;
-  }
-  showView("view-poll");
-  renderPoll(found[0]);
-  return found[0];
-}
-
-async function copyToClipboard(input, button, doneKey) {
-  try {
-    await navigator.clipboard.writeText(input.value);
-    button.textContent = t(doneKey);
-    setTimeout(() => (button.textContent = t("copy")), 1600);
-  } catch (error) {
-    input.select();
-  }
-}
-
-function setupPollPage() {
-  $("answer-form").addEventListener("submit", async event => {
-    event.preventDefault();
-    const status = $("answer-status");
-    const name = $("a-name").value.trim();
-    const comment = $("a-comment").value.trim();
-    if (!name) return setStatus(status, errorMessage("e_name_required", lang), "is-error");
-
-    const choices = currentPoll.options.map((_, i) => {
-      const picked = document.querySelector(`input[name="opt-${i}"]:checked`);
-      return toVariant(picked ? picked.value : "no");
-    });
-
-    setBusy($("answer-button"), true, "sending", "submit");
-    setStatus(status, t("writing"));
-    try {
-      const result = await backend.submitAnswer(currentPoll.id, name, comment, choices);
-      if ("err" in result) {
-        setStatus(status, errorMessage(result.err, lang), "is-error");
-        return;
-      }
-      await loadPoll(currentPoll.id);
-      setStatus(status, t("sent"), "is-ok");
-      $("a-comment").value = "";
-    } catch (error) {
-      console.error(error);
-      setStatus(status, errorMessage("network", lang), "is-error");
-    } finally {
-      setBusy($("answer-button"), false, "sending", "submit");
-    }
-  });
-
-  // 取り消し: 1 回目で「本当に消す？」に変わり、2 回目で消す
-  $("tally-body").addEventListener("click", async event => {
-    const button = event.target.closest(".withdraw");
-    if (!button || !currentPoll) return;
-
-    if (button.dataset.armed !== "1") {
-      document.querySelectorAll(".withdraw").forEach(other => {
-        delete other.dataset.armed;
-        other.textContent = t("withdraw");
-        other.classList.remove("is-armed");
-      });
-      button.dataset.armed = "1";
-      button.textContent = t("withdrawSure");
-      button.classList.add("is-armed");
-      return;
-    }
-
-    const status = $("answer-status");
-    button.disabled = true;
-    setStatus(status, t("writing"));
-    try {
-      const result = await backend.withdrawAnswer(currentPoll.id, button.dataset.name);
-      if ("err" in result) {
-        setStatus(status, errorMessage(result.err, lang), "is-error");
-        button.disabled = false;
-        return;
-      }
-      await loadPoll(currentPoll.id);
-      setStatus(status, t("withdrawDone"), "is-ok");
-    } catch (error) {
-      console.error(error);
-      setStatus(status, errorMessage("network", lang), "is-error");
-      button.disabled = false;
-    }
-  });
-
-  $("copy-url").addEventListener("click", () => copyToClipboard($("share-url"), $("copy-url"), "copied"));
-  $("copy-backend").addEventListener("click", () => copyToClipboard($("backend-id"), $("copy-backend"), "copied"));
-  $("copy-frontend").addEventListener("click", () => copyToClipboard($("frontend-id"), $("copy-frontend"), "copied"));
-
-  $("toggle-close").addEventListener("click", async () => {
-    const status = $("owner-status");
-    setStatus(status, t("writing"));
-    try {
-      const result = await backend.setClosed(currentPoll.id, !currentPoll.closed);
-      if ("err" in result) return setStatus(status, errorMessage(result.err, lang), "is-error");
-      await loadPoll(currentPoll.id);
-      setStatus(status, "");
-    } catch (error) {
-      console.error(error);
-      setStatus(status, errorMessage("network", lang), "is-error");
-    }
-  });
-
-  $("delete-poll").addEventListener("click", async () => {
-    if (!window.confirm(t("deleteConfirm"))) return;
-    const status = $("owner-status");
-    setStatus(status, t("writing"));
-    try {
-      const result = await backend.deletePoll(currentPoll.id);
-      if ("err" in result) return setStatus(status, errorMessage(result.err, lang), "is-error");
-      location.hash = "#/";
-    } catch (error) {
-      console.error(error);
-      setStatus(status, errorMessage("network", lang), "is-error");
-    }
-  });
-}
 
 // --- 支援ページ -------------------------------------------------------------
 
@@ -621,9 +148,9 @@ async function setupLegacyCounter() {
 
 // --- 画面切り替え -----------------------------------------------------------
 
-const VIEWS = ["view-drill", "view-quiz", "view-result", "view-kiroku", "view-home", "view-poll", "view-support", "view-missing"];
+const VIEWS = ["view-drill", "view-quiz", "view-result", "view-kiroku", "view-support"];
 
-// ドリルは日本語のこどもむけなので、言語の切り替えはキマル側の画面にだけ出す
+// ドリルは日本語のこどもむけ。言語の切り替えは支援ページだけに出す
 const DRILL_VIEWS = ["view-drill", "view-quiz", "view-result", "view-kiroku"];
 
 function showView(id) {
@@ -635,60 +162,31 @@ function showView(id) {
 async function route() {
   const hash = location.hash;
 
-  if (hash === "" || hash === "#" || hash === "#/") {
-    currentPoll = null;
-    showView("view-drill");
-    renderDrillHome();
-    return;
-  }
-
   if (hash === "#/kiroku") {
-    currentPoll = null;
     showView("view-kiroku");
     renderKiroku();
     return;
   }
 
-  if (hash === "#/kimaru") {
-    currentPoll = null;
-    showView("view-home");
-    return;
-  }
-
   if (hash === "#/support") {
-    currentPoll = null;
     showView("view-support");
     await loadSupport();
     return;
   }
 
-  const match = hash.match(/^#\/p\/([a-z0-9]+)$/);
-  if (!match) {
-    currentPoll = null;
-    showView("view-drill");
-    renderDrillHome();
-    return;
-  }
-
-  try {
-    await loadPoll(match[1]);
-  } catch (error) {
-    console.error(error);
-    showView("view-missing");
-  }
+  showView("view-drill");
+  renderDrillHome();
 }
 
 async function init() {
   setupTheme();
   setupLangSelect();
   applyLang();
-  setupCreateForm();
-  setupPollPage();
   initDrill({ show: showView });
   window.addEventListener("hashchange", route);
 
   // ドリルは通信が要らない。つながらなくても画面は出す
-  // （キャニスターへの問い合わせが要るのは キマル と フッターのカウンターだけ）
+  // （問い合わせが要るのは フッターの小さなカウンターだけ）
   try {
     await ensureAgentReady();
   } catch (error) {

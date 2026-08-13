@@ -77,6 +77,18 @@ export function addProfile(name, face, grade) {
   return { ...profile };
 }
 
+/** なまえと かお を あとから変える。記録はそのまま残る */
+export function updateProfile(id, name, face) {
+  const target = state.profiles.find(p => p.id === id);
+  if (!target) return false;
+  const clean = String(name || "").trim().slice(0, MAX_NAME);
+  if (!clean) return false;
+  target.name = clean;
+  if (face) target.face = face;
+  write(state);
+  return true;
+}
+
 export function selectProfile(id) {
   if (!state.profiles.some(p => p.id === id)) return false;
   state.current = id;

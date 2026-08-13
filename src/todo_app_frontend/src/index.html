@@ -54,18 +54,21 @@
             <!-- ============ ドリル（トップ） ============ -->
             <section id="view-drill" class="view">
                 <div class="drill-top">
-                    <div class="who">
-                        <button type="button" id="who-face" class="who-face" aria-label="つかう人">🐻</button>
-                        <div class="who-text">
+                    <button type="button" id="who-open" class="who">
+                        <span id="who-face" class="who-face">🐻</span>
+                        <span class="who-text">
                             <b id="who-name">はじめまして</b>
                             <span id="who-streak" class="who-streak"></span>
-                        </div>
-                    </div>
+                        </span>
+                        <span class="who-caret">つかう人を かえる ▼</span>
+                    </button>
                     <div class="who-right">
                         <span class="star-chip"><span class="star-mark">★</span><b id="who-stars">0</b></span>
                         <a class="btn-ghost" href="#/kiroku">きろく</a>
                     </div>
                 </div>
+
+                <div id="who-panel" class="who-panel is-hidden"></div>
 
                 <div id="who-empty" class="panel panel-center is-hidden">
                     <h2 class="panel-title">なまえを きめよう</h2>
@@ -135,147 +138,7 @@
                 </div>
             </section>
 
-            <!-- ============ トップ / 作成 ============ -->
-            <section id="view-home" class="view">
-                <div class="hero">
-                    <h1 data-t="heroTitle"></h1>
-                    <p data-t="heroSub"></p>
-                </div>
 
-                <form id="create-form" class="panel" novalidate>
-                    <h2 class="panel-title" data-t="createHeading"></h2>
-
-                    <label class="field">
-                        <span class="field-label"><span data-t="title"></span><b data-t="required"></b></span>
-                        <input id="f-title" type="text" maxlength="100" data-t-ph="titlePh" required>
-                    </label>
-
-                    <label class="field">
-                        <span class="field-label" data-t="note"></span>
-                        <textarea id="f-note" rows="2" maxlength="500" data-t-ph="notePh"></textarea>
-                    </label>
-
-                    <div class="field">
-                        <span class="field-label"><span data-t="options"></span><b data-t="required"></b></span>
-                        <div id="f-options"></div>
-                        <div class="pick-row">
-                            <input id="f-date" type="date" aria-label="date">
-                            <input id="f-time" type="time" value="09:00" aria-label="time">
-                            <button type="button" id="add-from-date" class="btn-ghost" data-t="addFromDate"></button>
-                        </div>
-                        <span class="field-hint" data-t="addFromDateHint"></span>
-                        <button type="button" id="add-option" class="btn-ghost" data-t="addOption"></button>
-                    </div>
-
-                    <label class="field">
-                        <span class="field-label" data-t="deadline"></span>
-                        <input id="f-deadline" type="datetime-local">
-                        <span class="field-hint" data-t="deadlineHint"></span>
-                    </label>
-
-                    <div class="field">
-                        <label class="check">
-                            <input id="f-lock" type="checkbox">
-                            <span data-t="lockNames"></span>
-                        </label>
-                        <span class="field-hint" data-t="lockHint"></span>
-                    </div>
-
-                    <button type="submit" id="create-button" class="cta">
-                        <span class="spinner" aria-hidden="true"></span>
-                        <span class="cta-label" data-t="createBtn"></span>
-                    </button>
-                    <p id="create-status" class="status" role="status"></p>
-
-                    <p class="fineprint" data-t="finePrint"></p>
-                </form>
-
-                <h2 class="section-title" data-t="whyHeading"></h2>
-                <div class="cards">
-                    <article class="card">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>
-                        </svg>
-                        <h3 data-t="why1h"></h3>
-                        <p data-t="why1p"></p>
-                    </article>
-                    <article class="card">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#f472b6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M12 3v9"/><path d="M8.5 6.5 12 3l3.5 3.5"/><rect x="4" y="12" width="16" height="9" rx="2"/>
-                        </svg>
-                        <h3 data-t="why2h"></h3>
-                        <p data-t="why2p"></p>
-                    </article>
-                    <article class="card">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <circle cx="12" cy="12" r="9"/><path d="M3.5 12h17M12 3.2a15 15 0 0 1 0 17.6M12 3.2a15 15 0 0 0 0 17.6"/>
-                        </svg>
-                        <h3 data-t="why3h"></h3>
-                        <p data-t="why3p"></p>
-                    </article>
-                </div>
-            </section>
-
-            <!-- ============ 調整ページ ============ -->
-            <section id="view-poll" class="view is-hidden">
-                <div class="panel">
-                    <div class="poll-head">
-                        <h1 id="poll-title"></h1>
-                        <p id="poll-note" class="poll-note"></p>
-                        <div id="poll-meta" class="poll-meta"></div>
-                    </div>
-
-                    <div class="table-scroll">
-                        <table class="tally" id="tally-table">
-                            <thead id="tally-head"></thead>
-                            <tbody id="tally-body"></tbody>
-                            <tfoot id="tally-foot"></tfoot>
-                        </table>
-                    </div>
-                    <p id="tally-empty" class="tally-empty is-hidden" data-t="tallyEmpty"></p>
-                </div>
-
-                <form id="answer-form" class="panel">
-                    <h2 class="panel-title" data-t="answerHeading"></h2>
-                    <label class="field">
-                        <span class="field-label"><span data-t="name"></span><b data-t="required"></b></span>
-                        <input id="a-name" type="text" maxlength="30" data-t-ph="namePh" required>
-                    </label>
-                    <div id="a-options" class="answer-options"></div>
-                    <label class="field">
-                        <span class="field-label" data-t="comment"></span>
-                        <input id="a-comment" type="text" maxlength="200" data-t-ph="commentPh">
-                    </label>
-                    <button type="submit" id="answer-button" class="cta">
-                        <span class="spinner" aria-hidden="true"></span>
-                        <span class="cta-label" data-t="submit"></span>
-                    </button>
-                    <p id="answer-status" class="status" role="status"></p>
-                    <p class="fineprint"><span data-t="resendNote"></span> <span id="my-tag" class="device-tag"></span></p>
-                </form>
-
-                <div class="panel share-panel">
-                    <h2 class="panel-title" data-t="shareHeading"></h2>
-                    <div class="share-row">
-                        <input id="share-url" type="text" readonly>
-                        <button type="button" id="copy-url" class="btn-ghost" data-t="copy"></button>
-                    </div>
-                    <div class="qr-box">
-                        <canvas id="share-qr" class="qr" role="img"></canvas>
-                        <p class="qr-hint" data-t="qrHint"></p>
-                    </div>
-                    <div id="owner-tools" class="owner-tools is-hidden">
-                        <button type="button" id="toggle-close" class="btn-ghost"></button>
-                        <button type="button" id="delete-poll" class="btn-ghost btn-danger" data-t="deletePoll"></button>
-                    </div>
-                    <p id="owner-status" class="status" role="status"></p>
-                </div>
-
-                <details class="panel history">
-                    <summary data-t="historyHeading"></summary>
-                    <ol id="history-list" class="history-list"></ol>
-                </details>
-            </section>
 
             <!-- ============ 支援 ============ -->
             <section id="view-support" class="view is-hidden">
@@ -283,6 +146,8 @@
                     <h2 class="panel-title" data-t="supportHeading"></h2>
                     <p class="support-intro" data-t="supportIntro"></p>
 
+                    <details class="support-more">
+                        <summary>くわしい人むけ</summary>
                     <h3 class="support-sub" data-t="supportHow"></h3>
                     <p class="support-text" data-t="supportHow1"></p>
 
@@ -309,29 +174,18 @@
 
                     <p class="support-text" data-t="supportHow2"></p>
                     <pre class="code" id="wallet-cmd"></pre>
+                    </details>
+
                     <p class="support-thanks" data-t="supportThanks"></p>
                     <p><a class="btn-ghost" href="#/" data-t="backHome"></a></p>
                 </div>
             </section>
 
-            <!-- ============ 見つからない ============ -->
-            <section id="view-missing" class="view is-hidden">
-                <div class="panel panel-center">
-                    <h1 data-t="missingH"></h1>
-                    <p data-t="missingP"></p>
-                    <a class="cta" href="#/"><span class="cta-label" data-t="createNew"></span></a>
-                </div>
-            </section>
         </main>
 
         <footer class="site-footer">
-            <p data-t="footerAll"></p>
             <p>
-                <a href="https://github.com/yasumorishima/icp-counter-learning" target="_blank" rel="noopener noreferrer" data-t="source"></a>
-                <span class="footer-sep">·</span>
                 <a href="#/support" data-t="supportNav"></a>
-                <span class="footer-sep">·</span>
-                <a href="#/kimaru">キマル（日程調整）</a>
             </p>
             <p class="legacy">
                 <button type="button" id="legacy-counter" class="legacy-counter" title="">

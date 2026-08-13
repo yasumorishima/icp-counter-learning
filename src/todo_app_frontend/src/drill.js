@@ -12,6 +12,7 @@ let show = () => {};
 let grade = 1;
 let session = null;
 let typed = "";
+let panelMode = "";
 
 export function initDrill(options) {
   show = options.show;
@@ -34,8 +35,42 @@ export function initDrill(options) {
     renderHome();
   });
 
-  $("who-face").addEventListener("click", () => {
-    location.hash = "#/kiroku";
+  $("who-open").addEventListener("click", () => {
+    panelMode = panelMode ? "" : "list";
+    renderWhoPanel();
+  });
+
+  $("who-panel").addEventListener("click", event => {
+    const pick = event.target.closest("[data-pick]");
+    if (pick) {
+      records.selectProfile(pick.dataset.pick);
+      panelMode = "";
+      renderHome();
+      return;
+    }
+    const act = event.target.closest("[data-act]");
+    if (!act) return;
+    if (act.dataset.act === "edit" || act.dataset.act === "add") {
+      panelMode = act.dataset.act;
+      renderWhoPanel();
+      return;
+    }
+    if (act.dataset.act === "save") {
+      const name = $("who-edit-name").value.trim();
+      if (!name) return;
+      const chosen = $("who-panel").querySelector(".face.is-on");
+      const face = chosen ? chosen.dataset.face : FACES[0];
+      const current = records.currentProfile();
+      if (panelMode === "add") records.addProfile(name, face, grade);
+      else if (current) records.updateProfile(current.id, name, face);
+      panelMode = "";
+      renderHome();
+      return;
+    }
+    if (act.dataset.act === "close") {
+      panelMode = "";
+      renderWhoPanel();
+    }
   });
 
   $("grade-tabs").addEventListener("click", event => {
@@ -161,6 +196,8 @@ export function renderHome() {
     : "";
   $("weak-row").classList.toggle("is-hidden", weak.length === 0);
 
+  renderWhoPanel();
+
   $("grade-tabs").innerHTML = GRADES.map(
     g => '<button type="button" class="grade-tab' + (g === grade ? " is-on" : "") + '" data-grade="' + g + '">' + g + "年</button>"
   ).join("");
@@ -179,6 +216,55 @@ export function renderHome() {
       );
     })
     .join("");
+}
+
+/** つかう人 の 切替 / なまえ変え / 追加。トップからすぐ出せるようにする */
+function renderWhoPanel() {
+  const panel = $("who-panel");
+  panel.classList.toggle("is-hidden", !panelMode);
+  if (!panelMode) {
+    panel.innerHTML = "";
+    return;
+  }
+
+  if (panelMode === "list") {
+    const people = records.profiles();
+    const current = records.currentProfile();
+    panel.innerHTML =
+      '<h2 class="panel-title">つかう人</h2>' +
+      people
+        .map(p => {
+          const on = current && current.id === p.id ? " is-on" : "";
+          return '<button type="button" class="who-pick' + on + '" data-pick="' + p.id + '">' + p.face + " " + escapeText(p.name) + "</button>";
+        })
+        .join("") +
+      '<div class="who-actions">' +
+      '<button type="button" class="btn-ghost" data-act="edit">なまえを かえる</button>' +
+      '<button type="button" class="btn-ghost" data-act="add">あたらしい人</button>' +
+      "</div>" +
+      '<button type="button" class="btn-ghost" data-act="close">とじる</button>';
+    return;
+  }
+
+  const current = records.currentProfile();
+  const startName = panelMode === "edit" && current ? current.name : "";
+  const startFace = panelMode === "edit" && current ? current.face : FACES[0];
+  panel.innerHTML =
+    '<h2 class="panel-title">' + (panelMode === "add" ? "あたらしい人" : "なまえを かえる") + "</h2>" +
+    '<div class="face-row">' +
+    FACES.map(f => '<button type="button" class="face' + (f === startFace ? " is-on" : "") + '" data-face="' + f + '">' + f + "</button>").join("") +
+    "</div>" +
+    '<input id="who-edit-name" type="text" maxlength="12" placeholder="なまえ" value="' + escapeText(startName) + '">' +
+    '<div class="who-actions">' +
+    '<button type="button" class="cta" data-act="save"><span class="cta-label">ほぞん</span></button>' +
+    '<button type="button" class="btn-ghost" data-act="close">やめる</button>' +
+    "</div>";
+
+  panel.querySelectorAll(".face").forEach(button => {
+    button.addEventListener("click", () => {
+      panel.querySelectorAll(".face").forEach(f => f.classList.toggle("is-on", f === button));
+    });
+  });
 }
 
 // --- 問題 -------------------------------------------------------------------

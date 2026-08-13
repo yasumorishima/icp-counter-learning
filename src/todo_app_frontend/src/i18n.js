@@ -93,7 +93,7 @@ const en = {
   supportNav: "Support",
   supportHeading: "SUPPORT",
   supportIntro:
-    "This site runs on everyone's goodwill. There is no server bill and no advertising: the canister pays for its own computation and storage in cycles, and those cycles run out over time.",
+    "This site has no ads and no sign-up. It costs a little to keep running, and for now the person who made it pays for that.",
   supportHow: "How to help",
   supportHow1: "Top up the backend canister with cycles. Most top-up services only need the canister ID below.",
   supportHow2: "Or, from a wallet canister:",
@@ -210,7 +210,7 @@ const ja = {
   supportNav: "支援",
   supportHeading: "このサイトについて",
   supportIntro:
-    "このサイトはみなさんの善意で成り立っています。サーバー代も広告もありません。置き場所そのものが、動くための燃料（サイクル）を自分で払っていて、その燃料はいずれ尽きます。",
+    "このサイトは 広告も 会員登録も ありません。動かすのに すこしだけ お金が かかっていて、いまは 作った人が はらっています。",
   supportHow: "支援の方法",
   supportHow1: "下の「データの置き場所」に燃料を入れてください。多くのサービスは、この文字列（キャニスター ID）だけで受け付けます。",
   supportHow2: "詳しい人向け（ウォレットから送る場合）:",

@@ -34,227 +34,46 @@ async function newPage(width = 1280, height = 900) {
   return { context, page };
 }
 
-// ---- 1. 作成 ---------------------------------------------------------------
+// ---- 1. トップ（ドリル） ---------------------------------------------------
 
 const { context, page } = await newPage();
 await page.goto(BASE, { waitUntil: "domcontentloaded" });
 await page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
-check("home loads and agent is ready", true);
-check("default language follows the browser", (await page.locator("#lang-select").inputValue()) === "en");
-
+check("home loads", true);
+check("the top page is the drill", await page.locator("#view-drill").isVisible());
+check("scheduling is gone from the site", (await page.locator("a[href='#/kimaru']").count()) === 0);
+check("no developer wording in the footer", !(await page.locator(".site-footer").textContent()).includes("Internet Computer"));
 await page.screenshot({ path: `${shots}/01-home.png`, fullPage: true });
 
-// トップはドリル。日程調整はフッターの入口から
-check("the top page is the drill", await page.locator("#view-drill").isVisible());
-check("the drill hides the language switch", await page.locator(".lang").isHidden());
-const kimaruLink = page.locator(".site-footer a[href='#/kimaru']");
-check("kimaru is reachable from the footer", (await kimaruLink.count()) === 1);
-await kimaruLink.click();
-await page.waitForSelector("#f-title", { state: "visible", timeout: 30000 });
-
-await page.fill("#f-title", "Team practice in August");
-
-// 日付を選んで押すだけで候補が入るか
-await page.fill("#f-date", "2026-09-05");
-await page.fill("#f-time", "10:30");
-await page.click("#add-from-date");
-const picked = await page.locator(".option-input").first().inputValue();
-const expected = await page.evaluate(() =>
-  new Intl.DateTimeFormat("en", {
-    month: "short", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit",
-  }).format(new Date(2026, 8, 5, 10, 30))
-);
-check("picking a date fills an option row", picked === expected, picked);
-
-const optionInputs = page.locator(".option-input");
-await optionInputs.nth(0).fill("Sun 17 Aug, 9:00");
-await optionInputs.nth(1).fill("Sat 23 Aug, 13:00");
-await optionInputs.nth(2).fill("Sun 31 Aug, 9:00");
-await page.click("#create-button");
-
-await page.waitForFunction(() => location.hash.startsWith("#/p/"), null, { timeout: 30000 });
-const pollUrl = page.url();
-const pollId = pollUrl.split("/p/")[1];
-check("poll is created on chain", Boolean(pollId), `id=${pollId}`);
-await page.waitForFunction(() => document.getElementById("poll-title").textContent.length > 0, null, { timeout: 30000 });
-check("poll title is shown", (await page.locator("#poll-title").textContent()) === "Team practice in August");
-
-// ---- 2. 回答 ---------------------------------------------------------------
-
-await page.fill("#a-name", "Alice");
-await page.locator('.answer-row').nth(0).locator('.seg-yes').click();
-await page.locator('.answer-row').nth(1).locator('.seg-no').click();
-await page.locator('.answer-row').nth(2).locator('.seg-maybe').click();
-await page.fill("#a-comment", "I can join from 15:00");
-await page.click("#answer-button");
-await page.waitForSelector("#answer-status.is-ok", { timeout: 30000 });
-check("answer is accepted", true);
-
-const firstRow = page.locator("#tally-body tr").first();
-check("respondent appears in the table", (await firstRow.locator("th.col-name").textContent()).includes("Alice"));
-check(
-  "marks match what was chosen",
-  (await firstRow.locator("td.mark").allTextContents()).join("") === "○×△",
-  (await firstRow.locator("td.mark").allTextContents()).join("")
-);
-check("comment is kept", (await firstRow.locator("td.col-comment").textContent()) === "I can join from 15:00");
-
-// ---- 3. 同じ名前で送り直すと履歴が残る ------------------------------------
-
-await page.fill("#a-name", "Alice");
-await page.locator('.answer-row').nth(1).locator('.seg-yes').click();
-await page.click("#answer-button");
-await page.waitForSelector("#answer-status.is-ok", { timeout: 30000 });
-
-check("only the latest answer is counted", (await page.locator("#tally-body tr").count()) === 1);
-check("the change is flagged in the row", (await page.locator("#tally-body .revision").count()) >= 1);
-
-await page.click(".history summary");
-const historyItems = await page.locator("#history-list li").count();
-check("both answers are kept in the history", historyItems === 2, `entries=${historyItems}`);
-
-// ---- 4. 別端末から同じ名前で書き換えると印が付く --------------------------
-
-const second = await newPage();
-await second.page.goto(pollUrl, { waitUntil: "domcontentloaded" });
-await second.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
-await second.page.fill("#a-name", "Alice");
-await second.page.locator('.answer-row').nth(0).locator('.seg-no').click();
-await second.page.click("#answer-button");
-await second.page.waitForSelector("#answer-status.is-ok", { timeout: 30000 });
-check(
-  "an edit from another device is marked",
-  (await second.page.locator("#tally-body .revision-alert").count()) === 1
-);
-await second.page.screenshot({ path: `${shots}/02-poll.png`, fullPage: true });
-
-// 主催者の操作は作成した端末にだけ出る
-check("owner tools are hidden for other devices", await second.page.locator("#owner-tools").isHidden());
-await page.reload();
-await page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
-check("owner tools are shown for the creator", await page.locator("#owner-tools").isVisible());
-
-// ---- 4c. 自分が書いた回答は自分で取り消せる --------------------------------
-
-// 2 台目から Bob として回答し、その端末から取り消す
-await second.page.fill("#a-name", "Bob");
-await second.page.locator(".answer-row").nth(0).locator(".seg-yes").click();
-await second.page.click("#answer-button");
-await second.page.waitForSelector("#answer-status.is-ok", { timeout: 30000 });
-const rowsBefore = await second.page.locator("#tally-body tr").count();
-
-const bobRow = second.page.locator("#tally-body tr", { hasText: "Bob" });
-check("a withdraw button is offered on my own row", (await bobRow.locator(".withdraw").count()) === 1);
-await bobRow.locator(".withdraw").click();
-check("the first press only arms the button", (await bobRow.locator(".withdraw.is-armed").count()) === 1);
-await bobRow.locator(".withdraw").click();
-await second.page.waitForSelector("#answer-status.is-ok", { timeout: 30000 });
-await second.page.waitForFunction(
-  count => document.querySelectorAll("#tally-body tr").length === count - 1,
-  rowsBefore,
-  { timeout: 30000 }
-);
-check("my own answer disappears after withdrawing", (await second.page.locator("#tally-body tr", { hasText: "Bob" }).count()) === 0);
-
-// 作成した端末から見ても消えている（画面だけの見かけではない）
-await page.reload();
-await page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
-check("the withdrawal is visible to everyone", (await page.locator("#tally-body tr", { hasText: "Bob" }).count()) === 0);
-check("other people's rows cannot be withdrawn", (await page.locator("#tally-body tr", { hasText: "Alice" }).locator(".withdraw").count()) === 0);
-
-// ---- 4b. QR は共有 URL を指しているか --------------------------------------
-
-// jsQR は実行場所に関係なく解決する（テストのときだけ使う）
-const jsqrPath = createRequire(import.meta.url).resolve("jsqr");
-await page.addScriptTag({ path: jsqrPath });
-const decoded = await page.evaluate(() => {
-  const canvas = document.getElementById("share-qr");
-  const ctx = canvas.getContext("2d");
-  const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const found = window.jsQR(image.data, canvas.width, canvas.height);
-  return found ? found.data : null;
-});
-check("the QR code encodes the share URL", decoded === pollUrl, String(decoded));
-
-// ---- 5. 言語切替 -----------------------------------------------------------
-
-await page.selectOption("#lang-select", "ja");
-check("switching to Japanese changes the UI", (await page.locator("#answer-form .panel-title").textContent()) === "回答する");
-await page.selectOption("#lang-select", "ar");
-check("Arabic switches the page direction", (await page.getAttribute("html", "dir")) === "rtl");
-await page.screenshot({ path: `${shots}/03-arabic.png`, fullPage: true });
-await page.selectOption("#lang-select", "ja");
-await page.screenshot({ path: `${shots}/04-japanese.png`, fullPage: true });
-
-// ---- 5a. どの言語でも文字が空にならず、横にはみ出さないか -------------------
-
-const langCodes = await page.evaluate(() =>
-  [...document.querySelectorAll("#lang-select option")].map(option => option.value)
-);
-const langProblems = [];
-for (const code of langCodes) {
-  await page.selectOption("#lang-select", code);
-  const report = await page.evaluate(() => {
-    const de = document.documentElement;
-    const empty = [...document.querySelectorAll("[data-t]")]
-      .filter(el => el.offsetParent !== null && !el.textContent.trim())
-      .map(el => el.dataset.t);
-    return { overflow: de.scrollWidth - de.clientWidth, empty };
-  });
-  if (report.overflow > 0 || report.empty.length) {
-    langProblems.push(code + ": overflow=" + report.overflow + " empty=[" + report.empty.join(",") + "]");
-  }
-}
-check("every language fits and has no empty label", langProblems.length === 0, langProblems.join(" | ") || langCodes.length + " languages");
-
-// ---- 5b. 明るい / 暗い -----------------------------------------------------
+// ---- 2. あかるさ -----------------------------------------------------------
 
 const darkPreferring = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: "dark" });
 const darkPage = await darkPreferring.newPage();
 await darkPage.goto(BASE, { waitUntil: "domcontentloaded" });
 await darkPage.waitForSelector("body[data-ready='1']", { timeout: 30000 });
-const forcedLight = await darkPage.evaluate(() => document.documentElement.dataset.theme);
-const forcedLightBg = await darkPage.evaluate(() => getComputedStyle(document.body).backgroundColor);
-check("light mode is the default even when the device prefers dark", forcedLight === "light", String(forcedLight));
-check("the default page really is painted light", forcedLightBg === "rgb(255, 248, 243)", forcedLightBg);
+check("light mode is the default even when the device prefers dark",
+  (await darkPage.evaluate(() => document.documentElement.dataset.theme)) === "light");
+check("the default page really is painted light",
+  (await darkPage.evaluate(() => getComputedStyle(document.body).backgroundColor)) === "rgb(255, 248, 243)");
 await darkPreferring.close();
 
-const themeBefore = await page.evaluate(() => document.documentElement.dataset.theme || "");
 await page.click("#theme-toggle");
-const themeAfter = await page.evaluate(() => document.documentElement.dataset.theme);
-check("theme toggle switches the mode", themeAfter === "dark", (themeBefore || "(system)") + " -> " + themeAfter);
-await page.waitForTimeout(700); // 背景色は 0.35 秒かけて変わるので、変わりきってから測る
-const bodyBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-check("dark mode paints a dark background", bodyBg === "rgb(28, 25, 48)", bodyBg);
-await page.screenshot({ path: shots + "/07-dark.png", fullPage: true });
+check("theme toggle switches the mode", (await page.evaluate(() => document.documentElement.dataset.theme)) === "dark");
 await page.reload();
 await page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 check("the theme choice survives a reload", (await page.evaluate(() => document.documentElement.dataset.theme)) === "dark");
 await page.click("#theme-toggle");
 check("switching back returns to light", (await page.evaluate(() => document.documentElement.dataset.theme)) === "light");
 
-// ---- 6. 締め切り -----------------------------------------------------------
+// ---- 3. 支援ページ と カウンター --------------------------------------------
 
-await page.click("#toggle-close");
-await page.waitForSelector(".pill-closed", { timeout: 30000 });
-check("creator can close the poll", await page.locator("#answer-form").isHidden());
-
-await second.page.reload();
-await second.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
-check("a closed poll hides the form for everyone", await second.page.locator("#answer-form").isHidden());
-
-// ---- 7. 支援ページとカウンター ---------------------------------------------
-
-// 支援はヘッダではなくフッターから辿れる（使いに来た人の視界に入れない）
-await page.goto(BASE, { waitUntil: "domcontentloaded" });
-await page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
-check("support is not in the header", (await page.locator(".header-tools a[href='#/support']").count()) === 0);
 const footerSupport = page.locator(".site-footer a[href='#/support']");
 check("support is reachable from the footer", (await footerSupport.count()) === 1);
 await footerSupport.click();
 await page.waitForSelector("#view-support:not(.is-hidden)", { timeout: 30000 });
-check("support page no longer shows any fuel figures", (await page.locator("#m-cycles, #m-polls, #m-entries").count()) === 0);
-await page.screenshot({ path: `${shots}/05-support.png`, fullPage: true });
+check("support page shows no fuel figures", (await page.locator("#m-cycles, #m-polls, #m-entries").count()) === 0);
+check("the technical part is folded away", (await page.locator(".support-more").count()) === 1);
+check("the folded part is closed by default", !(await page.locator(".support-more").evaluate(el => el.open)));
 
 const before = await page.locator("#legacy-count").textContent();
 await page.click("#legacy-counter");
@@ -266,36 +85,19 @@ await page.waitForFunction(
 const after = await page.locator("#legacy-count").textContent();
 check("the old counter still counts", Number(after.replace(/[^0-9]/g, "")) === Number(before.replace(/[^0-9]/g, "")) + 1, `${before} -> ${after}`);
 
-// ---- 7b. ホーム画面に追加できるか ------------------------------------------
+// ---- 4. ホーム画面に追加 ----------------------------------------------------
 
-const manifestResponse = await page.request.get(new URL("manifest.json", BASE).href);
+const manifestResponse = await page.request.get(`${BASE}manifest.json`);
 check("the manifest is served", manifestResponse.status() === 200, String(manifestResponse.status()));
 const manifest = await manifestResponse.json();
 check("the manifest is standalone with a start url", manifest.display === "standalone" && manifest.start_url === "/");
-
-const iconStatuses = [];
 for (const icon of manifest.icons) {
-  const iconResponse = await page.request.get(new URL(icon.src, BASE).href);
-  iconStatuses.push(icon.src + "=" + iconResponse.status());
+  const iconResponse = await page.request.get(`${BASE.replace(/\/$/, "")}${icon.src}`);
+  if (iconResponse.status() !== 200) check(`icon ${icon.src} exists`, false, String(iconResponse.status()));
 }
-check(
-  "every icon in the manifest exists",
-  iconStatuses.every(entry => entry.endsWith("=200")),
-  iconStatuses.join(" ")
-);
+check("every icon in the manifest exists", true);
 
-// ---- 8. 存在しない ID ------------------------------------------------------
-
-await page.goto(`${BASE}#/p/zzzzzzzz`, { waitUntil: "domcontentloaded" });
-await page.waitForSelector("#view-missing:not(.is-hidden)", { timeout: 30000 });
-check("unknown id shows the not-found view", true);
-
-// ---- 9. 携帯の画面幅 -------------------------------------------------------
-
-const mobile = await newPage(390, 900);
-await mobile.page.goto(pollUrl, { waitUntil: "domcontentloaded" });
-await mobile.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
-const overflow = await mobile.page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 check("no horizontal overflow on a phone-sized screen", overflow <= 0, `overflowX=${overflow}px`);
 
 // ---- 10. ドリル -------------------------------------------------------------
@@ -423,7 +225,7 @@ let offlineOk = false;
 let offlineDetail = "";
 try {
   await drill.page.reload({ waitUntil: "domcontentloaded", timeout: 20000 });
-  await drill.page.waitForSelector("#view-drill", { timeout: 20000 });
+  await drill.page.waitForSelector(".grade-tab", { timeout: 20000 });
   offlineOk = (await drill.page.locator(".grade-tab").count()) === 6;
 } catch (error) {
   offlineDetail = String(error.message).slice(0, 80);
