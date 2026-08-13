@@ -72,8 +72,10 @@ dfxx build --network ic "$FRONTEND"
 
 case "$mode" in
   backend)
-    echo "==> バックエンドを upgrade"
-    dfxx canister install "$BACKEND" --network ic --mode upgrade
+    # EOP（enhanced orthogonal persistence）の canister は、保存データを引き継ぐことを
+    # 明示しないと upgrade が拒否される（Missing upgrade option）
+    echo "==> バックエンドを upgrade（保存データは引き継ぐ）"
+    dfxx canister install "$BACKEND" --network ic --mode upgrade --wasm-memory-persistence keep
     ;;
   reset)
     echo "==> バックエンドを作り直し"
