@@ -1,7 +1,7 @@
 {
-  "name": "Kimaru",
-  "short_name": "Kimaru",
-  "description": "Scheduling that nobody can quietly rewrite.",
+  "name": "さんすうドリル 1〜6年",
+  "short_name": "さんすうドリル",
+  "description": "小学 1〜6年の さんすうドリル。記録は端末の中だけに残ります。",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
