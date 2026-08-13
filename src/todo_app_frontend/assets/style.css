@@ -825,3 +825,47 @@ body.on-drill .lang { display: none; }
 .fuel-detail { font-size: 0.9rem; color: var(--dim); font-weight: 700; }
 .fuel-bar { width: 100%; height: 14px; border-radius: 999px; background: var(--chip); overflow: hidden; margin-top: 4px; }
 .fuel-fill { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--mint), var(--sky)); }
+
+/* ================= 見やすさ ================= */
+
+/* もじの おおきさ。端末の設定を上書きせず、この場で選べるようにする */
+:root[data-size="l"] { font-size: 112.5%; }
+:root[data-size="xl"] { font-size: 125%; }
+
+.size-btn { display: inline-flex; align-items: baseline; justify-content: center; gap: 1px; font-weight: 900; }
+.size-btn .size-small { font-size: 0.75rem; }
+.size-btn .size-large { font-size: 1.05rem; }
+
+/* どこを操作しているかが 目で分かるように */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 4px solid var(--grape);
+  outline-offset: 3px;
+  border-radius: 12px;
+}
+
+/* 動きが苦手な人のために */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 押しやすさ: 小さくなりがちな所を 底上げする */
+.btn-ghost, .icon-btn { min-height: 48px; }
+.icon-btn { min-width: 48px; }
+.grade-tab { min-height: 56px; }
+.variant, .who-pick, .person-use { min-height: 56px; }
+.pad, .choice { min-height: 68px; }
+
+/* 読みやすさ: 行の間と 文字の間を すこし広げる */
+body { line-height: 1.75; letter-spacing: 0.02em; }
+.quiz-text { letter-spacing: 0.04em; }
+.unit-name, .who-text b { letter-spacing: 0.03em; }

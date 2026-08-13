@@ -57,6 +57,8 @@ function setupLangSelect() {
 // --- 明るい / 暗い -----------------------------------------------------------
 
 const THEME_KEY = "kimaru.theme";
+const SIZE_KEY = "drill.size";
+const SIZES = ["m", "l", "xl"];
 
 /** 既定はライト。端末が暗い設定でも、選ばれるまでは明るいままにする */
 const DEFAULT_THEME = "light";
@@ -87,6 +89,35 @@ function setupTheme() {
       localStorage.setItem(THEME_KEY, next);
     } catch (error) {
       /* 記憶できなくても切り替えは効く */
+    }
+  });
+}
+
+/**
+ * もじの おおきさ。ふつう → 大きい → とても大きい の 3 段。
+ * 端末の設定はそのままに、この場で選べるようにする（学校の共用端末でも使えるように）。
+ */
+function applySize(size) {
+  document.documentElement.dataset.size = size;
+}
+
+function setupTextSize() {
+  let stored = null;
+  try {
+    stored = localStorage.getItem(SIZE_KEY);
+  } catch (error) {
+    /* 保存できない環境でも その場の切り替えは効く */
+  }
+  applySize(SIZES.includes(stored) ? stored : SIZES[0]);
+
+  $("size-toggle").addEventListener("click", () => {
+    const now = document.documentElement.dataset.size || SIZES[0];
+    const next = SIZES[(SIZES.indexOf(now) + 1) % SIZES.length];
+    applySize(next);
+    try {
+      localStorage.setItem(SIZE_KEY, next);
+    } catch (error) {
+      /* 記憶できなくても 切り替えは効く */
     }
   });
 }
@@ -226,6 +257,7 @@ async function route() {
 
 async function init() {
   setupTheme();
+  setupTextSize();
   setupLangSelect();
   applyLang();
   initDrill({ show: showView });

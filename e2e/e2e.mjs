@@ -152,6 +152,80 @@ check("every icon in the manifest exists", true);
 const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 check("no horizontal overflow on a phone-sized screen", overflow <= 0, `overflowX=${overflow}px`);
 
+// ---- 5. 見やすさ -----------------------------------------------------------
+
+await page.goto(BASE, { waitUntil: "domcontentloaded" });
+await page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+
+const sizeBefore = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+await page.click("#size-toggle");
+const sizeAfter = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+check("the text can be made bigger", sizeAfter > sizeBefore, `${sizeBefore}px -> ${sizeAfter}px`);
+await page.reload();
+await page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+check("the chosen text size survives a reload",
+  (await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize))) === sizeAfter);
+await page.click("#size-toggle");
+await page.click("#size-toggle");
+
+// 押せるところが 小さすぎないか（実際の大きさを全部測る）
+const tooSmall = await page.evaluate(() => {
+  const bad = [];
+  document.querySelectorAll("button, a, input, select, summary").forEach(el => {
+    const box = el.getBoundingClientRect();
+    if (box.width === 0 && box.height === 0) return;
+    if (box.height < 44) bad.push((el.id || el.className || el.tagName) + "=" + Math.round(box.height));
+  });
+  return bad;
+});
+check("everything you tap is big enough", tooSmall.length === 0, tooSmall.slice(0, 5).join(" "));
+
+// 文字と背景の コントラストを 明るい画面と暗い画面の両方で 全部測る
+const contrastSweep = async () =>
+  page.evaluate(() => {
+    const toRgb = text => (text.match(/[0-9.]+/g) || [0, 0, 0]).slice(0, 3).map(Number);
+    const lum = ([r, g, b]) =>
+      [r, g, b]
+        .map(v => v / 255)
+        .map(v => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)))
+        .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+    const behind = el => {
+      let node = el;
+      while (node && node !== document.documentElement) {
+        const bg = getComputedStyle(node).backgroundColor;
+        if (bg && !bg.includes("rgba(0, 0, 0, 0)")) return toRgb(bg);
+        node = node.parentElement;
+      }
+      return toRgb(getComputedStyle(document.body).backgroundColor);
+    };
+    const bad = [];
+    document.querySelectorAll("body *").forEach(el => {
+      const text = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim().length > 0);
+      if (!text) return;
+      const box = el.getBoundingClientRect();
+      if (box.width === 0 || box.height === 0) return;
+      const style = getComputedStyle(el);
+      if (style.visibility === "hidden" || style.opacity === "0") return;
+      const fg = toRgb(style.color);
+      const bg = behind(el);
+      const la = lum(fg);
+      const lb = lum(bg);
+      const ratio = (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+      const size = parseFloat(style.fontSize);
+      const bold = Number(style.fontWeight) >= 700;
+      const need = size >= 24 || (bold && size >= 18.66) ? 3 : 4.5;
+      if (ratio < need) bad.push((el.id || el.className || el.tagName) + "=" + ratio.toFixed(1));
+    });
+    return bad;
+  });
+
+const lightBad = await contrastSweep();
+check("every text is readable in the light theme", lightBad.length === 0, lightBad.slice(0, 6).join(" "));
+await page.click("#theme-toggle");
+const darkBad = await contrastSweep();
+check("every text is readable in the dark theme", darkBad.length === 0, darkBad.slice(0, 6).join(" "));
+await page.click("#theme-toggle");
+
 // ---- 10. ドリル -------------------------------------------------------------
 
 const drill = await newPage(420, 900);
