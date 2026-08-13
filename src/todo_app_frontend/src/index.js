@@ -690,6 +690,20 @@ async function init() {
   document.body.dataset.ready = "1";
   await route();
   setupLegacyCounter();
+  registerOffline();
+}
+
+/**
+ * 電波が無くても開けるようにする。
+ * ドリルは端末の中だけで動くので、いちど読めば通信は要らない。
+ */
+function registerOffline() {
+  if (!("serviceWorker" in navigator)) return;
+  const build = process.env.BUILD_ID || "0";
+  navigator.serviceWorker.register("/sw.js?v=" + build).catch(error => {
+    // 登録できなくても、通信できる間はふつうに使える
+    console.warn("offline support is unavailable", error);
+  });
 }
 
 if (document.readyState === "loading") {

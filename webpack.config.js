@@ -90,6 +90,8 @@ module.exports = (env, argv) => {
       }),
       new webpack.DefinePlugin({
         "process.env.DFX_NETWORK": JSON.stringify(network),
+        // 版が変わったら、貯めてある古い画面を捨てさせるための印
+        "process.env.BUILD_ID": JSON.stringify(String(Date.now())),
         ...canisterIds
       }),
     ],

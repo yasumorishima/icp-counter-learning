@@ -408,6 +408,46 @@ await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 check("a weak unit is offered again", await drill.page.locator("#weak-row").isVisible());
 check("the weak card points at the unit just failed", (await drill.page.locator('.weak-card[data-unit="g1-sub"]').count()) === 1);
 
+// 電波が無くても ドリルが開けるか
+await drill.page.goto(BASE, { waitUntil: "networkidle" });
+await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+const swReady = await drill.page.evaluate(async () => {
+  if (!navigator.serviceWorker) return false;
+  const reg = await navigator.serviceWorker.ready;
+  return Boolean(reg && reg.active);
+});
+check("the offline helper is installed", swReady);
+
+await drill.context.setOffline(true);
+let offlineOk = false;
+let offlineDetail = "";
+try {
+  await drill.page.reload({ waitUntil: "domcontentloaded", timeout: 20000 });
+  await drill.page.waitForSelector("#view-drill", { timeout: 20000 });
+  offlineOk = (await drill.page.locator(".grade-tab").count()) === 6;
+} catch (error) {
+  offlineDetail = String(error.message).slice(0, 80);
+}
+check("the drill opens with no network", offlineOk, offlineDetail);
+
+// 電波が無くても 問題が解けて 記録に残るか
+let offlineAnswered = false;
+try {
+  await drill.page.locator('.grade-tab[data-grade="1"]').click();
+  await drill.page.locator('.unit-card[data-unit="g1-add"]').click();
+  await drill.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 20000 });
+  const text = (await drill.page.locator("#quiz-text").textContent()).trim().split(" ");
+  const value = String(Number(text[0]) + Number(text[2]));
+  for (const digit of value.split("")) await drill.page.locator(`.pad[data-pad="${digit}"]`).click();
+  await drill.page.locator('.pad[data-pad="ok"]').click();
+  await drill.page.waitForSelector(".quiz-feedback.is-ok", { timeout: 20000 });
+  offlineAnswered = true;
+} catch (error) {
+  offlineDetail = String(error.message).slice(0, 80);
+}
+check("questions can be answered with no network", offlineAnswered, offlineDetail);
+await drill.context.setOffline(false);
+
 const drillOverflow = await drill.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 check("the drill fits a phone-sized screen", drillOverflow <= 0, `overflowX=${drillOverflow}px`);
 await drill.context.close();
