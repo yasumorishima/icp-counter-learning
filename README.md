@@ -1,52 +1,46 @@
-# キマル / Kimaru
+# さんすうドリル 1〜6年
 
 [![CI](https://github.com/yasumorishima/icp-counter-learning/actions/workflows/ci.yml/badge.svg)](https://github.com/yasumorishima/icp-counter-learning/actions/workflows/ci.yml)
 
-**書き換えられない日程調整。** 広告なし、ログイン不要、集計はすべて Internet Computer 上。
+小学 1〜6年の 算数を、その場で解いて すぐ丸がつく ドリル。
+**広告なし、登録なし、記録は端末の中だけ。** 電波が無くても つかえます。
 
-Tamper-evident scheduling polls. No ads, no sign-up, and every response is written on-chain.
+Free arithmetic practice for Japanese elementary school (grades 1–6).
+No ads, no sign-up, and every learning record stays on the child's own device.
 
 🌐 https://iqjbc-7aaaa-aaaaj-qnnsa-cai.icp0.io/
 
 ---
 
-## なにが違うのか
+## なにができるか
 
-| | よくある日程調整 | キマル |
-|---|---|---|
-| 回答の変更 | 上書き。前の回答は消える | **追記**。誰がいつ変えたかが残る |
-| 別人による書き換え | 気づけない | **端末タグ**が変わるので画面で分かる |
-| アカウント | 必要なことが多い | **不要**（ブラウザが鍵を持つ） |
-| 広告・追跡 | あることが多い | **なし**。サーバー自体を持たない |
-| 運営が消えたら | データも消える | キャニスターが動く限り残る |
-
-## 仕組み
-
-- **バックエンド**: Motoko キャニスター。調整・回答・履歴を保持する
-- **フロントエンド**: Vanilla JS。asset キャニスターから配信される
-- **本人確認**: ブラウザ内で Ed25519 鍵を生成し `localStorage` に置く。
-  秘密鍵は端末から出ず、主催者かどうかはこの鍵の principal で判定する
-- **端末タグ**: principal から導く 4 文字。同じ名前が別の端末から書き換えられると印が付く
-- **ガス代**: リバースガスモデル。閲覧者も回答者も費用を負担しない
-
-### 保存の上限（cycles を有界にするため）
-
-| 項目 | 上限 |
+| | |
 |---|---|
-| タイトル / 説明 | 100 / 500 文字 |
-| 候補 | 20 件（1 件 60 文字） |
-| 名前 / コメント | 30 / 200 文字 |
-| 1 つの調整の回答 | 600 件 |
-| 保存される調整 | 5,000 件 |
-| 作成のペース | 1 端末 5 件/時、全体 100 件/時 |
-| 保存期間 | 90 日で自動削除 |
+| **36 単元** | 全学年 6 単元ずつ。たし算・ひき算・九九（段ごと）・時計・わり算・分数・小数・がい数・面積・角度・割合・平均・体積・比・速さ・円の面積・場合の数 など |
+| **きょうの 1まい** | その日ごとに 決まった 10 問。同じ日なら 何度ひらいても 同じ、日が変われば 変わる |
+| **タイムアタック** | 60 びょうで 何問とけるか。学年ごとに さいこう記録 |
+| **チャレンジ** | なつやすみ（7/21〜8/31）や 30日。毎日 1まい やって、さいごに **印刷できる しょうじょう** |
+| **つづく仕組み** | ★とレベル、連続日数、今月のカレンダー、にがてな単元の出し直し |
+| **きろく** | なまえごとに 6人まで。書き出し / よみこみ で 端末を移せる |
 
-匿名 principal からの書き込みは受け付けない。
+## 大事にしていること
 
-## 対応言語
+- **こどものデータを 外に出さない。** 問題は 端末の中で作り、記録も `localStorage` だけ。
+  サーバーに送るものは ありません
+- **外の部品を 読み込まない。** フォント・音・かみふぶきまで 自前。外部の CDN も 追跡もゼロ
+- **電波が無くても つかえる。** いちど ひらけば、そのあとは オフラインで 解けます
+- **見やすさは 数で担保する。** 文字の大きさ 3 段、押すところは 44px 以上、
+  明るい画面と 暗い画面の 両方で コントラスト基準（大きい字 3:1・ふつう 4.5:1）を
+  CI が 毎回 全数検査します
 
-英語 / 日本語 / 中国語 / 韓国語 / スペイン語 / ポルトガル語 / フランス語 / ドイツ語 / ロシア語 / アラビア語（RTL）。
-`src/todo_app_frontend/src/i18n.js` に 1 ブロック足せば言語を追加できる。
+## 動かしているところ
+
+HTML・JavaScript・データの すべてが Internet Computer 上の キャニスターで 動いています。
+サーバー代を 払う会社が いないので、消えることも 売られることも ありません。
+キャニスター自身が 計算と保存の費用（cycles）を払い、**残りは 支援ページに 年数で 表示**しています。
+
+**保存量が増えない作り**なので、使う人が増えても 費用は ほぼ 変わりません
+（問題も記録も 端末の中で完結し、2 回目からは キャッシュから 表示されます）。
 
 ## 開発
 
@@ -62,27 +56,17 @@ dfx deploy todo_app_frontend
 ### 動作確認（実ブラウザ）
 
 ```bash
-npm install --no-save playwright@1
-npx playwright install --with-deps chromium
 node e2e/e2e.mjs http://$(dfx canister id todo_app_frontend).localhost:4943/
 ```
 
-作成 → 回答 → 変更の履歴 → 別端末からの書き換え検知 → 主催者だけの操作 → 締め切り →
-言語切替（アラビア語の RTL 含む）→ 明暗切替と再読み込み後の保持 → 支援ページ →
-不明な ID → 携帯幅での横あふれまで、27 項目を実際のブラウザで通す。
-画面は `e2e-shots/` に残る（`E2E_SHOTS` で変更可）。
+作成〜採点〜記録の通し、きょうの 1まい の 日替わり、タイムアタック、チャレンジと しょうじょう、
+オフラインで 解けること、押すところの 大きさ、明暗それぞれの コントラスト全数、
+390px で 横あふれ 0px まで、**70 項目**を 実ブラウザで 確かめます。
 
 ### CI
 
-`.github/workflows/ci.yml` が push と Pull Request のたびに走る。**secrets は使わない**。
-
-1. **本番と同じ条件でビルドして成果物を検証** — 最小化あり・`DFX_NETWORK=ic`。
-   `<script>` タグが 1 個か、バンドルが `ic0.app` と backend canister id を持つか。
-   HTML 圧縮が `type="text"` を削るような、本番ビルドでしか出ない不具合をここで捕まえる
-2. **ローカル replica に配置して実ブラウザで 27 項目**
-
-失敗したときだけスクリーンショットを artifact に残す（5 日）。
-配備鍵を CI に置いていないので、**反映は CI からは行わない**（`scripts/deploy.sh` を人が実行する）。
+push と PR のたびに 上を すべて実行します（鍵は 使いません）。
+**反映は CI からは行いません**（配備鍵を GitHub に置かないため。`scripts/deploy.sh` を 人が実行します）。
 
 ## デプロイ
 
@@ -93,38 +77,31 @@ bash scripts/deploy.sh --reset-backend  # バックエンドを作り直す（�
 ```
 
 `dfx deploy` を直接使わないのは、**canister 名を指定しても依存先まで install してしまう**ため。
-フロントエンドだけ直したつもりでバックエンドの状態を触るのを避けたい。
 
-配備に使う identity を指定したいときは `KIMARU_IDENTITY` を渡す。
+配備に使う identity は `KIMARU_IDENTITY` で指定します。
 
 ```bash
 KIMARU_IDENTITY=kimaru-deploy bash scripts/deploy.sh
 ```
 
-配備鍵は平文で保存されているため dfx がメインネット向けのコマンドを警告で止めるが、
-`scripts/deploy.sh` の中で `DFX_WARNING` を設定してあるので追加の操作は要らない。
+配備鍵は 平文で保存されているため dfx が メインネット向けのコマンドを 警告で止めますが、
+`scripts/deploy.sh` の中で `DFX_WARNING` を設定してあるので 追加の操作は要りません。
 
-端末を持たない環境（ssh 越しなど）からバックエンドを作り直すときは、確認を環境変数で明示する。
+端末を持たない環境（ssh 越しなど）から バックエンドを作り直すときは、確認を 環境変数で明示します。
 
 ```bash
 KIMARU_RESET_CONFIRM=yes bash scripts/deploy.sh --reset-backend
 ```
 
-### 初めてその identity で配備するとき
+### 初めて その identity で配備するとき
 
-アセットキャニスターは controller とは別に権限を持っている。
+アセットキャニスターは controller とは別に 権限を持っています。
 controller に加えただけでは `Caller does not have Prepare permission` で止まるので、
-一度だけ Prepare と Commit を渡す。
+一度だけ Prepare と Commit を渡します。
 
 ```bash
 dfx --identity kimaru-deploy canister --network ic call iqjbc-7aaaa-aaaaj-qnnsa-cai grant_permission '(record { to_principal = principal "<配備する principal>"; permission = variant { Prepare } })'
 dfx --identity kimaru-deploy canister --network ic call iqjbc-7aaaa-aaaaj-qnnsa-cai grant_permission '(record { to_principal = principal "<配備する principal>"; permission = variant { Commit } })'
-```
-
-付与できたかは `list_permitted` で確認する（`--query` は付かない。update メソッドのため）。
-
-```bash
-dfx --identity kimaru-deploy canister --network ic call iqjbc-7aaaa-aaaaj-qnnsa-cai list_permitted '(record { permission = variant { Prepare } })'
 ```
 
 ### dfx のバージョン
@@ -134,17 +111,11 @@ dfx --identity kimaru-deploy canister --network ic call iqjbc-7aaaa-aaaaj-qnnsa-
 | 一般 | 0.24 以降 | `persistent actor` / `transient` 構文 |
 | Raspberry Pi 5 (Debian bookworm) | **0.29.2 まで** | 0.32 は glibc 2.38/2.39 を要求し、bookworm の 2.36 では起動しない |
 
-0.29.2 でも `persistent actor` のコンパイルとフロントのビルドは通る（実機で確認済み）。
-
-## このサイトの費用について
-
-サーバー代も広告もなく、キャニスターが計算と保存の費用を cycles で払っている。
-残量はサイト内の「支援」ページに出ている。1 兆 cycles = 1 XDR の固定レート。
-
 ## 前身
 
-このリポジトリは元々「禁欲カウンター」だった。カウンターはフッターに小さく残してある。
-当時の開発記録は [docs/icp-learning-log.md](docs/icp-learning-log.md) に移した。
+このリポジトリは 「禁欲カウンター」→「キマル（日程調整）」を経て いまの形になりました。
+カウンターは フッターに 小さく残してあります。
+当時の開発記録は [docs/icp-learning-log.md](docs/icp-learning-log.md) にあります。
 
 ## ライセンス
 
