@@ -40,7 +40,8 @@ const { context, page } = await newPage();
 await page.goto(BASE, { waitUntil: "domcontentloaded" });
 await page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 check("home loads", true);
-check("the top page is the drill", await page.locator("#view-drill").isVisible());
+check("the top page asks which one to play", await page.locator("#view-pick").isVisible());
+check("both the drill and shogi are one tap away", (await page.locator(".pick-card").count()) === 2);
 check("scheduling is gone from the site", (await page.locator("a[href='#/kimaru']").count()) === 0);
 check("no developer wording in the footer", !(await page.locator(".site-footer").textContent()).includes("Internet Computer"));
 await page.screenshot({ path: `${shots}/01-home.png`, fullPage: true });
@@ -154,7 +155,7 @@ check("no horizontal overflow on a phone-sized screen", overflow <= 0, `overflow
 
 // ---- 5. 見やすさ -----------------------------------------------------------
 
-await page.goto(BASE, { waitUntil: "domcontentloaded" });
+await page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
 await page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 
 const sizeBefore = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
@@ -249,7 +250,7 @@ await page.click("#theme-toggle");
 // ---- 10. ドリル -------------------------------------------------------------
 
 const drill = await newPage(420, 900);
-await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
 await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 
 check("a new device is asked for a name first", await drill.page.locator("#who-empty").isVisible());
@@ -294,7 +295,7 @@ check("answering every question correctly scores 10", (await drill.page.locator(
 await drill.page.screenshot({ path: `${shots}/06-drill.png`, fullPage: true });
 
 // 記録は端末に残り、リロードしても消えない
-await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
 await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 check("stars are kept after a reload", (await drill.page.locator("#who-stars").textContent()) === "10");
 check("the unit shows the last score", (await drill.page.locator(".unit-card").first().textContent()).includes("100点"));
@@ -309,7 +310,7 @@ check("the record page lists the person", (await drill.page.locator("#kiroku-peo
 check("the record page lists the unit", (await drill.page.locator(".kiroku-table").count()) === 1);
 
 // きょうの 1まい は 毎日 かわり、その日のうちは 同じ
-await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
 await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 check("today's sheet is offered", await drill.page.locator("#daily-card").isVisible());
 const levelBefore = await drill.page.locator("#level-rank").textContent();
@@ -337,7 +338,7 @@ for (let i = 0; i < 10; i += 1) {
   if (i < 9) await drill.page.waitForFunction(n => document.getElementById("quiz-count").textContent.startsWith(String(n)), i + 2, { timeout: 30000 });
 }
 await drill.page.waitForSelector("#view-result:not(.is-hidden)", { timeout: 30000 });
-await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
 await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 check("today's sheet is marked as done", await drill.page.locator("#daily-card.is-done").isVisible());
 
@@ -347,6 +348,8 @@ await drill.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 
 check("today's sheet stays the same all day",
   (await drill.page.locator("#quiz-text").textContent()).trim() === dailyFirstText, dailyFirstText);
 await drill.page.click("#quiz-quit");
+await drill.page.waitForSelector("#view-drill:not(.is-hidden)", { timeout: 20000 });
+check("leaving a sheet returns to the drill top", await drill.page.locator("#drill-main").isVisible());
 
 // カレンダーに きょうの印が つく
 await drill.page.goto(`${BASE}#/kiroku`, { waitUntil: "domcontentloaded" });
@@ -354,7 +357,7 @@ await drill.page.waitForSelector("#view-kiroku:not(.is-hidden)", { timeout: 3000
 check("the calendar marks the days done", (await drill.page.locator(".calendar-cell.is-done").count()) >= 1);
 
 // タイムアタック（60 びょう）と コンボ
-await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
 await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 check("a time attack is offered", await drill.page.locator("#time-card").isVisible());
 await drill.page.click("#time-card");
@@ -390,10 +393,12 @@ await drill.page.evaluate(() => {
   return el ? el.textContent : "";
 });
 await drill.page.click("#quiz-quit");
+await drill.page.waitForSelector("#view-drill:not(.is-hidden)", { timeout: 20000 });
 check("leaving the time attack stops the clock", await drill.page.locator("#quiz-timer").isHidden());
+check("leaving the time attack returns to the drill top", await drill.page.locator("#drill-main").isVisible());
 
 // おとは 切れる
-await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
 await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 const soundBefore = (await drill.page.locator("#sound-mark").textContent()).trim();
 await drill.page.click("#sound-toggle");
@@ -406,7 +411,7 @@ check("the sound setting survives a reload",
 await drill.page.click("#sound-toggle");
 
 // チャレンジ（期間を決めて 毎日 1まい）
-await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
 await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 check("a challenge is offered", (await drill.page.locator('[data-challenge="summer"]').count()) === 1);
 await drill.page.locator('[data-challenge="month"]').click();
@@ -422,14 +427,14 @@ await drill.page.waitForSelector("#view-award:not(.is-hidden)", { timeout: 30000
 const awardText = (await drill.page.locator("#award-body").textContent()).replace(/\s+/g, " ").trim();
 check("the certificate names the person and the days", /ゆうた どの/.test(awardText) && /30日 のうち/.test(awardText), awardText.slice(0, 60));
 
-await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
 await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 await drill.page.locator('[data-challenge="stop"]').click();
 await drill.page.locator('[data-challenge="stop"]').click();
 check("a challenge can be given up", (await drill.page.locator('[data-challenge="month"]').count()) === 1);
 
 // 九九は段をえらべる
-await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
 await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 await drill.page.locator('.grade-tab[data-grade="2"]').click();
 const kukuCard = drill.page.locator('.unit-card[data-unit="g2-kuku"]');
@@ -442,7 +447,7 @@ const kukuText = (await drill.page.locator("#quiz-text").textContent()).trim();
 check("the chosen row is the one asked", kukuText.startsWith("5 ×"), kukuText);
 
 // とけいは 絵で出る
-await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
 await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 await drill.page.locator('.grade-tab[data-grade="1"]').click();
 await drill.page.locator('.unit-card[data-unit="g1-clock"]').click();
@@ -460,7 +465,7 @@ check("the clock face is actually drawn", painted > 5000, `pixels=${painted}`);
 check("the clock question is answered by choosing", (await drill.page.locator(".choice").count()) === 4);
 
 // まちがえると「にがてを もういちど」が出る
-await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
 await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 await drill.page.locator('.grade-tab[data-grade="1"]').click();
 await drill.page.locator('.unit-card[data-unit="g1-sub"]').click();
@@ -471,13 +476,13 @@ for (let i = 0; i < 10; i += 1) {
   if (i < 9) await drill.page.waitForFunction(n => document.getElementById("quiz-count").textContent.startsWith(String(n)), i + 2, { timeout: 30000 });
 }
 await drill.page.waitForSelector("#view-result:not(.is-hidden)", { timeout: 30000 });
-await drill.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
 await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 check("a weak unit is offered again", await drill.page.locator("#weak-row").isVisible());
 check("the weak card points at the unit just failed", (await drill.page.locator('.weak-card[data-unit="g1-sub"]').count()) === 1);
 
 // 電波が無くても ドリルが開けるか
-await drill.page.goto(BASE, { waitUntil: "networkidle" });
+await drill.page.goto(`${BASE}#/drill`, { waitUntil: "networkidle" });
 await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 const swReady = await drill.page.evaluate(async () => {
   if (!navigator.serviceWorker) return false;
@@ -520,6 +525,180 @@ const drillOverflow = await drill.page.evaluate(() => document.documentElement.s
 check("the drill fits a phone-sized screen", drillOverflow <= 0, `overflowX=${drillOverflow}px`);
 await drill.page.screenshot({ path: `${shots}/06-drill-phone.png`, fullPage: true });
 await drill.context.close();
+
+// ---- 11. しょうぎ ------------------------------------------------------------
+
+const shogi = await newPage(420, 900);
+await shogi.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await shogi.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await shogi.page.click(".pick-shogi");
+await shogi.page.waitForSelector("#view-shogi:not(.is-hidden)", { timeout: 20000 });
+check("shogi opens from the front page", await shogi.page.locator("#shogi-setup").isVisible());
+check("three strengths are offered", (await shogi.page.locator("[data-level]").count()) === 3);
+
+await shogi.page.click('[data-level="1"]');
+await shogi.page.click("#shogi-start");
+await shogi.page.waitForSelector("#shogi-play:not(.is-hidden)", { timeout: 20000 });
+check("the board has 81 squares", (await shogi.page.locator(".sq").count()) === 81);
+check("40 pieces are set out", (await shogi.page.locator(".koma").count()) === 40);
+check("the opponent pieces face the other way", (await shogi.page.locator(".koma.is-gote").count()) === 20);
+
+await shogi.page.click('.sq[data-sq="56"]');
+check("tapping a pawn shows where it may go", (await shogi.page.locator(".sq.is-go").count()) === 1);
+await shogi.page.click('.sq[data-sq="47"]');
+await shogi.page.waitForFunction(() => document.querySelectorAll("#shogi-kifu-list li").length >= 2, null,
+  { timeout: 40000 });
+const record = await shogi.page.locator("#shogi-kifu-list li").allTextContents();
+check("the move is written down", record[0].includes("▲７六歩"), record[0]);
+check("the opponent answers", record.length >= 2 && record[1].includes("△"), record[1] || "none");
+
+const beforeTap = await shogi.page.locator("#shogi-kifu-list li").count();
+await shogi.page.click('.sq[data-sq="0"]');
+check("the opponent pieces cannot be moved",
+  (await shogi.page.locator("#shogi-kifu-list li").count()) === beforeTap);
+
+await shogi.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
+await shogi.page.goto(`${BASE}#/shogi`, { waitUntil: "domcontentloaded" });
+await shogi.page.waitForSelector("#view-shogi:not(.is-hidden)", { timeout: 20000 });
+check("the game in progress is still on the board",
+  (await shogi.page.locator("#shogi-kifu-list li").count()) >= 2);
+
+await shogi.page.reload({ waitUntil: "domcontentloaded" });
+await shogi.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await shogi.page.goto(`${BASE}#/shogi`, { waitUntil: "domcontentloaded" });
+await shogi.page.waitForSelector("#shogi-setup:not(.is-hidden)", { timeout: 20000 });
+check("after a reload the game can be picked up", await shogi.page.locator("#shogi-resume-row").isVisible());
+await shogi.page.click("#shogi-resume");
+await shogi.page.waitForSelector("#shogi-play:not(.is-hidden)", { timeout: 20000 });
+check("the moves come back", (await shogi.page.locator("#shogi-kifu-list li").count()) >= 2);
+
+await shogi.page.click("#shogi-hint");
+await shogi.page.waitForFunction(() => document.querySelectorAll(".sq.is-hint").length > 0, null,
+  { timeout: 40000 });
+check("a hint lights up a square", (await shogi.page.locator(".sq.is-hint").count()) >= 1);
+
+const beforeUndo = await shogi.page.locator("#shogi-kifu-list li").count();
+await shogi.page.click("#shogi-undo");
+await shogi.page.waitForFunction(n => document.querySelectorAll("#shogi-kifu-list li").length < n, beforeUndo,
+  { timeout: 40000 });
+check("taking a move back works", (await shogi.page.locator("#shogi-kifu-list li").count()) < beforeUndo);
+
+const komaRatio = async () =>
+  shogi.page.evaluate(() => {
+    const toRgb = t => (t.match(/[0-9.]+/g) || [0, 0, 0]).slice(0, 3).map(Number);
+    const lum = ([r, g, b]) =>
+      [r, g, b]
+        .map(v => v / 255)
+        .map(v => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)))
+        .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+    const koma = document.querySelector(".koma");
+    const fg = lum(toRgb(getComputedStyle(koma).color));
+    // 駒の 面は グラデーション。色を 全部 取り出して いちばん 悪い 組み合わせで 見る
+    const image = getComputedStyle(koma).backgroundImage;
+    const stops = (image.match(/rgba?\([^)]+\)/g) || []).map(toRgb);
+    const board = toRgb(getComputedStyle(document.querySelector(".shogi-board")).backgroundColor);
+    const list = stops.length ? stops : [board];
+    let worst = 99;
+    for (const stop of list) {
+      const bg = lum(stop);
+      worst = Math.min(worst, (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05));
+    }
+    return Math.round(worst * 10) / 10;
+  });
+const lightRatio = await komaRatio();
+await shogi.page.click("#theme-toggle");
+const darkRatio = await komaRatio();
+await shogi.page.click("#theme-toggle");
+check("the pieces stay readable in both themes", lightRatio >= 4.5 && darkRatio >= 4.5,
+  `light=${lightRatio} dark=${darkRatio}`);
+
+const shogiTaps = await shogi.page.evaluate(() => {
+  const bad = [];
+  document.querySelectorAll("#view-shogi button, #view-shogi a, #view-shogi summary").forEach(el => {
+    const box = el.getBoundingClientRect();
+    if (box.width === 0 && box.height === 0) return;
+    // ますは 盤が 正方形なので、画面の はばで 大きさが きまる
+    if (el.classList.contains("sq")) return;
+    if (box.height < 44 || box.width < 44) {
+      bad.push((el.id || el.className) + "=" + Math.round(box.width) + "x" + Math.round(box.height));
+    }
+  });
+  return bad;
+});
+check("the shogi controls are big enough to tap", shogiTaps.length === 0, shogiTaps.slice(0, 4).join(" "));
+
+await shogi.page.setViewportSize({ width: 390, height: 850 });
+const shogiOverflow = await shogi.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+check("the board fits a phone-sized screen", shogiOverflow <= 0, `overflowX=${shogiOverflow}px`);
+await shogi.page.screenshot({ path: `${shots}/07-shogi-phone.png`, fullPage: true });
+
+await shogi.page.click("#shogi-resign");
+await shogi.page.waitForSelector("#shogi-over:not(.is-hidden)", { timeout: 20000 });
+check("giving up ends the game", (await shogi.page.locator("#shogi-over-title").textContent()).length > 0);
+await shogi.context.close();
+
+// 成り と 打つ ながれは、とちゅうの 局面を 保存の しくみに 入れて 確かめる
+// （1.▲7六歩 △3四歩 のあと。手の 書きかたは to | (from << 7)）
+const nari = await newPage(420, 900);
+await nari.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await nari.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await nari.page.evaluate(() =>
+  localStorage.setItem("shogi.game.v1", JSON.stringify({ level: 1, me: 0, moves: [7215, 3105], flipped: false })));
+await nari.page.goto(`${BASE}#/shogi`, { waitUntil: "domcontentloaded" });
+await nari.page.reload({ waitUntil: "domcontentloaded" });
+await nari.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await nari.page.click("#shogi-resume");
+await nari.page.waitForSelector("#shogi-play:not(.is-hidden)", { timeout: 20000 });
+check("a saved game comes back mid-position", (await nari.page.locator("#shogi-kifu-list li").count()) === 2);
+
+await nari.page.click('.sq[data-sq="64"]');
+await nari.page.click('.sq[data-sq="16"]');
+await nari.page.waitForSelector("#shogi-promote:not(.is-hidden)", { timeout: 20000 });
+check("entering the far camp asks about promoting",
+  await nari.page.locator("#shogi-promote").isVisible());
+await nari.page.click("#shogi-promote-yes");
+let becameHorse = true;
+try {
+  await nari.page.waitForFunction(() => document.querySelector('.sq[data-sq="16"] .koma.is-nari'), null,
+    { timeout: 5000 });
+} catch (error) {
+  becameHorse = false;
+}
+check("the promoted piece is drawn as a horse", becameHorse);
+await nari.page.waitForFunction(() => {
+  const hint = document.getElementById("shogi-hint");
+  return document.querySelectorAll("#shogi-kifu-list li").length >= 4 && hint && !hint.disabled;
+}, null, { timeout: 60000 });
+check("the captured piece lands in hand", (await nari.page.locator("#shogi-hand-sente .hand-piece").count()) >= 1);
+await nari.page.locator("#shogi-hand-sente .hand-piece").first().click();
+check("a piece in hand lights up where it may be dropped",
+  (await nari.page.locator(".sq.is-go").count()) > 20);
+// まえの 対局の 考えごとが 新しい 対局に 混ざらないか。ヒントは 目に 見えるので これで 見る
+// （あいての 手を えらぶ ところも 同じ しくみで まもっている）
+await nari.page.click("#shogi-hint");
+await nari.page.waitForFunction(() => document.getElementById("shogi-status").textContent.includes("かんがえて"),
+  null, { timeout: 20000 });
+await nari.page.click("#shogi-quit");
+await nari.page.waitForSelector("#shogi-setup:not(.is-hidden)", { timeout: 20000 });
+await nari.page.click('[data-side="0"]');
+await nari.page.click("#shogi-start");
+await nari.page.waitForSelector("#shogi-play:not(.is-hidden)", { timeout: 20000 });
+let staleHint = "";
+for (let i = 0; i < 25; i++) {
+  const seen = await nari.page.evaluate(() => ({
+    hints: document.querySelectorAll(".sq.is-hint").length,
+    help: document.getElementById("shogi-help").textContent,
+  }));
+  if (seen.hints > 0 || seen.help.includes("どうかな")) {
+    staleHint = `${i * 100}ms: ${seen.hints} squares / ${seen.help}`;
+    break;
+  }
+  await new Promise(resolve => setTimeout(resolve, 100));
+}
+check("a hint from an abandoned game never lands in the new one", staleHint === "", staleHint);
+
+await nari.context.close();
+
 
 await browser.close();
 

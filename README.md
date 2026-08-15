@@ -1,12 +1,14 @@
-# さんすうドリル 1〜6年
+# さんすう と しょうぎ
 
 [![CI](https://github.com/yasumorishima/icp-counter-learning/actions/workflows/ci.yml/badge.svg)](https://github.com/yasumorishima/icp-counter-learning/actions/workflows/ci.yml)
 
-小学 1〜6年の 算数を、その場で解いて すぐ丸がつく ドリル。
+小学 1〜6年の 算数ドリルと、ひとりで あそべる しょうぎ。
+その場で解いて すぐ丸がつき、しょうぎの 相手も この端末の 中で 考えています。
 **広告なし、登録なし、記録は端末の中だけ。** 電波が無くても つかえます。
 
 Free arithmetic practice for Japanese elementary school (grades 1–6).
-No ads, no sign-up, and every learning record stays on the child's own device.
+Plus a shogi opponent that runs entirely in the browser.
+No ads, no sign-up, and every record stays on the child's own device.
 
 🌐 https://iqjbc-7aaaa-aaaaj-qnnsa-cai.icp0.io/
 
@@ -22,6 +24,33 @@ No ads, no sign-up, and every learning record stays on the child's own device.
 | **チャレンジ** | なつやすみ（7/21〜8/31）や 30日。毎日 1まい やって、さいごに **印刷できる しょうじょう** |
 | **つづく仕組み** | ★とレベル、連続日数、今月のカレンダー、にがてな単元の出し直し |
 | **きろく** | なまえごとに 6人まで。書き出し / よみこみ で 端末を移せる |
+| **しょうぎ** | ひとり用。つよさ 3 だんかい、ヒント・まった・棋譜・つづきから |
+
+## しょうぎ
+
+トップで 「さんすう」か 「しょうぎ」を えらびます。しょうぎは **ひとり用**で、
+相手も この端末の 中で 考えています（通信なし・外部の 部品なし）。
+
+- **つよさ 3 だんかい**（よわい / ふつう / つよい）。読みの 深さと 時間で 変えている
+- **きまりは 全部いれた**: 成り（強制も）・持ち駒を 打つ・二歩・打ち歩詰め・
+  行き所のない駒・王手放置の禁止・つみ / 手が無い ときの 負け・千日手の 引き分け
+- **たすけ**: 押した駒の 行ける ますが 光る／その駒の うごきかたを ことばで 出す／
+  ヒント（次の 一手を 提案）／まった／棋譜／読み込み直しても つづきから
+- 対局の とちゅうも 記録も `localStorage` だけ。サーバーには 送りません
+
+### きまりが 正しいことの 確かめかた
+
+駒の うごきと 王手の 判定は、決められた 手数ぶんの 合法手を 数え上げて（perft）
+公表値と 突き合わせています。**5 手ぶん 19,861,490 手まで 完全一致**（CI では 4 手ぶん
+719,731 手を 毎回）。ほかに 二歩・打ち歩詰め・成りの強制・王手放置・持ち駒の 戻りかたを
+局面つきで 検算し、相手の 側も 「1 手詰めを 見つける」「60 手 指しても 反則ゼロ」
+「1 手 3 秒いない」を 毎回 見ています。
+
+```
+node tests/shogi-rules.test.mjs     # きまり（perft 4 手ぶんまで）
+node tests/shogi-rules.test.mjs 5   # 5 手ぶんまで（時間が かかる）
+node tests/shogi-ai.test.mjs        # 相手の 側
+```
 
 ## 大事にしていること
 

@@ -2,6 +2,7 @@ import { Actor, HttpAgent } from "@icp-sdk/core/agent";
 import { idlFactory, canisterId as localCanisterId } from "../../declarations/todo_app_backend";
 import { LANGS, RTL, makeT, detectLang, saveLang } from "./i18n";
 import { initDrill, renderHome as renderDrillHome, renderKiroku, renderAward } from "./drill";
+import { initShogi, renderShogi } from "./shogi";
 
 // --- 接続 -------------------------------------------------------------------
 
@@ -225,14 +226,16 @@ async function setupLegacyCounter() {
 
 // --- 画面切り替え -----------------------------------------------------------
 
-const VIEWS = ["view-drill", "view-quiz", "view-result", "view-kiroku", "view-award", "view-support"];
+const VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view-kiroku", "view-award",
+  "view-shogi", "view-support"];
 
-// ドリルは日本語のこどもむけ。言語の切り替えは支援ページだけに出す
-const DRILL_VIEWS = ["view-drill", "view-quiz", "view-result", "view-kiroku", "view-award"];
+// こどもむけの画面は日本語だけ。言語の切り替えは支援ページだけに出す
+const KIDS_VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view-kiroku", "view-award",
+  "view-shogi"];
 
 function showView(id) {
   VIEWS.forEach(view => $(view).classList.toggle("is-hidden", view !== id));
-  document.body.classList.toggle("on-drill", DRILL_VIEWS.indexOf(id) >= 0);
+  document.body.classList.toggle("on-drill", KIDS_VIEWS.indexOf(id) >= 0);
   window.scrollTo(0, 0);
 }
 
@@ -257,8 +260,33 @@ async function route() {
     return;
   }
 
-  showView("view-drill");
-  renderDrillHome();
+  if (hash === "#/shogi") {
+    showView("view-shogi");
+    renderShogi();
+    return;
+  }
+
+  if (hash === "#/drill") {
+    showView("view-drill");
+    renderDrillHome();
+    return;
+  }
+
+  // それ以外は「なにを する？」の 画面
+  showView("view-pick");
+}
+
+/**
+ * いまと 同じ hash への リンクは、ブラウザが なにも しない（hashchange が 出ない）。
+ * 画面の 中で 場面だけ 変えている ところ（問題・けっか）から トップへ もどる リンクが
+ * それに あたるので、ここで じぶんから 呼びなおす。
+ */
+function setupSameHashLinks() {
+  document.addEventListener("click", event => {
+    const link = event.target.closest('a[href^="#/"]');
+    if (!link) return;
+    if (link.getAttribute("href") === location.hash) route();
+  });
 }
 
 async function init() {
@@ -267,6 +295,8 @@ async function init() {
   setupLangSelect();
   applyLang();
   initDrill({ show: showView });
+  initShogi({ show: showView });
+  setupSameHashLinks();
   window.addEventListener("hashchange", route);
 
   // ドリルは通信が要らない。つながらなくても画面は出す

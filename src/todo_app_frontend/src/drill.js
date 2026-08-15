@@ -155,7 +155,13 @@ export function initDrill(options) {
   $("quiz-quit").addEventListener("click", () => {
     stopTimer();
     session = null;
-    location.hash = "#/";
+    // すでに #/drill に いる ときは hash を 入れても なにも 起きない（同じ値だと hashchange が 出ない）
+    if (location.hash === "#/drill") {
+      show("view-drill");
+      renderHome();
+    } else {
+      location.hash = "#/drill";
+    }
   });
 
   $("quiz-keypad").addEventListener("click", event => {

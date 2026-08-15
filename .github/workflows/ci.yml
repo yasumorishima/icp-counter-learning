@@ -34,6 +34,13 @@ jobs:
       - name: 依存をインストール
         run: npm ci
 
+      # しょうぎの きまりは 画面が なくても 確かめられる。数え上げ（perft）が
+      # 1 でも ずれたら 駒の うごきか 王手の 判定が こわれている。
+      - name: しょうぎの きまりと あいてを 検算
+        run: |
+          node tests/shogi-rules.test.mjs
+          node tests/shogi-ai.test.mjs
+
       - name: dfx を導入
         run: |
           DFXVM_INIT_YES=true sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
