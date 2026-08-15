@@ -15,6 +15,14 @@ set -euo pipefail
 # 鍵を RPi5 の外へ出さない方針なのでここで明示的に黙らせる。
 export DFX_WARNING=-mainnet_plaintext_identity
 
+# RPi5 は glibc 2.36 なので dfx 0.32 は起動できない（GLIBC_2.38/2.39 not found）。
+# dfxvm の入り口が PATH の先にいると そちらを掴むので、動く版が ~/.local/bin にあれば そちらを使う。
+if ! dfx --version >/dev/null 2>&1 && [ -x "$HOME/.local/bin/dfx" ]; then
+  PATH="$HOME/.local/bin:$PATH"
+  export PATH
+  echo "==> PATH の dfx が起動できないので $HOME/.local/bin/dfx を使います（$(dfx --version)）"
+fi
+
 BACKEND_ID="ifoqp-6iaaa-aaaaj-qnnrq-cai"
 BACKEND="todo_app_backend"
 FRONTEND="todo_app_frontend"
