@@ -542,6 +542,20 @@ check("the board has 81 squares", (await shogi.page.locator(".sq").count()) === 
 check("40 pieces are set out", (await shogi.page.locator(".koma").count()) === 40);
 check("the opponent pieces face the other way", (await shogi.page.locator(".koma.is-gote").count()) === 20);
 
+// ますは 81 個 とも 同じ 大きさ（行の 高さを 指定しないと 駒のある行だけ 高くなる）
+const cellSizes = await shogi.page.evaluate(() => {
+  const rects = [...document.querySelectorAll(".sq")].map(el => el.getBoundingClientRect());
+  const w = rects.map(r => Math.round(r.width * 100) / 100);
+  const h = rects.map(r => Math.round(r.height * 100) / 100);
+  return { minW: Math.min(...w), maxW: Math.max(...w), minH: Math.min(...h), maxH: Math.max(...h) };
+});
+check("every square is the same size",
+  cellSizes.maxW - cellSizes.minW < 0.01 && cellSizes.maxH - cellSizes.minH < 0.01,
+  `w=${cellSizes.minW}-${cellSizes.maxW} h=${cellSizes.minH}-${cellSizes.maxH}`);
+check("the two kings are drawn differently",
+  (await shogi.page.locator(".sq .koma", { hasText: "王" }).count()) === 1 &&
+  (await shogi.page.locator(".sq .koma", { hasText: "玉" }).count()) === 1);
+
 await shogi.page.click('.sq[data-sq="56"]');
 check("tapping a pawn shows where it may go", (await shogi.page.locator(".sq.is-go").count()) === 1);
 await shogi.page.click('.sq[data-sq="47"]');
@@ -656,14 +670,12 @@ await nari.page.waitForSelector("#shogi-promote:not(.is-hidden)", { timeout: 200
 check("entering the far camp asks about promoting",
   await nari.page.locator("#shogi-promote").isVisible());
 await nari.page.click("#shogi-promote-yes");
-let becameHorse = true;
-try {
-  await nari.page.waitForFunction(() => document.querySelector('.sq[data-sq="16"] .koma.is-nari'), null,
-    { timeout: 5000 });
-} catch (error) {
-  becameHorse = false;
-}
-check("the promoted piece is drawn as a horse", becameHorse);
+// 成った 直後の 画面を 見に行くと あいての 手と 競合する（あいての 思考は 画面を 止める）。
+// 指された ことは 棋譜で 確かめる。成り駒の 見た目は 別の 落ち着いた 局面で 見る。
+await nari.page.waitForFunction(() => document.querySelectorAll("#shogi-kifu-list li").length >= 3, null,
+  { timeout: 30000 });
+const promoted = await nari.page.locator("#shogi-kifu-list li").nth(2).textContent();
+check("the promotion is recorded", promoted.includes("成"), promoted);
 await nari.page.waitForFunction(() => {
   const hint = document.getElementById("shogi-hint");
   return document.querySelectorAll("#shogi-kifu-list li").length >= 4 && hint && !hint.disabled;

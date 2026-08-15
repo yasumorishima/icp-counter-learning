@@ -41,6 +41,10 @@ jobs:
           node tests/shogi-rules.test.mjs
           node tests/shogi-ai.test.mjs
 
+      # 自分の 実装を 自分で 採点しない。外の OSS（tsshogi・MIT）と 合法手を 全数 突き合わせる。
+      - name: しょうぎの きまりを 外の OSS と 突き合わせ
+        run: node tests/shogi-vs-oss.test.mjs
+
       - name: dfx を導入
         run: |
           DFXVM_INIT_YES=true sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"

@@ -31,6 +31,13 @@ export const CHAR = {
   9: "と", 10: "杏", 11: "圭", 12: "全", 14: "馬", 15: "龍",
 };
 
+// 盤に 出す 文字。玉将と 王将は 先手・後手で 書き分ける（本物の 駒と 同じ）
+export function faceOf(p) {
+  const t = typeOf(p);
+  if (t === K) return colorOf(p) === SENTE ? "王" : "玉";
+  return CHAR[t];
+}
+
 // 駒の うごきを ことばで（はじめての 人むけ）
 export const HOW = {
   1: "まえに 1 ます",

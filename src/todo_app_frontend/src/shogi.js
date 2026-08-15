@@ -22,6 +22,8 @@ let hint = null;
 let hintText = "";
 let flipped = false;
 let thinking = false;
+// 直前に 取った駒（持ち駒の どれが 増えたかを 目で 分かるように する）
+let justTook = null;
 let setup = { level: 2, side: R.SENTE };
 // 対局を 作り直したら 数を 進める。まえの 対局の 考えごとが 戻ってきても 混ざらないように
 let generation = 0;
@@ -56,6 +58,7 @@ function dropSave() {
 
 function startGame(level, me) {
   generation++;
+  justTook = null;
   thinking = false;
   pending = null;
   overShown = false;
@@ -107,7 +110,9 @@ function applyMove(m, quiet) {
   const mover = game.st.turn;
   const previous = game.moves.length ? R.moveTo(game.moves[game.moves.length - 1]) : -1;
   const text = R.moveText(game.st, m, previous, legal);
-  const captured = game.st.board[R.moveTo(m)] !== 0;
+  const taken = game.st.board[R.moveTo(m)];
+  const captured = taken !== 0;
+  justTook = captured ? { color: mover, type: R.demote(R.typeOf(taken)) } : null;
   R.doMove(game.st, m);
   game.moves.push(m);
   game.kifu.push(text);
@@ -176,10 +181,28 @@ function targetMap() {
   return map;
 }
 
+/**
+ * 盤の 幅を 9 の倍数の 整数に そろえる。
+ * 端数のままだと ます 1 つが 37.23px と 37.25px に 割れて 大きさが ちがって 見える。
+ */
+function sizeBoard() {
+  const board = $("shogi-board");
+  const files = $("shogi-files");
+  if (!board) return;
+  const room = Math.min(window.innerWidth * 0.88, 430);
+  const cell = Math.max(24, Math.floor(room / 9));
+  board.style.width = cell * 9 + "px";
+  board.style.height = cell * 9 + "px";
+  if (files) files.style.width = cell * 9 + 8 + "px";
+}
+
 function renderBoard() {
+  sizeBoard();
   const targets = targetMap();
   const rev = reversed();
   const lastTo = game.moves.length ? R.moveTo(game.moves[game.moves.length - 1]) : -1;
+  // 王手を かけられている 側の 玉に しるしを つける（なぜ 動けないかが 分かるように）
+  const checkedKing = R.inCheck(game.st, game.st.turn) ? game.st.king[game.st.turn] : -1;
   const cells = [];
   for (let i = 0; i < 81; i++) {
     const sq = rev ? 80 - i : i;
@@ -189,12 +212,13 @@ function renderBoard() {
     if (targets.has(sq)) classes.push(p ? "is-take" : "is-go");
     if (sq === lastTo) classes.push("is-last");
     if (hint && (hint.from === sq || hint.to === sq)) classes.push("is-hint");
+    if (checkedKing >= 0 && sq === checkedKing) classes.push("is-check");
     const name = p ? R.NAME[R.typeOf(p)] : "あき";
     const side = p ? (R.colorOf(p) === game.me ? "じぶんの " : "あいての ") : "";
     let inner = "";
     if (p) {
       const komaClass = "koma" + (R.colorOf(p) === R.GOTE ? " is-gote" : "") + (R.typeOf(p) >= 9 ? " is-nari" : "");
-      inner = '<span class="' + komaClass + '">' + R.CHAR[R.typeOf(p)] + "</span>";
+      inner = '<span class="' + komaClass + '">' + R.faceOf(p) + "</span>";
     }
     cells.push(
       '<button type="button" class="' + classes.join(" ") + '" data-sq="' + sq +
@@ -228,8 +252,9 @@ function paintHand(color, id, mine) {
   for (const t of R.HAND_ORDER) {
     if (!hand[t]) continue;
     const on = mine && sel && sel.drop === t ? " is-sel" : "";
+    const fresh = justTook && justTook.color === color && justTook.type === t ? " is-new" : "";
     parts.push(
-      '<button type="button" class="hand-piece' + on + '" data-hand="' + t + '"' +
+      '<button type="button" class="hand-piece' + on + fresh + '" data-hand="' + t + '"' +
         (mine ? "" : " disabled") + ' aria-label="' + R.NAME[t] + " " + hand[t] + 'まい">' +
         R.CHAR[t] + "<b>" + hand[t] + "</b></button>"
     );
@@ -271,6 +296,13 @@ function renderHelp() {
     return;
   }
   const type = R.typeOf(game.st.board[sel.from]);
+  const canGo = legal.some(m => !R.moveDrop(m) && R.moveFrom(m) === sel.from);
+  if (!canGo) {
+    el.textContent = R.inCheck(game.st, game.me)
+      ? "王手が かかっています。この駒では 玉を 助けられません。ほかの駒を えらんでね。"
+      : R.NAME[type] + "は いま うごけません（行ける ますが ありません）。";
+    return;
+  }
   el.textContent = R.NAME[type] + "：" + R.HOW[type];
 }
 
@@ -535,6 +567,9 @@ export function initShogi(options) {
     flipped = !flipped;
     save();
     render();
+  });
+  window.addEventListener("resize", () => {
+    if (game) sizeBoard();
   });
   $("shogi-undo").addEventListener("click", undo);
   $("shogi-hint").addEventListener("click", askHint);
