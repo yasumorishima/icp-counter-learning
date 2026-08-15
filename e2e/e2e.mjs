@@ -27,6 +27,17 @@ const check = (name, ok, detail = "") => {
 
 const browser = await chromium.launch();
 
+/**
+ * ドリルの トップを 読み込み直して 開く。
+ * hash だけ ちがう（または 同じ）URL への goto は 同じ画面のままで、
+ * 読み込み直しには ならない。記録が のこるかを 見る 検査は 本当の 読み込み直しが 要る。
+ */
+async function openDrill(page) {
+  await page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+}
+
 async function newPage(width = 1280, height = 900) {
   const context = await browser.newContext({ viewport: { width, height }, locale: "en-US" });
   const page = await context.newPage();
@@ -250,8 +261,7 @@ await page.click("#theme-toggle");
 // ---- 10. ドリル -------------------------------------------------------------
 
 const drill = await newPage(420, 900);
-await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
-await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await openDrill(drill.page);
 
 check("a new device is asked for a name first", await drill.page.locator("#who-empty").isVisible());
 await drill.page.fill("#who-input", "ゆうた");
@@ -295,8 +305,7 @@ check("answering every question correctly scores 10", (await drill.page.locator(
 await drill.page.screenshot({ path: `${shots}/06-drill.png`, fullPage: true });
 
 // 記録は端末に残り、リロードしても消えない
-await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
-await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await openDrill(drill.page);
 check("stars are kept after a reload", (await drill.page.locator("#who-stars").textContent()) === "10");
 check("the unit shows the last score", (await drill.page.locator(".unit-card").first().textContent()).includes("100点"));
 
@@ -310,8 +319,7 @@ check("the record page lists the person", (await drill.page.locator("#kiroku-peo
 check("the record page lists the unit", (await drill.page.locator(".kiroku-table").count()) === 1);
 
 // きょうの 1まい は 毎日 かわり、その日のうちは 同じ
-await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
-await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await openDrill(drill.page);
 check("today's sheet is offered", await drill.page.locator("#daily-card").isVisible());
 const levelBefore = await drill.page.locator("#level-rank").textContent();
 check("a level is shown", /レベル \d+/.test(levelBefore), levelBefore);
@@ -338,8 +346,7 @@ for (let i = 0; i < 10; i += 1) {
   if (i < 9) await drill.page.waitForFunction(n => document.getElementById("quiz-count").textContent.startsWith(String(n)), i + 2, { timeout: 30000 });
 }
 await drill.page.waitForSelector("#view-result:not(.is-hidden)", { timeout: 30000 });
-await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
-await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await openDrill(drill.page);
 check("today's sheet is marked as done", await drill.page.locator("#daily-card.is-done").isVisible());
 
 // もう一度ひらいても 同じ問題（その日のうちは 変わらない）
@@ -357,8 +364,7 @@ await drill.page.waitForSelector("#view-kiroku:not(.is-hidden)", { timeout: 3000
 check("the calendar marks the days done", (await drill.page.locator(".calendar-cell.is-done").count()) >= 1);
 
 // タイムアタック（60 びょう）と コンボ
-await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
-await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await openDrill(drill.page);
 check("a time attack is offered", await drill.page.locator("#time-card").isVisible());
 await drill.page.click("#time-card");
 await drill.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
@@ -398,8 +404,7 @@ check("leaving the time attack stops the clock", await drill.page.locator("#quiz
 check("leaving the time attack returns to the drill top", await drill.page.locator("#drill-main").isVisible());
 
 // おとは 切れる
-await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
-await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await openDrill(drill.page);
 const soundBefore = (await drill.page.locator("#sound-mark").textContent()).trim();
 await drill.page.click("#sound-toggle");
 const soundAfter = (await drill.page.locator("#sound-mark").textContent()).trim();
@@ -411,8 +416,7 @@ check("the sound setting survives a reload",
 await drill.page.click("#sound-toggle");
 
 // チャレンジ（期間を決めて 毎日 1まい）
-await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
-await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await openDrill(drill.page);
 check("a challenge is offered", (await drill.page.locator('[data-challenge="summer"]').count()) === 1);
 await drill.page.locator('[data-challenge="month"]').click();
 await drill.page.waitForSelector(".challenge-fill", { timeout: 30000 });
@@ -427,15 +431,13 @@ await drill.page.waitForSelector("#view-award:not(.is-hidden)", { timeout: 30000
 const awardText = (await drill.page.locator("#award-body").textContent()).replace(/\s+/g, " ").trim();
 check("the certificate names the person and the days", /ゆうた どの/.test(awardText) && /30日 のうち/.test(awardText), awardText.slice(0, 60));
 
-await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
-await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await openDrill(drill.page);
 await drill.page.locator('[data-challenge="stop"]').click();
 await drill.page.locator('[data-challenge="stop"]').click();
 check("a challenge can be given up", (await drill.page.locator('[data-challenge="month"]').count()) === 1);
 
 // 九九は段をえらべる
-await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
-await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await openDrill(drill.page);
 await drill.page.locator('.grade-tab[data-grade="2"]').click();
 const kukuCard = drill.page.locator('.unit-card[data-unit="g2-kuku"]');
 check("the kuku unit offers a chooser", (await kukuCard.locator(".unit-more").count()) === 1);
@@ -447,8 +449,7 @@ const kukuText = (await drill.page.locator("#quiz-text").textContent()).trim();
 check("the chosen row is the one asked", kukuText.startsWith("5 ×"), kukuText);
 
 // とけいは 絵で出る
-await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
-await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await openDrill(drill.page);
 await drill.page.locator('.grade-tab[data-grade="1"]').click();
 await drill.page.locator('.unit-card[data-unit="g1-clock"]').click();
 await drill.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
@@ -465,8 +466,7 @@ check("the clock face is actually drawn", painted > 5000, `pixels=${painted}`);
 check("the clock question is answered by choosing", (await drill.page.locator(".choice").count()) === 4);
 
 // まちがえると「にがてを もういちど」が出る
-await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
-await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await openDrill(drill.page);
 await drill.page.locator('.grade-tab[data-grade="1"]').click();
 await drill.page.locator('.unit-card[data-unit="g1-sub"]').click();
 await drill.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
@@ -476,8 +476,7 @@ for (let i = 0; i < 10; i += 1) {
   if (i < 9) await drill.page.waitForFunction(n => document.getElementById("quiz-count").textContent.startsWith(String(n)), i + 2, { timeout: 30000 });
 }
 await drill.page.waitForSelector("#view-result:not(.is-hidden)", { timeout: 30000 });
-await drill.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
-await drill.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await openDrill(drill.page);
 check("a weak unit is offered again", await drill.page.locator("#weak-row").isVisible());
 check("the weak card points at the unit just failed", (await drill.page.locator('.weak-card[data-unit="g1-sub"]').count()) === 1);
 
