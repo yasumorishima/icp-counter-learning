@@ -5,6 +5,7 @@
  *   node e2e.mjs <frontend-url>
  */
 import { chromium } from "playwright";
+import { readFileSync } from "node:fs";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { createRequire } from "node:module";
@@ -728,6 +729,28 @@ for (let i = 0; i < 25; i++) {
 check("a hint from an abandoned game never lands in the new one", staleHint === "", staleHint);
 
 await nari.context.close();
+
+// しょうぶが つく ところ。詰みで 終わる 一局（69 手）を 入れて、勝ち負けを 出せるか 見る
+const mate = JSON.parse(readFileSync(new URL("./fixtures/mate-game.json", import.meta.url), "utf8"));
+const endgame = await newPage(420, 900);
+await endgame.page.goto(BASE, { waitUntil: "domcontentloaded" });
+await endgame.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await endgame.page.evaluate(m =>
+  localStorage.setItem("shogi.game.v1", JSON.stringify({ level: 1, me: 0, moves: m, flipped: false })), mate.moves);
+await endgame.page.goto(`${BASE}#/shogi`, { waitUntil: "domcontentloaded" });
+await endgame.page.reload({ waitUntil: "domcontentloaded" });
+await endgame.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+await endgame.page.click("#shogi-resume");
+await endgame.page.waitForSelector("#shogi-over:not(.is-hidden)", { timeout: 30000 });
+const endTitle = (await endgame.page.locator("#shogi-over-title").textContent()).trim();
+check("a checkmate ends the game", endTitle.length > 0, endTitle);
+check("the right side is declared the winner", mate.loser === 1 ? endTitle.includes("かち") : endTitle.includes("まけ"), endTitle);
+check("the reason is shown", (await endgame.page.locator("#shogi-over-note").textContent()).includes("つみ"));
+await endgame.page.click("#shogi-over-close");
+await endgame.page.click("#shogi-flip");
+check("the result box stays closed once dismissed",
+  await endgame.page.locator("#shogi-over").evaluate(el => el.classList.contains("is-hidden")));
+await endgame.context.close();
 
 
 await browser.close();
