@@ -669,6 +669,24 @@ await nari.page.click('.sq[data-sq="16"]');
 await nari.page.waitForSelector("#shogi-promote:not(.is-hidden)", { timeout: 20000 });
 check("entering the far camp asks about promoting",
   await nari.page.locator("#shogi-promote").isVisible());
+// 枠の 外を おして やめたとき、黙って 消えない こと（取ったはずの 駒が 入らない 原因に なる）
+const beforeCancel = await nari.page.locator("#shogi-kifu-list li").count();
+await nari.page.evaluate(() => {
+  const el = document.getElementById("shogi-promote");
+  const box = el.getBoundingClientRect();
+  el.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: box.left + 6, clientY: box.top + 6 }));
+});
+await nari.page.waitForSelector("#shogi-promote.is-hidden", { timeout: 10000 });
+check("cancelling the promotion dialog plays no move",
+  (await nari.page.locator("#shogi-kifu-list li").count()) === beforeCancel);
+check("cancelling says so on screen",
+  (await nari.page.locator("#shogi-help").textContent()).includes("やめました"));
+await nari.page.click('.sq[data-sq="64"]');
+await nari.page.click('.sq[data-sq="16"]');
+await nari.page.waitForSelector("#shogi-promote:not(.is-hidden)", { timeout: 20000 });
+check("the dialog says which piece is captured",
+  (await nari.page.locator("#shogi-promote-note").textContent()).includes("取ります"));
+
 await nari.page.click("#shogi-promote-yes");
 // 成った 直後の 画面を 見に行くと あいての 手と 競合する（あいての 思考は 画面を 止める）。
 // 指された ことは 棋譜で 確かめる。成り駒の 見た目は 別の 落ち着いた 局面で 見る。

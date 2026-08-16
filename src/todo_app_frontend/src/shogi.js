@@ -455,8 +455,10 @@ function choose(moves) {
   }
   pending = { promote, plain, gen: generation };
   const type = R.typeOf(game.st.board[R.moveFrom(promote)]);
+  const target = game.st.board[R.moveTo(promote)];
+  const takes = target ? R.NAME[R.typeOf(target)] + "を 取ります。" : "";
   $("shogi-promote-note").textContent =
-    R.NAME[type] + "は 成ると 「" + R.NAME[R.promoted(type)] + "」に なります（" + R.HOW[R.promoted(type)] + "）。";
+    takes + R.NAME[type] + "は 成ると 「" + R.NAME[R.promoted(type)] + "」に なります（" + R.HOW[R.promoted(type)] + "）。";
   $("shogi-promote").classList.remove("is-hidden");
   $("shogi-promote-yes").focus();
 }
@@ -646,15 +648,24 @@ export function initShogi(options) {
     $("shogi-over").classList.add("is-hidden");
   });
 
-  // Esc で きく画面を 閉じる。成るか きいている ときは その手を やめる（まだ 指していない）
+  // 成るか きいている ときに やめたら、黙って 消えないよう その ことを 出す
+  const cancelPromote = () => {
+    if ($("shogi-promote").classList.contains("is-hidden")) return false;
+    pending = null;
+    $("shogi-promote").classList.add("is-hidden");
+    render();
+    $("shogi-help").textContent = "その手は やめました。まだ 指していません。もう いちど ますを おしてね。";
+    return true;
+  };
+
+  // 枠の 外を おしたら やめる（押しても なにも 起きないと 迷うため）
+  $("shogi-promote").addEventListener("click", event => {
+    if (event.target === $("shogi-promote")) cancelPromote();
+  });
+
   document.addEventListener("keydown", event => {
     if (event.key !== "Escape") return;
-    if (!$("shogi-promote").classList.contains("is-hidden")) {
-      pending = null;
-      $("shogi-promote").classList.add("is-hidden");
-      render();
-      return;
-    }
+    if (cancelPromote()) return;
     if (!$("shogi-over").classList.contains("is-hidden")) $("shogi-over").classList.add("is-hidden");
   });
 }
