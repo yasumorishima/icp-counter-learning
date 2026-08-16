@@ -1246,7 +1246,9 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
 .shogi-status.is-check { color: var(--err-fg); }
 .shogi-status.is-over { color: var(--ok-fg); }
 .shogi-help { text-align: center; color: var(--muted); margin: 0 0 12px; min-height: 1.4em; }
+.shogi-declare-note { text-align: center; color: var(--muted); margin: 0 0 10px; }
 .shogi-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.shogi-actions .shogi-declare { background: var(--ok-bg); color: var(--ok-fg); border-color: var(--ok-fg); font-weight: 800; }
 .shogi-actions .btn-ghost { min-height: 46px; }
 .shogi-kifu { margin-top: 16px; }
 .shogi-kifu summary,

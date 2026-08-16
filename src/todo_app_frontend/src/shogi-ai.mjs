@@ -9,7 +9,7 @@ import {
   movePromotes, inZone, SENTE, GOTE, P, L, N, S, G, B, R, K, TOKIN, NL, NN, NS, HORSE, DRAGON,
 } from "./shogi-rules.mjs";
 
-const MATE = 100000;
+export const MATE = 100000;
 
 // 駒の ねうち。持ち駒は 打てるぶん すこし 高く 見る
 const VALUE = [];
@@ -166,6 +166,10 @@ const breathe = () => new Promise(resolve => setTimeout(resolve, 0));
 /**
  * 手を 1 つ えらぶ。時間が きたら そこまでの いちばん よい手を かえす。
  * random には テストから 決まった 数を わたせる（同じ手を くり返させるため）。
+ *
+ * options.rootScore(st, m) を わたすと、いちばん うえの 手だけは 読まずに その点を つかう。
+ * 千日手（引き分け＝0）や 連続王手の 千日手（きまりで まけ＝-MATE）を 探索の 外から 教えるため。
+ * null を かえした 手は これまでどおり 読む。
  */
 export async function chooseMove(st, level, options) {
   const cfg = LEVELS[level] || LEVELS[2];
@@ -175,8 +179,20 @@ export async function chooseMove(st, level, options) {
   if (!root.length) return 0;
   if (root.length === 1) return root[0];
 
+  const rootScore = opts.rootScore || null;
+  const fixedOf = m => {
+    if (!rootScore) return null;
+    doMove(st, m);
+    const v = rootScore(st, m);
+    undoMove(st);
+    return v === undefined ? null : v;
+  };
+
   if (cfg.blunder && random() < cfg.blunder) {
-    return root[Math.floor(random() * root.length)];
+    // わざと 外す ときでも、きまりで まけに なる手（連続王手の 千日手）は えらばない
+    const safe = rootScore ? root.filter(m => fixedOf(m) !== -MATE) : root;
+    const pool = safe.length ? safe : root;
+    return pool[Math.floor(random() * pool.length)];
   }
 
   const ctx = { nodes: 0, stop: false, deadline: Date.now() + (opts.budget || cfg.budget) };
@@ -196,10 +212,16 @@ export async function chooseMove(st, level, options) {
     for (let i = 0; i < ordered.length; i++) {
       const m = ordered[i];
       doMove(st, m);
-      let score = -search(st, depth - 1, -MATE * 2, wide ? MATE * 2 : -alpha, ctx, 1);
+      const fixed = rootScore ? rootScore(st, m) : null;
+      let score = fixed === null || fixed === undefined
+        ? -search(st, depth - 1, -MATE * 2, wide ? MATE * 2 : -alpha, ctx, 1)
+        : fixed;
       undoMove(st);
       if (ctx.stop) break;
-      if (cfg.jitter) score += Math.floor((random() * 2 - 1) * cfg.jitter);
+      // きまりで 点が 決まって いる手には ゆらぎを 足さない
+      if (cfg.jitter && (fixed === null || fixed === undefined)) {
+        score += Math.floor((random() * 2 - 1) * cfg.jitter);
+      }
       scores.push({ m, score });
       if (score > localScore) {
         localScore = score;

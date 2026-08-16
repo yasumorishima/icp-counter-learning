@@ -107,6 +107,12 @@
                                 歩を 打って いきなり つませる（打ち歩詰め）。この 3 つは はじめから えらべません。</p>
                             <p><b>王手と かち</b>　玉が ねらわれたら（王手）、かならず 助ける手を さします。
                                 どこにも 逃げられなく なったら つみ＝しょうぶ ありです。</p>
+                            <p><b>おうを むこうへ はこぶ</b>　おたがいの おうが あいての じんちに 入ると、
+                                つみに ならなく なる ことが あります。その ときは じんちに 入った こまと もちごまの
+                                てんすう（飛車と角は 5 てん、ほかは 1 てん）で おわりに できます。
+                                できる ときだけ 盤の 下に ボタンが 出ます（31 てん いじょうで かち、24 てんから ひきわけ）。</p>
+                            <p><b>おうてを くりかえす とき</b>　おなじ ばんめんが 4 かい 出たら そこで おわりです。
+                                ふつうは ひきわけですが、ずっと 王手を かけつづけて いた ほうが あれば その ほうの まけに なります。</p>
                             <p><b>こまった とき</b>　「ヒント」で つぎの 一手を おしえます。「まった」で 手を もどせます。</p>
                         </div>
                     </details>
@@ -135,8 +141,10 @@
 
                     <p id="shogi-status" class="shogi-status" role="status"></p>
                     <p id="shogi-help" class="shogi-help"></p>
+                    <p id="shogi-declare-note" class="shogi-declare-note is-hidden"></p>
 
                     <div class="shogi-actions">
+                        <button type="button" id="shogi-declare" class="btn-ghost shogi-declare is-hidden"></button>
                         <button type="button" id="shogi-hint" class="btn-ghost">ヒント</button>
                         <button type="button" id="shogi-undo" class="btn-ghost">まった</button>
                         <button type="button" id="shogi-resign" class="btn-ghost">まけました</button>

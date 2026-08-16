@@ -5,8 +5,10 @@
  * 対局の とちゅうは 端末の 中だけに のこす（ほかへは 送らない）。
  */
 import * as R from "./shogi-rules.mjs";
-import { chooseMove, LEVELS } from "./shogi-ai.mjs";
-import { refereed } from "./shogi-referee";
+import { chooseMove, LEVELS, MATE } from "./shogi-ai.mjs";
+import {
+  refereed, repetitionVerdict, declarationVerdict, declarationPoint, repetitionScore,
+} from "./shogi-referee";
 import { sounds, confetti } from "./effects";
 
 const $ = id => document.getElementById(id);
@@ -104,6 +106,8 @@ function resume(saved) {
   legal = legalNow(st);
   flipped = Boolean(saved.flipped);
   for (const m of saved.moves || []) {
+    // しょうぶが ついた あとの 手は 読まない
+    if (game.over) break;
     if (!legal.includes(m)) {
       game = null;
       dropSave();
@@ -147,10 +151,47 @@ function checkEnd(quiet) {
     finish(won ? "win" : "lose", won ? "つみ！ あなたの かちです" : "つみ。あなたの まけです", quiet);
     return;
   }
+  if (sameCount() < 4) return;
+  // 4 かいめの 判決（ひきわけか、王手を かけつづけた ほうの まけか）は 審判に 出させる
+  const verdict = repetitionVerdict(game.moves);
+  if (verdict.checker === null) {
+    finish("draw", "おなじ ばんめんが 4 かい。ひきわけ（せんにちて）です", quiet);
+    return;
+  }
+  const mine = verdict.checker === game.me;
+  finish(
+    mine ? "lose" : "win",
+    mine
+      ? "おうてを かけつづけたので あなたの まけです（おなじ ばんめんが 4 かい）"
+      : "あいてが おうてを かけつづけたので あなたの かちです（おなじ ばんめんが 4 かい）",
+    quiet,
+  );
+}
+
+/** いまの ばんめんが これまでに 何かい 出たか（いまの ぶんも 数える） */
+function sameCount() {
   const key = game.keys[game.keys.length - 1];
   let same = 0;
   for (const k of game.keys) if (k === key) same++;
-  if (same >= 4) finish("draw", "おなじ ばんめんが 4 かい。ひきわけ（せんにちて）です", quiet);
+  return same;
+}
+
+/**
+ * 玉が あいての じんちに 入った ときの「おわりに する」申し込み。
+ * できる かどうかの 判断は 審判（外の しくみ）に させる。
+ * 申し込んで まけに なる こたえは 審判が null に して かえすので、押して 負ける ことは ない。
+ */
+function declareState() {
+  if (!game || game.over || thinking || game.st.turn !== game.me) return null;
+  const ks = game.st.king[game.me];
+  if (ks < 0 || !R.inZone(game.me, ks)) return null;
+  let inside = 0;
+  for (let sq = 0; sq < 81; sq++) {
+    const p = game.st.board[sq];
+    if (!p || R.colorOf(p) !== game.me || R.typeOf(p) === R.K) continue;
+    if (R.inZone(game.me, sq)) inside++;
+  }
+  return { verdict: declarationVerdict(game.st, game.me), point: declarationPoint(game.st, game.me), inside };
 }
 
 function finish(result, note, quiet) {
@@ -311,6 +352,9 @@ function renderStatus() {
   if (thinking) text = "あいてが かんがえています…";
   else if (check) text = mine ? "王手！ にげてください" : "王手を かけました";
   else text = mine ? "あなたの ばんです" : "あいての ばんです";
+  if (!thinking && sameCount() === 3) {
+    text += "　（おなじ ばんめんが 3 かい。あと 1 かいで おわりです）";
+  }
   el.textContent = text;
   el.className = "shogi-status" + (check ? " is-check" : "");
 }
@@ -348,6 +392,33 @@ function renderHelp() {
   el.textContent = R.NAME[type] + "：" + R.HOW[type] + (stopped ? "　" + why : "");
 }
 
+function renderDeclare() {
+  const button = $("shogi-declare");
+  const note = $("shogi-declare-note");
+  const state = declareState();
+  if (!state) {
+    button.classList.add("is-hidden");
+    note.classList.add("is-hidden");
+    return;
+  }
+  note.classList.remove("is-hidden");
+  const head = "おうが あいての じんちに 入りました。いまの てんすうは " + state.point + " てん。";
+  if (state.verdict) {
+    button.classList.remove("is-hidden");
+    button.textContent = state.verdict === "win" ? "てんすうで かちに する" : "てんすうで ひきわけに する";
+    note.textContent = head + (state.verdict === "win"
+      ? "ここで おわりに すると あなたの かちです。"
+      : "ここで おわりに すると ひきわけです（31 てん いじょうで かち）。");
+    return;
+  }
+  button.classList.add("is-hidden");
+  const short = [];
+  if (R.inCheck(game.st, game.me)) short.push("さきに 王手を ふせぐ");
+  if (state.inside < 10) short.push("じんちの こまが あと " + (10 - state.inside) + " まい");
+  if (state.point < 24) short.push("てんすうが あと " + (24 - state.point) + " てん");
+  note.textContent = head + (short.length ? short.join("／") + " で おわりに できます。" : "");
+}
+
 function renderKifu() {
   const list = game.kifu.map((t, i) => "<li><span>" + (i + 1) + "</span>" + t + "</li>");
   $("shogi-kifu-list").innerHTML = list.join("");
@@ -366,6 +437,7 @@ function render() {
   renderHands();
   renderStatus();
   renderHelp();
+  renderDeclare();
   renderKifu();
   $("shogi-undo").disabled = thinking || game.moves.length === 0;
   $("shogi-hint").disabled = thinking || Boolean(game.over) || game.st.turn !== game.me;
@@ -480,9 +552,16 @@ async function aiTurn() {
   // すぐ 指すと 見えないので すこし 待つ
   await new Promise(resolve => setTimeout(resolve, 260));
   if (gen !== generation) return;
+  const other = game.me === R.SENTE ? R.GOTE : R.SENTE;
+  if (declarationVerdict(game.st, other) === "win") {
+    thinking = false;
+    finish("lose", "あいてが おうを じんちへ はこんで、てんすうで かちました");
+    render();
+    return;
+  }
   let m = 0;
   try {
-    m = await chooseMove(R.cloneState(game.st), game.level);
+    m = await chooseMove(R.cloneState(game.st), game.level, { rootScore: repetitionScoreFor(other) });
   } catch (error) {
     console.error("あいてが 手を えらべませんでした", error);
   }
@@ -495,6 +574,12 @@ async function aiTurn() {
   if (!m || !legal.includes(m)) m = legal[Math.floor(Math.random() * legal.length)];
   applyMove(m);
   render();
+}
+
+/** あいて（と ヒント）に「その手で しょうぶが きまるか」を 教える。判決は 審判が 出す */
+function repetitionScoreFor(mover) {
+  // 考えている あいだに 対局を やめる ことが あるので、その ときは 何も 教えない
+  return (st, m) => (game ? repetitionScore(game.keys, game.moves, mover, st, m, MATE) : null);
 }
 
 /** まった。じぶんの ばんに もどるまで 手を もどす */
@@ -517,7 +602,10 @@ function undo() {
   const st = R.initialState();
   game = { st, level, me, moves: [], kifu: [], keys: [R.positionKey(st)], over: null };
   legal = legalNow(st);
-  for (const m of moves) applyMove(m, true);
+  for (const m of moves) {
+    if (game.over) break;
+    applyMove(m, true);
+  }
   game.over = null;
   $("shogi-over").classList.add("is-hidden");
   save();
@@ -532,7 +620,7 @@ async function askHint() {
   render();
   let m = 0;
   try {
-    m = await chooseMove(R.cloneState(game.st), 2, { budget: 500 });
+    m = await chooseMove(R.cloneState(game.st), 2, { budget: 500, rootScore: repetitionScoreFor(game.me) });
   } catch (error) {
     console.error("ヒントを 出せませんでした", error);
   }
@@ -617,6 +705,16 @@ export function initShogi(options) {
   });
   $("shogi-undo").addEventListener("click", undo);
   $("shogi-hint").addEventListener("click", askHint);
+  $("shogi-declare").addEventListener("click", () => {
+    const state = declareState();
+    if (!state || !state.verdict) return;
+    if (state.verdict === "win") {
+      finish("win", "おうを あいての じんちへ はこんで、てんすう " + state.point + " てんで かちました");
+    } else {
+      finish("draw", "てんすう " + state.point + " てんで ひきわけに しました");
+    }
+    render();
+  });
   $("shogi-resign").addEventListener("click", () => {
     if (!game || game.over) return;
     finish("lose", "まけを みとめました");

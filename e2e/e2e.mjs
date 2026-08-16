@@ -753,6 +753,83 @@ check("the result box stays closed once dismissed",
 await endgame.context.close();
 
 
+// せんにちて（おなじ ばんめん 4 かい）と 入玉。つくった 一局を 入れて 画面の しょうぶの つけかたを 見る
+const ending = name => JSON.parse(readFileSync(new URL("./fixtures/" + name, import.meta.url), "utf8"));
+
+async function openSaved(moves, me) {
+  const seat = await newPage(420, 900);
+  await seat.page.goto(BASE, { waitUntil: "domcontentloaded" });
+  await seat.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  await seat.page.evaluate(
+    pair => localStorage.setItem("shogi.game.v1", JSON.stringify({ level: 1, me: pair[1], moves: pair[0], flipped: false })),
+    [moves, me],
+  );
+  await seat.page.goto(`${BASE}#/shogi`, { waitUntil: "domcontentloaded" });
+  await seat.page.reload({ waitUntil: "domcontentloaded" });
+  await seat.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  await seat.page.click("#shogi-resume");
+  return seat;
+}
+
+{
+  const data = ending("repetition-draw.json");
+  const seat = await openSaved(data.moves, 0);
+  await seat.page.waitForSelector("#shogi-over:not(.is-hidden)", { timeout: 30000 });
+  const title = (await seat.page.locator("#shogi-over-title").textContent()).trim();
+  const note = await seat.page.locator("#shogi-over-note").textContent();
+  check("a fourfold repetition without checks is a draw", title.includes("ひきわけ"), title);
+  check("the draw says why", note.includes("せんにちて"), note);
+  await seat.context.close();
+}
+
+{
+  const data = ending("repetition-check.json");
+  const loser = await openSaved(data.moves, data.checker);
+  await loser.page.waitForSelector("#shogi-over:not(.is-hidden)", { timeout: 30000 });
+  const title = (await loser.page.locator("#shogi-over-title").textContent()).trim();
+  const note = await loser.page.locator("#shogi-over-note").textContent();
+  check("perpetual check loses for the side giving it", title.includes("まけ"), title);
+  check("the loss says it was the endless checks", note.includes("おうてを かけつづけた"), note);
+  await loser.context.close();
+
+  const winner = await openSaved(data.moves, data.checker === 0 ? 1 : 0);
+  await winner.page.waitForSelector("#shogi-over:not(.is-hidden)", { timeout: 30000 });
+  const won = (await winner.page.locator("#shogi-over-title").textContent()).trim();
+  check("the checked side wins the same game", won.includes("かち"), won);
+  await winner.context.close();
+}
+
+for (const [file, want, ends] of [
+  ["jishogi-win.json", "かちに する", "かちました"],
+  ["jishogi-draw.json", "ひきわけに する", "ひきわけ"],
+]) {
+  const data = ending(file);
+  const seat = await openSaved(data.moves, 0);
+  await seat.page.waitForSelector("#shogi-declare:not(.is-hidden)", { timeout: 30000 });
+  const label = (await seat.page.locator("#shogi-declare").textContent()).trim();
+  check(`entering the enemy camp offers to end it (${file})`, label.includes(want), label);
+  const note = await seat.page.locator("#shogi-declare-note").textContent();
+  check(`the offer shows the points (${file})`, note.includes(`${data.point} てん`), note);
+  await seat.page.click("#shogi-declare");
+  await seat.page.waitForSelector("#shogi-over:not(.is-hidden)", { timeout: 30000 });
+  const title = (await seat.page.locator("#shogi-over-title").textContent()).trim();
+  check(`declaring ends the game (${file})`, title.includes(ends), title);
+  await seat.context.close();
+}
+
+{
+  const data = ending("jishogi-not-yet.json");
+  const seat = await openSaved(data.moves, 0);
+  await seat.page.waitForSelector("#shogi-declare-note:not(.is-hidden)", { timeout: 30000 });
+  const hidden = await seat.page.locator("#shogi-declare").evaluate(el => el.classList.contains("is-hidden"));
+  check("without enough pieces there is no button to press", hidden);
+  const note = await seat.page.locator("#shogi-declare-note").textContent();
+  check("the note says what is missing", note.includes("あと"), note);
+  check("the game is still on", await seat.page.locator("#shogi-over").evaluate(el => el.classList.contains("is-hidden")));
+  await seat.context.close();
+}
+
+
 await browser.close();
 
 const failed = results.filter(r => !r.ok);
