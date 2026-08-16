@@ -641,6 +641,13 @@ const shogiTaps = await shogi.page.evaluate(() => {
 });
 check("the shogi controls are big enough to tap", shogiTaps.length === 0, shogiTaps.slice(0, 4).join(" "));
 
+const shogiLight = await contrastSweep(shogi.page);
+check("every text on the board screen is readable in the light theme", shogiLight.length === 0, shogiLight.slice(0, 6).join(" "));
+await shogi.page.click("#theme-toggle");
+const shogiDark = await contrastSweep(shogi.page);
+check("every text on the board screen is readable in the dark theme", shogiDark.length === 0, shogiDark.slice(0, 6).join(" "));
+await shogi.page.click("#theme-toggle");
+
 await shogi.page.setViewportSize({ width: 390, height: 850 });
 const shogiOverflow = await shogi.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 check("the board fits a phone-sized screen", shogiOverflow <= 0, `overflowX=${shogiOverflow}px`);
@@ -822,6 +829,18 @@ for (const [file, want, ends] of [
   await seat.page.waitForSelector("#shogi-over:not(.is-hidden)", { timeout: 30000 });
   const title = (await seat.page.locator("#shogi-over-title").textContent()).trim();
   check(`declaring ends the game (${file})`, title.includes(ends), title);
+  await seat.context.close();
+}
+
+{
+  // 同じ 一局を、せんてを あいてに 持たせて 読み込む。あいてが じぶんで 申し込む はず
+  const data = ending("jishogi-win.json");
+  const seat = await openSaved(data.moves, 1);
+  await seat.page.waitForSelector("#shogi-over:not(.is-hidden)", { timeout: 30000 });
+  const title = (await seat.page.locator("#shogi-over-title").textContent()).trim();
+  const note = await seat.page.locator("#shogi-over-note").textContent();
+  check("the opponent ends it by declaring too", title.includes("まけ"), title);
+  check("the note says the opponent walked its king in", note.includes("あいてが おうを じんちへ"), note);
   await seat.context.close();
 }
 

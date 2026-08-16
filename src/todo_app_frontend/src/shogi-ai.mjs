@@ -180,12 +180,17 @@ export async function chooseMove(st, level, options) {
   if (root.length === 1) return root[0];
 
   const rootScore = opts.rootScore || null;
+  // きまりで きまる 点は 局面が 同じ なら 変わらない。深さを ふやす たびに 出しなおさない
+  const known = new Map();
   const fixedOf = m => {
     if (!rootScore) return null;
+    if (known.has(m)) return known.get(m);
     doMove(st, m);
     const v = rootScore(st, m);
     undoMove(st);
-    return v === undefined ? null : v;
+    const use = v === undefined ? null : v;
+    known.set(m, use);
+    return use;
   };
 
   if (cfg.blunder && random() < cfg.blunder) {
@@ -211,15 +216,15 @@ export async function chooseMove(st, level, options) {
 
     for (let i = 0; i < ordered.length; i++) {
       const m = ordered[i];
+      const fixed = fixedOf(m);
       doMove(st, m);
-      const fixed = rootScore ? rootScore(st, m) : null;
-      let score = fixed === null || fixed === undefined
+      let score = fixed === null
         ? -search(st, depth - 1, -MATE * 2, wide ? MATE * 2 : -alpha, ctx, 1)
         : fixed;
       undoMove(st);
       if (ctx.stop) break;
       // きまりで 点が 決まって いる手には ゆらぎを 足さない
-      if (cfg.jitter && (fixed === null || fixed === undefined)) {
+      if (cfg.jitter && fixed === null) {
         score += Math.floor((random() * 2 - 1) * cfg.jitter);
       }
       scores.push({ m, score });

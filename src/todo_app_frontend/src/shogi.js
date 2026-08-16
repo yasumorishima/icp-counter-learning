@@ -154,6 +154,10 @@ function checkEnd(quiet) {
   if (sameCount() < 4) return;
   // 4 かいめの 判決（ひきわけか、王手を かけつづけた ほうの まけか）は 審判に 出させる
   const verdict = repetitionVerdict(game.moves);
+  if (!verdict.known) {
+    // 審判に 出せなかった ときだけ ここに 来る。きまりの 既定どおり 引き分けに するが、黙らない
+    console.error("審判が 千日手の 判決を 出せませんでした。引き分けに します");
+  }
   if (verdict.checker === null) {
     finish("draw", "おなじ ばんめんが 4 かい。ひきわけ（せんにちて）です", quiet);
     return;

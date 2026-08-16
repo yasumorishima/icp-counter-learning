@@ -1104,7 +1104,7 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
 }
 
 .shogi-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
-.shogi-chip { padding: 6px 14px; border-radius: 999px; background: var(--chip); color: var(--muted); font-size: 0.9rem; font-weight: 700; }
+.shogi-chip { padding: 6px 14px; border-radius: 999px; background: var(--chip); color: var(--ink); font-size: 0.9rem; font-weight: 700; }
 .shogi-field-label { margin: 14px 0 6px; font-weight: 700; color: var(--muted); }
 .shogi-seg { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .shogi-seg-btn {
@@ -1221,7 +1221,7 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
   border: 1px solid var(--line);
 }
 .hand-owner { color: var(--muted); font-size: 0.8rem; font-weight: 700; margin-right: 4px; }
-.hand-none { color: var(--dim); font-size: 0.85rem; }
+.hand-none { color: var(--muted); font-size: 0.85rem; }
 .hand-piece {
   position: relative;
   min-width: 44px;
@@ -1265,7 +1265,7 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
 .shogi-guide-body b { color: var(--ink); }
 .kifu-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 4px; }
 .kifu-list li { background: var(--soft); border-radius: 8px; padding: 6px 10px; font-size: 0.92rem; }
-.kifu-list li span { color: var(--dim); margin-right: 6px; font-size: 0.8rem; }
+.kifu-list li span { color: var(--muted); margin-right: 6px; font-size: 0.8rem; }
 
 .shogi-modal {
   position: fixed;
