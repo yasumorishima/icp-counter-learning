@@ -194,8 +194,8 @@ const tooSmall = await page.evaluate(() => {
 check("everything you tap is big enough", tooSmall.length === 0, tooSmall.slice(0, 5).join(" "));
 
 // 文字と背景の コントラストを 明るい画面と暗い画面の両方で 全部測る
-const contrastSweep = async () =>
-  page.evaluate(() => {
+const contrastSweep = async (target = page) =>
+  target.evaluate(() => {
     const toRgb = text => (text.match(/[0-9.]+/g) || [0, 0, 0]).slice(0, 3).map(Number);
     const lum = ([r, g, b]) =>
       [r, g, b]
@@ -810,6 +810,14 @@ for (const [file, want, ends] of [
   check(`entering the enemy camp offers to end it (${file})`, label.includes(want), label);
   const note = await seat.page.locator("#shogi-declare-note").textContent();
   check(`the offer shows the points (${file})`, note.includes(`${data.point} てん`), note);
+  const wide = await seat.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  check(`the offer does not push the page sideways (${file})`, wide === 0, `${wide}px`);
+  const lightSeat = await contrastSweep(seat.page);
+  check(`the offer is readable in the light theme (${file})`, lightSeat.length === 0, lightSeat.slice(0, 4).join(" "));
+  await seat.page.click("#theme-toggle");
+  const darkSeat = await contrastSweep(seat.page);
+  check(`the offer is readable in the dark theme (${file})`, darkSeat.length === 0, darkSeat.slice(0, 4).join(" "));
+  await seat.page.click("#theme-toggle");
   await seat.page.click("#shogi-declare");
   await seat.page.waitForSelector("#shogi-over:not(.is-hidden)", { timeout: 30000 });
   const title = (await seat.page.locator("#shogi-over-title").textContent()).trim();

@@ -31,7 +31,7 @@
   --mint: #34d399;
   --rose: #fb7185;
 
-  --ok-bg: #eafaf2;   --ok-fg: #17915f;
+  --ok-bg: #eafaf2;   --ok-fg: #17915f;  --ok-strong: #0f6f48;
   --warn-bg: #fdf0d2; --warn-fg: #a86c00;
   --bad-bg: #ffe1e7;  --bad-fg: #d6436a;
   --err-fg: #e0436a;
@@ -73,7 +73,7 @@
     --chip: #382f5a;
     --seg-bg: #332c52;
 
-    --ok-bg: #1e4a3a;   --ok-fg: #6ee7b7;
+    --ok-bg: #1e4a3a;   --ok-fg: #6ee7b7;  --ok-strong: #6ee7b7;
     --warn-bg: #4a3a1c; --warn-fg: #fcd34d;
     --bad-bg: #4d2436;  --bad-fg: #fda4c0;
     --err-fg: #ff9db5;
@@ -108,7 +108,7 @@
   --chip: #382f5a;
   --seg-bg: #332c52;
 
-  --ok-bg: #1e4a3a;   --ok-fg: #6ee7b7;
+  --ok-bg: #1e4a3a;   --ok-fg: #6ee7b7;  --ok-strong: #6ee7b7;
   --warn-bg: #4a3a1c; --warn-fg: #fcd34d;
   --bad-bg: #4d2436;  --bad-fg: #fda4c0;
   --err-fg: #ff9db5;
@@ -1248,7 +1248,7 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
 .shogi-help { text-align: center; color: var(--muted); margin: 0 0 12px; min-height: 1.4em; }
 .shogi-declare-note { text-align: center; color: var(--muted); margin: 0 0 10px; }
 .shogi-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-.shogi-actions .shogi-declare { background: var(--ok-bg); color: var(--ok-fg); border-color: var(--ok-fg); font-weight: 800; }
+.shogi-actions .shogi-declare { background: var(--ok-bg); color: var(--ok-strong); border-color: var(--ok-strong); font-weight: 800; }
 .shogi-actions .btn-ghost { min-height: 46px; }
 .shogi-kifu { margin-top: 16px; }
 .shogi-kifu summary,
