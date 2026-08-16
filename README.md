@@ -38,6 +38,15 @@ No ads, no sign-up, and every record stays on the child's own device.
   ヒント（次の 一手を 提案）／まった／棋譜／読み込み直しても つづきから
 - 対局の とちゅうも 記録も `localStorage` だけ。サーバーには 送りません
 
+### 指せる手の 最終判断は 外の OSS がする
+
+人が さわる 側（行ける ますの 表示・指す手の 受け付け）は、この中の きまりが 出した 手を
+**tsshogi（MIT・sunfish-shogi）に 通してから** 画面に 出します。自分の 実装を 自分で 採点しない ため。
+
+相手の 読みだけは 自前の きまりの まま です。1 手に 何万局面も 調べるので 速さが 要るためで、
+実測で **1 局面あたり 自前 0.04ms / tsshogi 1.2ms（33 倍）**、bundle は **+8.4KB（gzip）** でした。
+両者が 食い違った ことは 一度も ありません（下記の 突き合わせ）。
+
 ### きまりが 正しいことの 確かめかた
 
 駒の うごきと 王手の 判定は、決められた 手数ぶんの 合法手を 数え上げて（perft）
@@ -46,10 +55,14 @@ No ads, no sign-up, and every record stays on the child's own device.
 局面つきで 検算し、相手の 側も 「1 手詰めを 見つける」「60 手 指しても 反則ゼロ」
 「1 手 3 秒いない」を 毎回 見ています。
 
+外の OSS との 突き合わせも CI で 毎回 走ります。**246 局面で 合法手の 集合が 完全一致**、
+さらに **200 手ぶん 1 手ごとに 局面ぜんたい（盤・持ち駒・手番）が 一致**することを 確かめています。
+
 ```
 node tests/shogi-rules.test.mjs     # きまり（perft 4 手ぶんまで）
 node tests/shogi-rules.test.mjs 5   # 5 手ぶんまで（時間が かかる）
 node tests/shogi-ai.test.mjs        # 相手の 側
+node tests/shogi-vs-oss.test.mjs    # 外の OSS（tsshogi）と 全数 突き合わせ
 ```
 
 ## 大事にしていること

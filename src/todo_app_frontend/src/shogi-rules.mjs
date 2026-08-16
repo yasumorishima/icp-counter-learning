@@ -457,6 +457,50 @@ export function moveText(st, m, prevTo, legal) {
 
 const SFEN_LETTER = { p: P, l: L, n: N, s: S, g: G, b: B, r: R, k: K };
 
+const SFEN_UPPER = { 1: "P", 2: "L", 3: "N", 4: "S", 5: "G", 6: "B", 7: "R", 8: "K" };
+
+// いまの 局面を SFEN で 書き出す（外の しくみに 渡すため）
+export function toSfen(st) {
+  const rows = [];
+  for (let r = 0; r < 9; r++) {
+    let row = "";
+    let gap = 0;
+    for (let c = 0; c < 9; c++) {
+      const p = st.board[r * 9 + c];
+      if (!p) {
+        gap++;
+        continue;
+      }
+      if (gap) {
+        row += gap;
+        gap = 0;
+      }
+      const t = typeOf(p);
+      const letter = SFEN_UPPER[demote(t)];
+      row += (t >= 9 ? "+" : "") + (colorOf(p) === SENTE ? letter : letter.toLowerCase());
+    }
+    if (gap) row += gap;
+    rows.push(row);
+  }
+  let hands = "";
+  for (const color of [SENTE, GOTE]) {
+    for (const t of HAND_ORDER) {
+      const n = st.hands[color][t];
+      if (!n) continue;
+      hands += (n > 1 ? n : "") + (color === SENTE ? SFEN_UPPER[t] : SFEN_UPPER[t].toLowerCase());
+    }
+  }
+  return rows.join("/") + " " + (st.turn === SENTE ? "b" : "w") + " " + (hands || "-") + " 1";
+}
+
+// 手を USI で 書き出す（例: 7g7f / 2b3c+ / P*5e）
+export function toUsi(m) {
+  const place = sq => String(9 - (sq % 9)) + String.fromCharCode(97 + ((sq / 9) | 0));
+  const drop = moveDrop(m);
+  if (drop) return SFEN_UPPER[drop] + "*" + place(moveTo(m));
+  return place(moveFrom(m)) + place(moveTo(m)) + (movePromotes(m) ? "+" : "");
+}
+
 // SFEN から 局面を つくる。検算で つくった局面を 読ませるために ある
 export function fromSfen(text) {
   const st = emptyState();

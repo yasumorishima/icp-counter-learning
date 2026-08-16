@@ -117,6 +117,41 @@ for (const seed of [3, 21, 55]) {
   }
 }
 
+// 3) 1 手 指すごとに 局面ぜんたい（盤・持ち駒・手番）が OSS と 同じかを 見る。
+//    取った駒が 正しく 持ち駒に 入るか、成った駒が 取られたら 元に もどるかは ここで 分かる。
+let stepped = 0;
+let stateBad = [];
+for (const seed of [11, 42]) {
+  const st = initialState();
+  const random = seeded(seed);
+  let pos = Position.newBySFEN(sfenOf(st));
+  for (let i = 0; i < 100; i++) {
+    const legal = legalMoves(st);
+    if (!legal.length) break;
+    const m = await chooseMove(st, 1, { random, budget: 60 });
+    if (!m) break;
+    const usi = usiOf(m);
+    const mv = pos.createMoveByUSI(usi);
+    if (!mv || !pos.doMove(mv)) {
+      stateBad.push(`${seed}-${i}手目 OSS が ${usi} を 指せない`);
+      break;
+    }
+    doMove(st, m);
+    stepped++;
+    const mineSfen = sfenOf(st);
+    const ossSfen = pos.getSFEN(1).replace(/ \d+$/, " 1");
+    if (mineSfen !== ossSfen) {
+      stateBad.push(`${seed}-${i}手目 ${usi}
+    私 : ${mineSfen}
+    OSS: ${ossSfen}`);
+      break;
+    }
+  }
+}
+console.log(`1 手ごとに くらべた 手数: ${stepped}　局面の ちがい: ${stateBad.length}`);
+stateBad.slice(0, 4).forEach(b => console.log("  " + b));
+mismatches.push(...stateBad);
+
 console.log(`
 くらべた 局面: ${positions}`);
 console.log(`ちがい: ${mismatches.length}`);

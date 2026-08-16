@@ -6,6 +6,7 @@
  */
 import * as R from "./shogi-rules.mjs";
 import { chooseMove, LEVELS } from "./shogi-ai.mjs";
+import { refereed } from "./shogi-referee";
 import { sounds, confetti } from "./effects";
 
 const $ = id => document.getElementById(id);
@@ -28,6 +29,14 @@ let setup = { level: 2, side: R.SENTE };
 // 対局を 作り直したら 数を 進める。まえの 対局の 考えごとが 戻ってきても 混ざらないように
 let generation = 0;
 let overShown = false;
+
+/**
+ * いま 指せる手。自前の きまりが 出した ものを、外の しくみ（審判）に 通してから つかう。
+ * 画面に 出る 行き先も、受け付ける 手も、すべて これを 通る。
+ */
+function legalNow(st) {
+  return refereed(st, R.legalMoves(st));
+}
 
 function readJson(key) {
   try {
@@ -66,7 +75,7 @@ function startGame(level, me) {
   $("shogi-over").classList.add("is-hidden");
   const st = R.initialState();
   game = { st, level, me, moves: [], kifu: [], keys: [R.positionKey(st)], over: null };
-  legal = R.legalMoves(st);
+  legal = legalNow(st);
   sel = null;
   hint = null;
   hintText = "";
@@ -92,7 +101,7 @@ function resume(saved) {
   overShown = false;
   const st = R.initialState();
   game = { st, level: saved.level, me: saved.me, moves: [], kifu: [], keys: [R.positionKey(st)], over: null };
-  legal = R.legalMoves(st);
+  legal = legalNow(st);
   flipped = Boolean(saved.flipped);
   for (const m of saved.moves || []) {
     if (!legal.includes(m)) {
@@ -117,7 +126,7 @@ function applyMove(m, quiet) {
   game.moves.push(m);
   game.kifu.push(text);
   game.keys.push(R.positionKey(game.st));
-  legal = R.legalMoves(game.st);
+  legal = legalNow(game.st);
   sel = null;
   hint = null;
   hintText = "";
@@ -188,17 +197,41 @@ function targetMap() {
 function sizeBoard() {
   const board = $("shogi-board");
   const files = $("shogi-files");
+  const ranks = $("shogi-ranks");
   if (!board) return;
-  const room = Math.min(window.innerWidth * 0.88, 430);
-  const cell = Math.max(24, Math.floor(room / 9));
+  // 窓の 幅では なく、入れ物の 実際の 幅から 決める（段の 目盛りと 枠の ぶんを 引く）
+  const holder = board.closest(".board-wrap");
+  const outer = holder && holder.clientWidth ? holder.clientWidth : window.innerWidth;
+  const side = (ranks ? Math.ceil(ranks.getBoundingClientRect().width) : 12) + 4 + 8;
+  const room = Math.min(outer - side, 430);
+  const cell = Math.max(20, Math.floor(room / 9));
   board.style.width = cell * 9 + "px";
   board.style.height = cell * 9 + "px";
   if (files) files.style.width = cell * 9 + 8 + "px";
 }
 
+/**
+ * 「駒の うごきとしては 行けるが、指すと 反則に なる」ます。
+ * 玉なら あいてに ねらわれている ます、ほかの駒なら 動かすと 玉が 取られる ます。
+ * ここを ✕ で 見せないと「なぜ 行けないのか」が 分からない。
+ */
+function blockedMap() {
+  const map = new Set();
+  if (!sel || sel.drop || !game || game.over || game.st.turn !== game.me) return map;
+  const ok = new Set();
+  for (const m of legal) if (!R.moveDrop(m) && R.moveFrom(m) === sel.from) ok.add(R.moveTo(m));
+  for (const m of R.pseudoMoves(game.st, [])) {
+    if (R.moveDrop(m) || R.moveFrom(m) !== sel.from) continue;
+    const to = R.moveTo(m);
+    if (!ok.has(to)) map.add(to);
+  }
+  return map;
+}
+
 function renderBoard() {
   sizeBoard();
   const targets = targetMap();
+  const blocked = blockedMap();
   const rev = reversed();
   const lastTo = game.moves.length ? R.moveTo(game.moves[game.moves.length - 1]) : -1;
   // 王手を かけられている 側の 玉に しるしを つける（なぜ 動けないかが 分かるように）
@@ -210,6 +243,7 @@ function renderBoard() {
     const classes = ["sq"];
     if (sel && !sel.drop && sel.from === sq) classes.push("is-sel");
     if (targets.has(sq)) classes.push(p ? "is-take" : "is-go");
+    else if (blocked.has(sq)) classes.push("is-no");
     if (sq === lastTo) classes.push("is-last");
     if (hint && (hint.from === sq || hint.to === sq)) classes.push("is-hint");
     if (checkedKing >= 0 && sq === checkedKing) classes.push("is-check");
@@ -297,13 +331,21 @@ function renderHelp() {
   }
   const type = R.typeOf(game.st.board[sel.from]);
   const canGo = legal.some(m => !R.moveDrop(m) && R.moveFrom(m) === sel.from);
+  const stopped = blockedMap().size > 0;
+  const why = type === R.K
+    ? "✕ は あいてに ねらわれている ますです。玉は そこへ 入れません。"
+    : "✕ へ 動かすと 玉が 取られて しまうので 指せません。";
   if (!canGo) {
-    el.textContent = R.inCheck(game.st, game.me)
-      ? "王手が かかっています。この駒では 玉を 助けられません。ほかの駒を えらんでね。"
-      : R.NAME[type] + "は いま うごけません（行ける ますが ありません）。";
+    if (stopped) {
+      el.textContent = (type === R.K ? "玉の まわりは 全部 ねらわれています。" : R.NAME[type] + "は いま 動かせません。") + why;
+    } else if (R.inCheck(game.st, game.me)) {
+      el.textContent = "王手が かかっています。この駒では 玉を 助けられません。ほかの駒を えらんでね。";
+    } else {
+      el.textContent = R.NAME[type] + "は いま うごけません（行ける ますが ありません）。";
+    }
     return;
   }
-  el.textContent = R.NAME[type] + "：" + R.HOW[type];
+  el.textContent = R.NAME[type] + "：" + R.HOW[type] + (stopped ? "　" + why : "");
 }
 
 function renderKifu() {
@@ -472,7 +514,7 @@ function undo() {
   const me = game.me;
   const st = R.initialState();
   game = { st, level, me, moves: [], kifu: [], keys: [R.positionKey(st)], over: null };
-  legal = R.legalMoves(st);
+  legal = legalNow(st);
   for (const m of moves) applyMove(m, true);
   game.over = null;
   $("shogi-over").classList.add("is-hidden");
