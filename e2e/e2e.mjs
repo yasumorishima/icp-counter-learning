@@ -676,7 +676,8 @@ await nari.page.evaluate(() => {
   const box = el.getBoundingClientRect();
   el.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: box.left + 6, clientY: box.top + 6 }));
 });
-await nari.page.waitForSelector("#shogi-promote.is-hidden", { timeout: 10000 });
+// display:none の 要素は「見える まで 待つ」が 効かないので、付いている ことで 待つ
+await nari.page.waitForSelector("#shogi-promote.is-hidden", { state: "attached", timeout: 10000 });
 check("cancelling the promotion dialog plays no move",
   (await nari.page.locator("#shogi-kifu-list li").count()) === beforeCancel);
 check("cancelling says so on screen",
