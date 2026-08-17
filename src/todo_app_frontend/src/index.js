@@ -3,6 +3,7 @@ import { idlFactory, canisterId as localCanisterId } from "../../declarations/to
 import { LANGS, RTL, makeT, detectLang, saveLang } from "./i18n";
 import { initDrill, renderHome as renderDrillHome, renderKiroku, renderAward } from "./drill";
 import { initShogi, renderShogi } from "./shogi";
+import { initCode, renderCode } from "./code";
 
 // --- 接続 -------------------------------------------------------------------
 
@@ -227,11 +228,11 @@ async function setupLegacyCounter() {
 // --- 画面切り替え -----------------------------------------------------------
 
 const VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view-kiroku", "view-award",
-  "view-shogi", "view-support"];
+  "view-shogi", "view-code", "view-support"];
 
 // こどもむけの画面は日本語だけ。言語の切り替えは支援ページだけに出す
 const KIDS_VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view-kiroku", "view-award",
-  "view-shogi"];
+  "view-shogi", "view-code"];
 
 function showView(id) {
   VIEWS.forEach(view => $(view).classList.toggle("is-hidden", view !== id));
@@ -266,6 +267,12 @@ async function route() {
     return;
   }
 
+  if (hash === "#/code") {
+    showView("view-code");
+    renderCode();
+    return;
+  }
+
   if (hash === "#/drill") {
     showView("view-drill");
     renderDrillHome();
@@ -296,6 +303,7 @@ async function init() {
   applyLang();
   initDrill({ show: showView });
   initShogi({ show: showView });
+  initCode({ show: showView });
   setupSameHashLinks();
   window.addEventListener("hashchange", route);
 

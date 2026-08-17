@@ -76,6 +76,12 @@
                         <span class="pick-note">ひとりで あいてと たいきょく</span>
                         <span class="pick-go">やる</span>
                     </a>
+                    <a class="pick-card pick-code" href="#/code">
+                        <span class="pick-face pick-cube" aria-hidden="true">▶</span>
+                        <b class="pick-name">プログラミング</b>
+                        <span class="pick-note">カードで キャラクターを うごかす</span>
+                        <span class="pick-go">やる</span>
+                    </a>
                 </div>
             </section>
 
@@ -304,6 +310,78 @@
             </section>
 
 
+
+            <!-- ============ プログラミング ============ -->
+            <section id="view-code" class="view is-hidden">
+                <div id="code-pick" class="panel panel-center">
+                    <h2 class="panel-title">プログラミング</h2>
+                    <p class="lede">カードを ならべて キャラクターを うごかそう。<br>
+                        じゅんばん → くりかえし → もし〜だったら → わざ の じゅんに ならえるよ。</p>
+                    <p id="code-noname" class="code-noname is-hidden">
+                        <a href="#/drill">さんすう</a> で なまえを つくると、とった ★が のこります。
+                    </p>
+                    <p class="code-total" id="code-total"></p>
+                    <p class="code-label">だれで あそぶ？</p>
+                    <div id="code-heroes" class="code-heroes"></div>
+                    <div id="code-worlds" class="code-worldlist"></div>
+                </div>
+
+                <div id="code-play" class="panel is-hidden">
+                    <div class="code-head">
+                        <b id="code-title" class="code-title"></b>
+                        <span id="code-worldtag" class="code-stage-tag"></span>
+                        <span id="code-idea" class="code-idea"></span>
+                    </div>
+                    <p id="code-mission" class="code-mission"></p>
+
+                    <div class="code-screen">
+                        <canvas id="code-canvas" class="code-canvas" aria-label="ぼうけんの がめん"></canvas>
+                        <canvas id="code-confetti" class="result-confetti" aria-hidden="true"></canvas>
+                    </div>
+
+                    <p id="code-status" class="status" role="status"></p>
+
+                    <div class="code-actions">
+                        <button type="button" id="code-run" class="cta"><span class="cta-label">スタート</span></button>
+                        <button type="button" id="code-next" class="cta code-next is-hidden"><span class="cta-label">つぎへ</span></button>
+                        <button type="button" id="code-fast" class="btn-ghost" aria-pressed="false">はやく</button>
+                        <button type="button" id="code-hint" class="btn-ghost">ヒント</button>
+                        <button type="button" id="code-clear" class="btn-ghost">ぜんぶ けす</button>
+                    </div>
+                    <p id="code-hint-text" class="code-hint-text is-hidden"></p>
+
+                    <p class="code-label">プログラム
+                        <span id="code-count" class="code-num"></span>
+                        <span id="code-par" class="code-par"></span>
+                    </p>
+                    <div id="code-prog-main" class="code-program"></div>
+
+                    <div id="code-skills" class="code-skillbox is-hidden">
+                        <p class="code-label">わざ 1</p>
+                        <div id="code-prog-a" class="code-program code-program-skill"></div>
+                        <p class="code-label">わざ 2</p>
+                        <div id="code-prog-b" class="code-program code-program-skill"></div>
+                    </div>
+
+                    <p class="code-label">カードを ふやす</p>
+                    <div id="code-palette" class="code-palette"></div>
+
+                    <details class="code-help">
+                        <summary>あそびかた</summary>
+                        <p>したの カードを おすと、プログラムに 1 まい ふえます。
+                            うえから じゅんばんに うごきます。</p>
+                        <p>「くりかえし」の なかに 入れた カードは、きめた かいすう だけ くりかえします。
+                            「ここに 入れる」を おすと、あたらしい カードが そこに 入ります。</p>
+                        <p>「もし」は そのときの ようすで する ことを かえます。
+                            まえが あな／まえが とびら／まえに てき／ここに ★か かぎ から えらべます。</p>
+                        <p>「わざ」は 手じゅんに 名前を つける ことです。おなじ ならびを なんども つかう ときに、
+                            わざに すると カードが ぐっと へります。</p>
+                        <p>★は カードが すくないほど ふえます。まちがえても なんども やりなおせます。</p>
+                    </details>
+
+                    <p><button type="button" id="code-back" class="btn-ghost">ステージを えらぶ</button></p>
+                </div>
+            </section>
 
             <!-- ============ 支援 ============ -->
             <section id="view-support" class="view is-hidden">

@@ -38,6 +38,7 @@ function normalize(p) {
     stars: Number.isFinite(p.stars) ? p.stars : 0,
     days: Array.isArray(p.days) ? p.days.filter(d => typeof d === "string").slice(-400) : [],
     units: p.units && typeof p.units === "object" ? p.units : {},
+    code: p.code && typeof p.code === "object" && !Array.isArray(p.code) ? p.code : {},
     challenge: p.challenge && typeof p.challenge === "object" ? p.challenge : undefined,
     times: p.times && typeof p.times === "object" ? p.times : {},
   };
@@ -141,6 +142,32 @@ export function record(unitId, correct, total, now) {
 
   write(state);
   return { ...stat };
+}
+
+/**
+ * プログラミングの レッスン。どの だんかいまで できたかを のこす。
+ * ★は はじめて できた ときだけ 多めに 入れる（やり直しでも すこしは たまる）。
+ */
+export function codeStars() {
+  const p = currentProfile();
+  return p && p.code ? { ...p.code } : {};
+}
+
+/** ステージごとに いちばん よかった ★の 数を のこす */
+export function codeClear(levelId, stars, now) {
+  const p = currentProfile();
+  if (!p) return { first: false, best: 0 };
+  if (!p.code || Array.isArray(p.code)) p.code = {};
+  const before = p.code[levelId] || 0;
+  const best = Math.max(before, stars);
+  p.code[levelId] = best;
+  // はじめて クリアで 5 こ。あとは ★が ふえた ぶんだけ
+  p.stars += before === 0 ? 5 : Math.max(0, best - before);
+  const day = today(now);
+  if (p.days[p.days.length - 1] !== day) p.days.push(day);
+  if (p.days.length > 400) p.days = p.days.slice(-400);
+  write(state);
+  return { first: before === 0, best };
 }
 
 export function unitStat(unitId) {

@@ -36,11 +36,13 @@ jobs:
 
       # しょうぎの きまりは 画面が なくても 確かめられる。数え上げ（perft）が
       # 1 でも ずれたら 駒の うごきか 王手の 判定が こわれている。
-      - name: しょうぎの きまりと あいてを 検算
+      - name: しょうぎと プログラミングの きまりを 検算
         run: |
           node tests/shogi-rules.test.mjs
           node tests/shogi-ai.test.mjs
           node tests/shogi-endings.test.mjs
+          node tests/code-world.test.mjs
+          node tests/code-lessons.test.mjs
 
       # 自分の 実装を 自分で 採点しない。外の OSS（tsshogi・MIT）と 合法手を 全数 突き合わせる。
       - name: しょうぎの きまりを 外の OSS と 突き合わせ

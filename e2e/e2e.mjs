@@ -857,6 +857,166 @@ for (const [file, want, ends] of [
 }
 
 
+// ---- 12. プログラミング -------------------------------------------------------
+
+{
+  const code = await newPage(430, 940);
+  const cp = code.page;
+  await cp.goto(BASE, { waitUntil: "networkidle" });
+  check("the top screen offers three things", (await cp.locator(".pick-card").count()) === 3);
+
+  // なまえを つくってから 入る（★が のこるかまで 見る）
+  await cp.goto(BASE + "#/drill");
+  await cp.reload();
+  await cp.fill("#who-input", "みなと");
+  await cp.click("#who-add");
+
+  await cp.goto(BASE + "#/code");
+  await cp.reload();
+  await cp.waitForSelector(".code-stage");
+  check("there are twenty stages", (await cp.locator(".code-stage").count()) === 20);
+  check("there are four worlds", (await cp.locator(".code-world-name").count()) === 4);
+  check("there are four characters to pick", (await cp.locator(".code-hero").count()) === 4);
+  check("every stage after the first is locked at the start",
+    (await cp.locator(".code-stage:disabled").count()) === 19);
+
+  await cp.click('.code-hero[data-hero="cat"]');
+  await cp.reload();
+  await cp.waitForSelector(".code-stage");
+  check("the chosen character is kept on the device",
+    await cp.locator('.code-hero[data-hero="cat"]').evaluate(el => el.classList.contains("is-on")));
+
+  await cp.click('.code-stage[data-level="1"]');
+  await cp.waitForSelector("#code-play:not(.is-hidden)");
+  check("the first stage offers only the card it needs", (await cp.locator(".code-pal").count()) === 1);
+  check("the skill boxes stay hidden until they are taught",
+    await cp.locator("#code-skills").evaluate(el => el.classList.contains("is-hidden")));
+
+  await cp.waitForTimeout(400);
+  const painted = await cp.evaluate(() => {
+    const c = document.getElementById("code-canvas");
+    const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+    const seen = new Set();
+    for (let i = 0; i < d.length; i += 4 * 89) seen.add(d[i] + "," + d[i + 1] + "," + d[i + 2]);
+    return seen.size;
+  });
+  check("the world is really drawn", painted > 8, String(painted) + " colours");
+
+  await cp.click("#code-fast");
+  check("the speed button flips", (await cp.locator("#code-fast").textContent()).trim() === "ゆっくり");
+
+  for (let i = 0; i < 3; i++) await cp.click('.code-pal[data-card="go"]');
+  check("pressing a card puts it into the program", (await cp.locator("#code-prog-main .code-card").count()) === 3);
+
+  await cp.click("#code-run");
+  await cp.waitForSelector("#code-status.is-ok", { timeout: 30000 });
+  const cleared = (await cp.locator("#code-status").textContent()).trim();
+  check("running the program clears the stage", cleared.includes("クリア"), cleared);
+  check("it says how many stars this run earned", cleared.includes("★3"), cleared);
+
+  const stars = await cp.evaluate(() =>
+    JSON.parse(localStorage.getItem("drill.records.v1")).profiles[0]);
+  check("clearing gives stars that stay on the device", stars.stars === 5, String(stars.stars));
+  check("the stage keeps its best result", stars.code["1"] === 3, JSON.stringify(stars.code));
+
+  await cp.click("#code-next");
+  await cp.waitForFunction(() => document.getElementById("code-title").textContent.startsWith("2."));
+  check("finishing a stage opens the next one", true);
+
+  // まちがった プログラムは クリアに ならない
+  for (let i = 0; i < 2; i++) await cp.click('.code-pal[data-card="go"]');
+  await cp.click("#code-run");
+  await cp.waitForSelector("#code-status.is-error", { timeout: 30000 });
+  const missed = (await cp.locator("#code-status").textContent()).trim();
+  check("leaving a star behind is not a clear", missed.includes("★"), missed);
+
+  // ここから 先は 記録を 入れて、うしろの ステージも 見る
+  await cp.evaluate(() => {
+    const data = JSON.parse(localStorage.getItem("drill.records.v1"));
+    const code = {};
+    for (let i = 1; i <= 20; i++) code[i] = 1;
+    data.profiles[0].code = code;
+    localStorage.setItem("drill.records.v1", JSON.stringify(data));
+    localStorage.removeItem("code.work.v1");
+  });
+  await cp.reload();
+  await cp.waitForSelector(".code-stage");
+  check("stages open up once they are cleared", (await cp.locator(".code-stage:disabled").count()) === 0);
+
+  await cp.click('.code-stage[data-level="3"]');
+  await cp.waitForSelector("#code-play:not(.is-hidden)");
+  await cp.click('.code-pal[data-card="repeat"]');
+  check("a repeat card starts at four", (await cp.locator(".code-n").first().textContent()).trim() === "4");
+  for (let i = 0; i < 25; i++) await cp.click('.code-mini[data-act="plus"]');
+  check("the number of repeats stops at twenty",
+    (await cp.locator(".code-n").first().textContent()).trim() === "20");
+  for (let i = 0; i < 25; i++) await cp.click('.code-mini[data-act="minus"]');
+  check("the number of repeats never goes below one",
+    (await cp.locator(".code-n").first().textContent()).trim() === "1");
+  check("a new card goes inside the repeat that was just made",
+    await cp.locator(".code-slot .code-here.is-open").first().isVisible());
+  await cp.click('.code-pal[data-card="go"]');
+  check("the card really went inside", (await cp.locator(".code-slot .code-card").count()) === 1);
+
+  await cp.reload();
+  await cp.waitForSelector(".code-stage");
+  await cp.click('.code-stage[data-level="3"]');
+  await cp.waitForSelector("#code-play:not(.is-hidden)");
+  check("the work in progress is still there after a reload",
+    (await cp.locator("#code-prog-main .code-card").count()) === 1);
+
+  await cp.click("#code-clear");
+  check("clearing empties the program", (await cp.locator("#code-prog-main .code-card").count()) === 0);
+  await cp.click("#code-hint");
+  check("the hint can be opened", await cp.locator("#code-hint-text").isVisible());
+
+  // もし の カード（中身を えらべる）
+  await cp.click("#code-back");
+  await cp.waitForSelector("#code-pick:not(.is-hidden)");
+  await cp.click('.code-stage[data-level="11"]');
+  await cp.waitForSelector("#code-play:not(.is-hidden)");
+  await cp.click('.code-pal[data-card="if"]');
+  const conds = await cp.locator(".code-cond option").count();
+  check("the if card lets you pick what to look at", conds === 4, String(conds));
+  await cp.selectOption(".code-cond", "enemy");
+  await cp.reload();
+  await cp.waitForSelector(".code-stage");
+  await cp.click('.code-stage[data-level="11"]');
+  await cp.waitForSelector("#code-play:not(.is-hidden)");
+  check("the choice inside the if card is kept",
+    (await cp.locator(".code-cond").inputValue()) === "enemy");
+
+  // わざ（名前を つけた 手じゅん）
+  await cp.click("#code-back");
+  await cp.click('.code-stage[data-level="9"]');
+  await cp.waitForSelector("#code-play:not(.is-hidden)");
+  check("the skill boxes appear once they are taught",
+    !(await cp.locator("#code-skills").evaluate(el => el.classList.contains("is-hidden"))));
+  await cp.click('#code-prog-a .code-here');
+  await cp.click('.code-pal[data-card="go"]');
+  check("a card can be put inside a skill", (await cp.locator("#code-prog-a .code-card").count()) === 1);
+  check("the main program stays empty", (await cp.locator("#code-prog-main .code-card").count()) === 0);
+
+  // 新しい 画面にも コントラストの 総なめを かける
+  const codeLight = await contrastSweep(cp);
+  check("every text on the programming screen is readable in the light theme",
+    codeLight.length === 0, codeLight.slice(0, 6).join(" "));
+  await cp.click("#theme-toggle");
+  const codeDark = await contrastSweep(cp);
+  check("every text on the programming screen is readable in the dark theme",
+    codeDark.length === 0, codeDark.slice(0, 6).join(" "));
+  await cp.click("#theme-toggle");
+
+  for (const width of [320, 360, 390, 430, 768, 1024, 1280]) {
+    await cp.setViewportSize({ width, height: 900 });
+    await cp.waitForTimeout(80);
+    const over = await cp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    check(`the programming screen does not spill sideways at ${width}px`, over <= 0, String(over));
+  }
+
+  await code.context.close();
+}
+
 await browser.close();
 
 const failed = results.filter(r => !r.ok);
