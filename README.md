@@ -71,7 +71,10 @@ No ads, no sign-up, and every record stays on the child's own device.
 node tests/shogi-rules.test.mjs     # きまり（perft 4 手ぶんまで）
 node tests/shogi-rules.test.mjs 5   # 5 手ぶんまで（時間が かかる）
 node tests/shogi-ai.test.mjs        # 相手の 側
+node tests/shogi-endings.test.mjs   # おわりかた（千日手の 区別・入玉の しきい値）
 node tests/shogi-vs-oss.test.mjs    # 外の OSS（tsshogi）と 全数 突き合わせ
+
+node scripts/make-shogi-fixtures.mjs  # 検査用の 一局を 作り直す（作った 手は 審判に 通してから 書き出す）
 ```
 
 ## 大事にしていること
@@ -112,7 +115,9 @@ node e2e/e2e.mjs http://$(dfx canister id todo_app_frontend).localhost:4943/
 
 作成〜採点〜記録の通し、きょうの 1まい の 日替わり、タイムアタック、チャレンジと しょうじょう、
 オフラインで 解けること、押すところの 大きさ、明暗それぞれの コントラスト全数、
-390px で 横あふれ 0px まで、**70 項目**を 実ブラウザで 確かめます。
+390px で 横あふれ 0px、しょうぎの つみ・千日手（王手を つづけた ときの 負けも）・
+入玉の 申し込み（できる とき / たりない とき / 相手が 申し込む とき）まで、
+**130 項目**を 実ブラウザで 確かめます。
 
 ### CI
 
