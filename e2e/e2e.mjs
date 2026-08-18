@@ -53,7 +53,8 @@ await page.goto(BASE, { waitUntil: "domcontentloaded" });
 await page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 check("home loads", true);
 check("the top page asks which one to play", await page.locator("#view-pick").isVisible());
-check("both the drill and shogi are one tap away", (await page.locator(".pick-card").count()) === 2);
+check("the drill, shogi and programming are each one tap away",
+  (await page.locator(".pick-card").count()) === 3);
 check("scheduling is gone from the site", (await page.locator("a[href='#/kimaru']").count()) === 0);
 check("no developer wording in the footer", !(await page.locator(".site-footer").textContent()).includes("Internet Computer"));
 await page.screenshot({ path: `${shots}/01-home.png`, fullPage: true });
@@ -962,8 +963,10 @@ for (const [file, want, ends] of [
   await cp.waitForSelector(".code-stage");
   await cp.click('.code-stage[data-level="3"]');
   await cp.waitForSelector("#code-play:not(.is-hidden)");
+  // くりかえし 1 まいと、その なかの 1 まい＝あわせて 2 まい 残っているはず
   check("the work in progress is still there after a reload",
-    (await cp.locator("#code-prog-main .code-card").count()) === 1);
+    (await cp.locator("#code-prog-main .code-card").count()) === 2 &&
+    (await cp.locator("#code-prog-main .code-slot .code-card").count()) === 1);
 
   await cp.click("#code-clear");
   check("clearing empties the program", (await cp.locator("#code-prog-main .code-card").count()) === 0);
@@ -996,6 +999,21 @@ for (const [file, want, ends] of [
   await cp.click('.code-pal[data-card="go"]');
   check("a card can be put inside a skill", (await cp.locator("#code-prog-a .code-card").count()) === 1);
   check("the main program stays empty", (await cp.locator("#code-prog-main .code-card").count()) === 0);
+
+  // ステージを えらぶ 画面にも かける（かけていない 画面は「合格」ではなく「未測定」）
+  await cp.click("#code-back");
+  await cp.waitForSelector("#code-pick:not(.is-hidden)");
+  const pickLight = await contrastSweep(cp);
+  check("every text on the stage list is readable in the light theme",
+    pickLight.length === 0, pickLight.slice(0, 6).join(" "));
+  await cp.click("#theme-toggle");
+  const pickDark = await contrastSweep(cp);
+  check("every text on the stage list is readable in the dark theme",
+    pickDark.length === 0, pickDark.slice(0, 6).join(" "));
+  await cp.click("#theme-toggle");
+  await cp.click('.code-stage[data-level="9"]');
+  await cp.waitForSelector("#code-play:not(.is-hidden)");
+  await cp.click("#code-hint");
 
   // 新しい 画面にも コントラストの 総なめを かける
   const codeLight = await contrastSweep(cp);

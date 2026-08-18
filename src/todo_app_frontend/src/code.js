@@ -117,7 +117,8 @@ function openUpTo(got) {
 }
 
 function starRow(n) {
-  return [1, 2, 3].map(i => `<span class="code-star${i <= n ? " is-on" : ""}">★</span>`).join("");
+  return [1, 2, 3].map(i =>
+    `<span class="code-star${i <= n ? " is-on" : ""}">${i <= n ? "★" : "☆"}</span>`).join("");
 }
 
 function renderPick() {
