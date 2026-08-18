@@ -1,4 +1,4 @@
-# さんすう と しょうぎ
+# さんすう しょうぎ プログラミング
 
 [![CI](https://github.com/yasumorishima/icp-counter-learning/actions/workflows/ci.yml/badge.svg)](https://github.com/yasumorishima/icp-counter-learning/actions/workflows/ci.yml)
 
