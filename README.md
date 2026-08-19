@@ -29,7 +29,7 @@ No ads, no sign-up, and every record stays on the child's own device.
 
 ## しょうぎ
 
-トップで 「さんすう」か 「しょうぎ」を えらびます。しょうぎは **ひとり用**で、
+トップの 「なにを する？」で **さんすう / しょうぎ / そら** から えらびます。しょうぎは **ひとり用**で、
 相手も この端末の 中で 考えています（通信なし・外部の 部品なし）。
 
 - **つよさ 3 だんかい**（よわい / ふつう / つよい）。読みの 深さと 時間で 変えている
@@ -216,4 +216,19 @@ dfx --identity kimaru-deploy canister --network ic call iqjbc-7aaaa-aaaaj-qnnsa-
 
 ## ライセンス
 
-MIT
+このリポジトリの コードは **MIT**。
+
+同梱している 外の データと 部品は それぞれの 条件に したがい、
+**表示は [`src/todo_app_frontend/assets/THIRD-PARTY-NOTICES.txt`](src/todo_app_frontend/assets/THIRD-PARTY-NOTICES.txt)
+に 全文を 置いて、サイトからも たどれるように して います**
+（そらの 画面の「この 空に ついて」→「くわしい 表示」）。
+
+| もの | 出どころ | 条件 |
+|---|---|---|
+| 星の 位置・明るさ・色 | Yale Bright Star Catalogue 5th Revised Ed.（Hoffleit &amp; Warren 1991・VizieR/CDS の V/50） | 学術目的の 再配布可 |
+| 星座の 線・名前、天の川 | [d3-celestial](https://github.com/ofrohn/d3-celestial)（Olaf Frohn） | BSD 3-Clause |
+| しょうぎの きまりの 判定 | [tsshogi](https://github.com/sunfish-shogi/tsshogi) | MIT |
+
+🔴 **最小化は コメントを 落とす**ので、表示を ソースの コメントだけに 頼らない こと。
+実ファイルとして 配り、**配られて いるかを E2E が 毎回 確かめます**
+（2026-08-19 に 実際に 消えて いたのを 実測で 見つけました）。
