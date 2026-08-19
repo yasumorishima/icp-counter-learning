@@ -1,6 +1,7 @@
 /**
  * ローカル replica に載せた本物のサイトを、本物のブラウザで通しで動かす。
- * 作成 → 回答 → 集計 → 変更（履歴に残るか）→ 取り消し → 言語切替 → 支援ページ → カウンター。
+ * さんすう（採点・きろく・きょうの1まい・タイムアタック・チャレンジ）→ しょうぎ（つみ・千日手・入玉）
+ * → そら（見まわし・星の名前・出すものの切り替え・時間送り）→ 支援ページ → カウンター。
  *
  *   node e2e.mjs <frontend-url>
  */
@@ -53,7 +54,7 @@ await page.goto(BASE, { waitUntil: "domcontentloaded" });
 await page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 check("home loads", true);
 check("the top page asks which one to play", await page.locator("#view-pick").isVisible());
-check("the drill, shogi and programming are each one tap away",
+check("the drill, the shogi and the sky are each one tap away",
   (await page.locator(".pick-card").count()) === 3);
 check("scheduling is gone from the site", (await page.locator("a[href='#/kimaru']").count()) === 0);
 check("no developer wording in the footer", !(await page.locator(".site-footer").textContent()).includes("Internet Computer"));
@@ -858,181 +859,193 @@ for (const [file, want, ends] of [
 }
 
 
-// ---- 12. プログラミング -------------------------------------------------------
+// ---- 12. そら ---------------------------------------------------------------
 
 {
-  const code = await newPage(430, 940);
-  const cp = code.page;
-  await cp.goto(BASE, { waitUntil: "networkidle" });
-  check("the top screen offers three things", (await cp.locator(".pick-card").count()) === 3);
+  const sky = await newPage(430, 940);
+  const sp = sky.page;
+  await sp.goto(BASE, { waitUntil: "networkidle" });
+  check("the top screen offers three things", (await sp.locator(".pick-card").count()) === 3);
+  check("one of them goes to the sky", (await sp.locator('a[href="#/sky"]').count()) === 1);
 
-  // なまえを つくってから 入る（★が のこるかまで 見る）
-  await cp.goto(BASE + "#/drill");
-  await cp.reload();
-  await cp.fill("#who-input", "みなと");
-  await cp.click("#who-add");
+  // えらぶ画面にも コントラストの 総なめを かける
+  // （新しい カードを 足したら そこにも かける。かけて いない 画面は「未測定」）
+  const pickLight = await contrastSweep(sp);
+  check("every text on the choosing screen is readable in the light theme",
+    pickLight.length === 0, pickLight.slice(0, 6).join(" "));
+  await sp.click("#theme-toggle");
+  const pickDark = await contrastSweep(sp);
+  check("every text on the choosing screen is readable in the dark theme",
+    pickDark.length === 0, pickDark.slice(0, 6).join(" "));
+  await sp.click("#theme-toggle");
 
-  await cp.goto(BASE + "#/code");
-  await cp.reload();
-  await cp.waitForSelector(".code-stage");
-  check("there are twenty stages", (await cp.locator(".code-stage").count()) === 20);
-  check("there are four worlds", (await cp.locator(".code-world-name").count()) === 4);
-  check("there are four characters to pick", (await cp.locator(".code-hero").count()) === 4);
-  check("every stage after the first is locked at the start",
-    (await cp.locator(".code-stage:disabled").count()) === 19);
+  await sp.goto(BASE + "#/sky");
+  await sp.reload();
+  await sp.waitForSelector("#sky-canvas");
+  await sp.waitForFunction(() => document.getElementById("sky-canvas").dataset.picks !== undefined);
 
-  await cp.click('.code-hero[data-hero="cat"]');
-  await cp.reload();
-  await cp.waitForSelector(".code-stage");
-  check("the chosen character is kept on the device",
-    await cp.locator('.code-hero[data-hero="cat"]').evaluate(el => el.classList.contains("is-on")));
+  // 見る 場所と 日時を きめて、どの 回でも おなじ 空に する
+  await sp.selectOption("#sky-place", "yokohama");
+  await sp.fill("#sky-date", "2026-08-19T21:00");
+  await sp.dispatchEvent("#sky-date", "change");
+  await sp.click("#sky-reset");
+  await sp.waitForTimeout(150);
 
-  await cp.click('.code-stage[data-level="1"]');
-  await cp.waitForSelector("#code-play:not(.is-hidden)");
-  check("the first stage offers only the card it needs", (await cp.locator(".code-pal").count()) === 1);
-  check("the skill boxes stay hidden until they are taught",
-    await cp.locator("#code-skills").evaluate(el => el.classList.contains("is-hidden")));
+  check("the sky faces south after resetting",
+    (await sp.locator("#sky-canvas").getAttribute("data-az")) === "180.0");
+  check("the clock shows the chosen moment",
+    (await sp.locator("#sky-when").textContent()).includes("2026年8月19日"),
+    await sp.locator("#sky-when").textContent());
+  check("it says which way you are facing",
+    (await sp.locator("#sky-where").textContent()).includes("南の 空"),
+    await sp.locator("#sky-where").textContent());
 
-  await cp.waitForTimeout(400);
-  const painted = await cp.evaluate(() => {
-    const c = document.getElementById("code-canvas");
+  const painted = await sp.evaluate(() => {
+    const c = document.getElementById("sky-canvas");
     const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
     const seen = new Set();
-    for (let i = 0; i < d.length; i += 4 * 89) seen.add(d[i] + "," + d[i + 1] + "," + d[i + 2]);
+    for (let i = 0; i < d.length; i += 4 * 97) seen.add(d[i] + "," + d[i + 1] + "," + d[i + 2]);
     return seen.size;
   });
-  check("the world is really drawn", painted > 8, String(painted) + " colours");
+  check("the sky is really drawn", painted > 40, String(painted) + " colours");
 
-  await cp.click("#code-fast");
-  check("the speed button flips", (await cp.locator("#code-fast").textContent()).trim() === "ゆっくり");
+  const picks = Number(await sp.locator("#sky-canvas").getAttribute("data-picks"));
+  check("plenty of things can be pressed", picks > 100, String(picks));
 
-  for (let i = 0; i < 3; i++) await cp.click('.code-pal[data-card="go"]');
-  check("pressing a card puts it into the program", (await cp.locator("#code-prog-main .code-card").count()) === 3);
+  // 指で なぞると 向きが 変わる。
+  // ボタンを 押すと ブラウザが そこまで 巻きあげるので、指の 位置を 出す 前に 上へ もどす。
+  const canvasBox = async () => {
+    await sp.evaluate(() => window.scrollTo(0, 0));
+    await sp.waitForTimeout(60);
+    return sp.locator("#sky-canvas").boundingBox();
+  };
+  // 描き直しは 次の 1 枚で 起きる。時間で 待たずに、その 1 枚を 待つ。
+  const nextFrame = () => sp.evaluate(() => new Promise(r =>
+    requestAnimationFrame(() => requestAnimationFrame(r))));
+  const waitAttr = (name, before) => sp.waitForFunction(
+    ([n, b]) => document.getElementById("sky-canvas").dataset[n] !== b, [name, before]);
 
-  await cp.click("#code-run");
-  await cp.waitForSelector("#code-status.is-ok", { timeout: 30000 });
-  const cleared = (await cp.locator("#code-status").textContent()).trim();
-  check("running the program clears the stage", cleared.includes("クリア"), cleared);
-  check("it says how many stars this run earned", cleared.includes("★3"), cleared);
+  let box = await canvasBox();
+  await sp.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await sp.mouse.down();
+  await sp.mouse.move(box.x + box.width / 2 - 90, box.y + box.height / 2, { steps: 6 });
+  await sp.mouse.up();
+  await waitAttr("az", "180.0");
+  const az2 = Number(await sp.locator("#sky-canvas").getAttribute("data-az"));
+  check("dragging turns the view", Math.abs(az2 - 180) > 5, String(az2));
 
-  const stars = await cp.evaluate(() =>
-    JSON.parse(localStorage.getItem("drill.records.v1")).profiles[0]);
-  check("clearing gives stars that stay on the device", stars.stars === 5, String(stars.stars));
-  check("the stage keeps its best result", stars.code["1"] === 3, JSON.stringify(stars.code));
+  await sp.click("#sky-reset");
+  await waitAttr("az", String(az2.toFixed(1)));
 
-  await cp.click("#code-next");
-  await cp.waitForFunction(() => document.getElementById("code-title").textContent.startsWith("2."));
-  check("finishing a stage opens the next one", true);
+  // ちかづく / はなれる
+  const fov0str = await sp.locator("#sky-canvas").getAttribute("data-fov");
+  const fov0 = Number(fov0str);
+  await sp.click("#sky-in");
+  await waitAttr("fov", fov0str);
+  const fov1str = await sp.locator("#sky-canvas").getAttribute("data-fov");
+  const fov1 = Number(fov1str);
+  check("pressing plus moves closer", fov1 < fov0, `${fov0} -> ${fov1}`);
+  await sp.click("#sky-out");
+  await waitAttr("fov", fov1str);
+  const fov2 = Number(await sp.locator("#sky-canvas").getAttribute("data-fov"));
+  check("pressing minus moves back", Math.abs(fov2 - fov0) < 0.2, `${fov0} -> ${fov2}`);
 
-  // まちがった プログラムは クリアに ならない
-  for (let i = 0; i < 2; i++) await cp.click('.code-pal[data-card="go"]');
-  await cp.click("#code-run");
-  await cp.waitForSelector("#code-status.is-error", { timeout: 30000 });
-  const missed = (await cp.locator("#code-status").textContent()).trim();
-  check("leaving a star behind is not a clear", missed.includes("★"), missed);
-
-  // ここから 先は 記録を 入れて、うしろの ステージも 見る
-  await cp.evaluate(() => {
-    const data = JSON.parse(localStorage.getItem("drill.records.v1"));
-    const code = {};
-    for (let i = 1; i <= 20; i++) code[i] = 1;
-    data.profiles[0].code = code;
-    localStorage.setItem("drill.records.v1", JSON.stringify(data));
-    localStorage.removeItem("code.work.v1");
+  // いちばん 明るい ところを 押すと 名前が 出る
+  check("nothing is named before anything is pressed",
+    await sp.locator("#sky-tip").evaluate(el => el.classList.contains("is-hidden")));
+  box = await canvasBox();
+  const spot = await sp.evaluate(() => {
+    const c = document.getElementById("sky-canvas");
+    const ratio = c.width / c.clientWidth;
+    const top = Math.round(70 * ratio), bottom = Math.round(c.clientHeight * 0.70 * ratio);
+    const d = c.getContext("2d").getImageData(0, top, c.width, bottom - top).data;
+    let best = -1, bx = 0, by = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const lum = d[i] + d[i + 1] + d[i + 2];
+      if (lum > best) {
+        best = lum;
+        const px = (i / 4) % c.width;
+        bx = px; by = top + Math.floor((i / 4) / c.width);
+      }
+    }
+    return { x: bx / ratio, y: by / ratio, lum: best };
   });
-  await cp.reload();
-  await cp.waitForSelector(".code-stage");
-  check("stages open up once they are cleared", (await cp.locator(".code-stage:disabled").count()) === 0);
+  await sp.mouse.click(box.x + spot.x, box.y + spot.y);
+  await sp.waitForSelector("#sky-tip:not(.is-hidden)", { timeout: 5000 }).catch(() => {});
+  check("pressing the brightest thing tells you what it is",
+    !(await sp.locator("#sky-tip").evaluate(el => el.classList.contains("is-hidden"))));
+  const tipText = (await sp.locator("#sky-tip").textContent()).trim();
+  check("the name comes with how high it is", tipText.includes("高さ"), tipText);
+  check("the name comes with a number", /[0-9]/.test(tipText), tipText);
 
-  await cp.click('.code-stage[data-level="3"]');
-  await cp.waitForSelector("#code-play:not(.is-hidden)");
-  await cp.click('.code-pal[data-card="repeat"]');
-  check("a repeat card starts at four", (await cp.locator(".code-n").first().textContent()).trim() === "4");
-  for (let i = 0; i < 25; i++) await cp.click('.code-mini[data-act="plus"]');
-  check("the number of repeats stops at twenty",
-    (await cp.locator(".code-n").first().textContent()).trim() === "20");
-  for (let i = 0; i < 25; i++) await cp.click('.code-mini[data-act="minus"]');
-  check("the number of repeats never goes below one",
-    (await cp.locator(".code-n").first().textContent()).trim() === "1");
-  check("a new card goes inside the repeat that was just made",
-    await cp.locator(".code-slot .code-here.is-open").first().isVisible());
-  await cp.click('.code-pal[data-card="go"]');
-  check("the card really went inside", (await cp.locator(".code-slot .code-card").count()) === 1);
+  // 出すものの 切り替えが 絵に きいて いる
+  const sign = () => sp.evaluate(() => {
+    const c = document.getElementById("sky-canvas");
+    const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+    let sum = 0;
+    for (let i = 0; i < d.length; i += 4 * 61) sum += d[i] + d[i + 1] + d[i + 2];
+    return sum;
+  });
+  const withLines = await sign();
+  await sp.click("#sky-lines");
+  await nextFrame();
+  check("turning the constellation lines off is remembered",
+    (await sp.locator("#sky-lines").getAttribute("aria-pressed")) === "false");
+  const withoutLines = await sign();
+  check("turning the lines off really changes the picture", withLines !== withoutLines,
+    `${withLines} -> ${withoutLines}`);
+  await sp.click("#sky-lines");
+  await nextFrame();
 
-  await cp.reload();
-  await cp.waitForSelector(".code-stage");
-  await cp.click('.code-stage[data-level="3"]');
-  await cp.waitForSelector("#code-play:not(.is-hidden)");
-  // くりかえし 1 まいと、その なかの 1 まい＝あわせて 2 まい 残っているはず
-  check("the work in progress is still there after a reload",
-    (await cp.locator("#code-prog-main .code-card").count()) === 2 &&
-    (await cp.locator("#code-prog-main .code-slot .code-card").count()) === 1);
+  await sp.click("#sky-milky");
+  await nextFrame();
+  const withoutMilky = await sign();
+  check("turning the milky way off really changes the picture", withoutMilky !== withLines,
+    String(withoutMilky));
+  await sp.click("#sky-milky");
+  await nextFrame();
 
-  await cp.click("#code-clear");
-  check("clearing empties the program", (await cp.locator("#code-prog-main .code-card").count()) === 0);
-  await cp.click("#code-hint");
-  check("the hint can be opened", await cp.locator("#code-hint-text").isVisible());
+  // 「いま」で 端末の 時計に もどる
+  await sp.click("#sky-now");
+  await sp.waitForTimeout(200);
+  check("the now button comes back to the real clock",
+    (await sp.locator("#sky-shift-label").textContent()).trim() === "いま");
+  const nowYear = new Date().getFullYear();
+  check("the clock shows this year",
+    (await sp.locator("#sky-when").textContent()).startsWith(String(nowYear)),
+    await sp.locator("#sky-when").textContent());
 
-  // もし の カード（中身を えらべる）
-  await cp.click("#code-back");
-  await cp.waitForSelector("#code-pick:not(.is-hidden)");
-  await cp.click('.code-stage[data-level="11"]');
-  await cp.waitForSelector("#code-play:not(.is-hidden)");
-  await cp.click('.code-pal[data-card="if"]');
-  const conds = await cp.locator(".code-cond option").count();
-  check("the if card lets you pick what to look at", conds === 4, String(conds));
-  await cp.selectOption(".code-cond", "enemy");
-  await cp.reload();
-  await cp.waitForSelector(".code-stage");
-  await cp.click('.code-stage[data-level="11"]');
-  await cp.waitForSelector("#code-play:not(.is-hidden)");
-  check("the choice inside the if card is kept",
-    (await cp.locator(".code-cond").inputValue()) === "enemy");
+  // 見た ものは どこにも 送らない。のこるのは 向きと 出すものだけ
+  const stored = await sp.evaluate(() => localStorage.getItem("sky.state.v1"));
+  check("only the view is kept on the device", stored && !stored.includes("when"), String(stored));
 
-  // わざ（名前を つけた 手じゅん）
-  await cp.click("#code-back");
-  await cp.click('.code-stage[data-level="9"]');
-  await cp.waitForSelector("#code-play:not(.is-hidden)");
-  check("the skill boxes appear once they are taught",
-    !(await cp.locator("#code-skills").evaluate(el => el.classList.contains("is-hidden"))));
-  await cp.click('#code-prog-a .code-here');
-  await cp.click('.code-pal[data-card="go"]');
-  check("a card can be put inside a skill", (await cp.locator("#code-prog-a .code-card").count()) === 1);
-  check("the main program stays empty", (await cp.locator("#code-prog-main .code-card").count()) === 0);
-
-  // ステージを えらぶ 画面にも かける（かけていない 画面は「合格」ではなく「未測定」）
-  await cp.click("#code-back");
-  await cp.waitForSelector("#code-pick:not(.is-hidden)");
-  const pickLight = await contrastSweep(cp);
-  check("every text on the stage list is readable in the light theme",
-    pickLight.length === 0, pickLight.slice(0, 6).join(" "));
-  await cp.click("#theme-toggle");
-  const pickDark = await contrastSweep(cp);
-  check("every text on the stage list is readable in the dark theme",
-    pickDark.length === 0, pickDark.slice(0, 6).join(" "));
-  await cp.click("#theme-toggle");
-  await cp.click('.code-stage[data-level="9"]');
-  await cp.waitForSelector("#code-play:not(.is-hidden)");
-  await cp.click("#code-hint");
+  // 時間を 送る
+  await sp.click('#sky-speed .seg-btn[data-sec="3600"]');
+  const before = await sp.locator("#sky-when").textContent();
+  await sp.waitForTimeout(1200);
+  const after = await sp.locator("#sky-when").textContent();
+  check("running time forward moves the clock", before !== after, `${before} -> ${after}`);
+  await sp.click('#sky-speed .seg-btn[data-sec="0"]');
 
   // 新しい 画面にも コントラストの 総なめを かける
-  const codeLight = await contrastSweep(cp);
-  check("every text on the programming screen is readable in the light theme",
-    codeLight.length === 0, codeLight.slice(0, 6).join(" "));
-  await cp.click("#theme-toggle");
-  const codeDark = await contrastSweep(cp);
-  check("every text on the programming screen is readable in the dark theme",
-    codeDark.length === 0, codeDark.slice(0, 6).join(" "));
-  await cp.click("#theme-toggle");
+  const skyLight = await contrastSweep(sp);
+  check("every text on the sky screen is readable in the light theme",
+    skyLight.length === 0, skyLight.slice(0, 6).join(" "));
+  await sp.click("#theme-toggle");
+  const skyDark = await contrastSweep(sp);
+  check("every text on the sky screen is readable in the dark theme",
+    skyDark.length === 0, skyDark.slice(0, 6).join(" "));
+  await sp.click("#theme-toggle");
 
   for (const width of [320, 360, 390, 430, 768, 1024, 1280]) {
-    await cp.setViewportSize({ width, height: 900 });
-    await cp.waitForTimeout(80);
-    const over = await cp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    check(`the programming screen does not spill sideways at ${width}px`, over <= 0, String(over));
+    await sp.setViewportSize({ width, height: 900 });
+    await sp.evaluate(() => window.scrollTo(0, 0));
+    await sp.waitForTimeout(120);
+    const over = await sp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    check(`the sky screen does not spill sideways at ${width}px`, over <= 0, String(over));
   }
 
-  await code.context.close();
+  await sky.context.close();
 }
 
 await browser.close();

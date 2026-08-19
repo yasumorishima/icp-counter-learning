@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#fff8f3">
-    <meta name="description" content="小学 1〜6年の さんすうドリルと、ひとりで あそべる しょうぎ。広告なし、登録なし。記録は端末の中だけに残ります。">
-    <meta property="og:title" content="さんすう しょうぎ プログラミング">
+    <meta name="description" content="小学 1〜6年の さんすうドリル、ひとりで あそべる しょうぎ、いまの 星空を そのまま 出す そら。広告なし、登録なし。記録は端末の中だけに残ります。">
+    <meta property="og:title" content="さんすう しょうぎ そら">
     <meta property="og:description" content="広告なし、登録なし。記録は端末の中だけ。">
     <meta property="og:type" content="website">
-    <title>さんすう しょうぎ プログラミング</title>
+    <title>さんすう しょうぎ そら</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='32' y2='32' gradientUnits='userSpaceOnUse'%3E%3Cstop stop-color='%2338bdf8'/%3E%3Cstop offset='.34' stop-color='%23a78bfa'/%3E%3Cstop offset='.68' stop-color='%23f472b6'/%3E%3Cstop offset='1' stop-color='%23fbbf24'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%23FFFFFF'/%3E%3Cpath d='M7 16.5 13 22l12-12' stroke='url(%23g)' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -32,7 +32,7 @@
                     </defs>
                     <path d="M7 16.5 13 22l12-12" stroke="url(#ic)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <span class="brand-text">さんすう しょうぎ プログラミング</span>
+                <span class="brand-text">さんすう しょうぎ そら</span>
             </a>
             <div class="header-tools">
                 <button type="button" id="sound-toggle" class="icon-btn" aria-label="おと">
@@ -76,11 +76,11 @@
                         <span class="pick-note">ひとりで あいてと たいきょく</span>
                         <span class="pick-go">やる</span>
                     </a>
-                    <a class="pick-card pick-code" href="#/code">
-                        <span class="pick-face pick-cube" aria-hidden="true">▶</span>
-                        <b class="pick-name">プログラミング</b>
-                        <span class="pick-note">カードで キャラクターを うごかす</span>
-                        <span class="pick-go">やる</span>
+                    <a class="pick-card pick-sky" href="#/sky">
+                        <span class="pick-face pick-star" aria-hidden="true">✦</span>
+                        <b class="pick-name">そら</b>
+                        <span class="pick-note">いまの 星空を そのまま</span>
+                        <span class="pick-go">みる</span>
                     </a>
                 </div>
             </section>
@@ -311,75 +311,64 @@
 
 
 
-            <!-- ============ プログラミング ============ -->
-            <section id="view-code" class="view is-hidden">
-                <div id="code-pick" class="panel panel-center">
-                    <h2 class="panel-title">プログラミング</h2>
-                    <p class="lede">カードを ならべて キャラクターを うごかそう。<br>
-                        じゅんばん → くりかえし → もし〜だったら → わざ の じゅんに ならえるよ。</p>
-                    <p id="code-noname" class="code-noname is-hidden">
-                        <a href="#/drill">さんすう</a> で なまえを つくると、とった ★が のこります。
-                    </p>
-                    <p class="code-total" id="code-total"></p>
-                    <p class="code-label">だれで あそぶ？</p>
-                    <div id="code-heroes" class="code-heroes"></div>
-                    <div id="code-worlds" class="code-worldlist"></div>
+            <!-- ============ そら ============ -->
+            <section id="view-sky" class="view is-hidden">
+                <div class="sky-stage">
+                    <canvas id="sky-canvas" class="sky-canvas" tabindex="0"
+                            aria-label="星空。指で なぞると 見まわせます"></canvas>
+                    <div class="sky-head">
+                        <b id="sky-when" class="sky-when"></b>
+                        <span id="sky-where" class="sky-where"></span>
+                    </div>
+                    <div id="sky-tip" class="sky-tip is-hidden" role="status"></div>
+                    <div class="sky-zoom">
+                        <button type="button" id="sky-in" class="sky-round" aria-label="ちかづく">＋</button>
+                        <button type="button" id="sky-out" class="sky-round" aria-label="はなれる">−</button>
+                    </div>
                 </div>
 
-                <div id="code-play" class="panel is-hidden">
-                    <div class="code-head">
-                        <b id="code-title" class="code-title"></b>
-                        <span id="code-worldtag" class="code-stage-tag"></span>
-                        <span id="code-idea" class="code-idea"></span>
-                    </div>
-                    <p id="code-mission" class="code-mission"></p>
-
-                    <div class="code-screen">
-                        <canvas id="code-canvas" class="code-canvas" aria-label="ぼうけんの がめん"></canvas>
-                        <canvas id="code-confetti" class="result-confetti" aria-hidden="true"></canvas>
-                    </div>
-
-                    <p id="code-status" class="status" role="status"></p>
-
-                    <div class="code-actions">
-                        <button type="button" id="code-run" class="cta"><span class="cta-label">スタート</span></button>
-                        <button type="button" id="code-next" class="cta code-next is-hidden"><span class="cta-label">つぎへ</span></button>
-                        <button type="button" id="code-fast" class="btn-ghost" aria-pressed="false">はやく</button>
-                        <button type="button" id="code-hint" class="btn-ghost">ヒント</button>
-                        <button type="button" id="code-clear" class="btn-ghost">ぜんぶ けす</button>
-                    </div>
-                    <p id="code-hint-text" class="code-hint-text is-hidden"></p>
-
-                    <p class="code-label">プログラム
-                        <span id="code-count" class="code-num"></span>
-                        <span id="code-par" class="code-par"></span>
+                <div class="panel sky-panel">
+                    <p class="sky-row">
+                        <button type="button" id="sky-now" class="cta sky-now is-on"><span class="cta-label">いま</span></button>
+                        <span id="sky-shift-label" class="sky-shift-label">いま</span>
                     </p>
-                    <div id="code-prog-main" class="code-program"></div>
+                    <label class="sky-slider">
+                        <span class="sr-only">時こくを 前後 12 時間 動かす</span>
+                        <input type="range" id="sky-shift" min="-720" max="720" step="5" value="0">
+                    </label>
 
-                    <div id="code-skills" class="code-skillbox is-hidden">
-                        <p class="code-label">わざ 1</p>
-                        <div id="code-prog-a" class="code-program code-program-skill"></div>
-                        <p class="code-label">わざ 2</p>
-                        <div id="code-prog-b" class="code-program code-program-skill"></div>
-                    </div>
+                    <p class="sky-label">日づけと 時こく</p>
+                    <p class="sky-row">
+                        <input type="datetime-local" id="sky-date" class="sky-date" aria-label="日づけと 時こく">
+                    </p>
 
-                    <p class="code-label">カードを ふやす</p>
-                    <div id="code-palette" class="code-palette"></div>
+                    <p class="sky-label">時間を 送る</p>
+                    <div id="sky-speed" class="sky-seg"></div>
 
-                    <details class="code-help">
-                        <summary>あそびかた</summary>
-                        <p>したの カードを おすと、プログラムに 1 まい ふえます。
-                            うえから じゅんばんに うごきます。</p>
-                        <p>「くりかえし」の なかに 入れた カードは、きめた かいすう だけ くりかえします。
-                            「ここに 入れる」を おすと、あたらしい カードが そこに 入ります。</p>
-                        <p>「もし」は そのときの ようすで する ことを かえます。
-                            まえが あな／まえが とびら／まえに てき／ここに ★か かぎ から えらべます。</p>
-                        <p>「わざ」は 手じゅんに 名前を つける ことです。おなじ ならびを なんども つかう ときに、
-                            わざに すると カードが ぐっと へります。</p>
-                        <p>★は カードが すくないほど ふえます。まちがえても なんども やりなおせます。</p>
+                    <p class="sky-label">見る 場所</p>
+                    <p class="sky-row">
+                        <select id="sky-place" class="sky-select" aria-label="見る 場所"></select>
+                        <button type="button" id="sky-reset" class="btn-ghost">南を むく</button>
+                    </p>
+                    <p id="sky-note" class="sky-note"></p>
+
+                    <p class="sky-label">出すもの</p>
+                    <p class="sky-row">
+                        <button type="button" id="sky-lines" class="btn-ghost" aria-pressed="true">星座の 線</button>
+                        <button type="button" id="sky-names" class="btn-ghost" aria-pressed="true">星座の 名前</button>
+                        <button type="button" id="sky-milky" class="btn-ghost" aria-pressed="true">天の川</button>
+                    </p>
+
+                    <details class="sky-help">
+                        <summary>この 空に ついて</summary>
+                        <p>画面を 指で なぞると 見まわせます。2 本の 指で ひろげると ちかづきます。
+                            星を 押すと、名前と 明るさが 出ます。</p>
+                        <p>出して いるのは 目で 見える 明るさ（6.5 等）までの 星 8,404 個です。
+                            星の 色は 実際の 色に 合わせて います。青いほど 熱く、赤いほど ぬるい 星です。</p>
+                        <p>月と 太陽と 惑星の 位置は、その 時刻に 合わせて この 場で 計算して います。
+                            地球の 首ふり（歳差）で 2000 年から ずれた ぶんも 直して います。</p>
+                        <p>電波が 無くても 動きます。見た 記録は どこにも 送りません。</p>
                     </details>
-
-                    <p><button type="button" id="code-back" class="btn-ghost">ステージを えらぶ</button></p>
                 </div>
             </section>
 

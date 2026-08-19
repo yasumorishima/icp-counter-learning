@@ -3,7 +3,7 @@ import { idlFactory, canisterId as localCanisterId } from "../../declarations/to
 import { LANGS, RTL, makeT, detectLang, saveLang } from "./i18n";
 import { initDrill, renderHome as renderDrillHome, renderKiroku, renderAward } from "./drill";
 import { initShogi, renderShogi } from "./shogi";
-import { initCode, renderCode } from "./code";
+import { initSky, renderSky, stopSky } from "./sky";
 
 // --- 接続 -------------------------------------------------------------------
 
@@ -228,13 +228,15 @@ async function setupLegacyCounter() {
 // --- 画面切り替え -----------------------------------------------------------
 
 const VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view-kiroku", "view-award",
-  "view-shogi", "view-code", "view-support"];
+  "view-shogi", "view-sky", "view-support"];
 
 // こどもむけの画面は日本語だけ。言語の切り替えは支援ページだけに出す
 const KIDS_VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view-kiroku", "view-award",
-  "view-shogi", "view-code"];
+  "view-shogi", "view-sky"];
 
 function showView(id) {
+  // そらは 出て いない あいだ 描き つづけない（電池の ため）
+  if (id !== "view-sky") stopSky();
   VIEWS.forEach(view => $(view).classList.toggle("is-hidden", view !== id));
   document.body.classList.toggle("on-drill", KIDS_VIEWS.indexOf(id) >= 0);
   window.scrollTo(0, 0);
@@ -267,9 +269,9 @@ async function route() {
     return;
   }
 
-  if (hash === "#/code") {
-    showView("view-code");
-    renderCode();
+  if (hash === "#/sky") {
+    showView("view-sky");
+    renderSky();
     return;
   }
 
@@ -303,7 +305,7 @@ async function init() {
   applyLang();
   initDrill({ show: showView });
   initShogi({ show: showView });
-  initCode({ show: showView });
+  initSky();
   setupSameHashLinks();
   window.addEventListener("hashchange", route);
 
