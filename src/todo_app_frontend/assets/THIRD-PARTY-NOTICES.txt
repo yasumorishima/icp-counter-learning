@@ -1,0 +1,59 @@
+このサイトの「そら」で つかって いる データの 出典と ライセンスです。
+（画面の 中の「この 空に ついて」からも たどれます）
+
+================================================================================
+1. 星の 位置・明るさ・色
+================================================================================
+
+Yale Bright Star Catalogue, 5th Revised Ed. (Preliminary Version)
+  Hoffleit D., Warren Jr. W.H. (1991)
+  Astronomical Data Center (NSSDC/ADC)
+  VizieR / CDS カタログ V/50
+  https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50
+
+肉眼で 見える 6.5 等までの 8,404 個を 取り出し、赤経・赤緯・V 等級・B-V 色指数・
+バイエル符号・星座を 同梱して います。
+
+================================================================================
+2. 星座の 線、星座の 名前、天の川の かたち
+================================================================================
+
+d3-celestial
+  https://github.com/ofrohn/d3-celestial
+
+Copyright (c) 2015, Olaf Frohn
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+   may be used to endorse or promote products derived from this software
+   without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+================================================================================
+3. しょうぎの きまりの 判定
+================================================================================
+
+tsshogi (MIT License)
+  https://github.com/sunfish-shogi/tsshogi
+
+指せる手の 最終判断・千日手・入玉の 判決に つかって います。

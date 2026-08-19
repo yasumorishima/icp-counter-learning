@@ -1383,6 +1383,10 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
 
 .sky-help { margin: 18px 0 0; }
 .sky-help p { color: var(--muted); font-size: 0.93rem; line-height: 1.9; margin: 6px 0; }
+.sky-credit { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 12px !important; }
+.sky-credit b { color: var(--ink); }
+/* 既定の リンク色（#0000EE）は 暗い画面で 1.6:1 しか 出ない。本文の 色に そろえる */
+.sky-credit a { color: var(--ink); text-decoration: underline; }
 
 @media (max-width: 480px) {
   .sky-canvas { height: 56vh; }

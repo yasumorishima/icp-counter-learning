@@ -1017,6 +1017,21 @@ for (const [file, want, ends] of [
     (await sp.locator("#sky-when").textContent()).startsWith(String(nowYear)),
     await sp.locator("#sky-when").textContent());
 
+  // 出典の 表示は 配って いる 実ファイルで 守る（圧縮器の 気まぐれに 頼らない）
+  const notice = await sp.evaluate(async () => {
+    const r = await fetch("/THIRD-PARTY-NOTICES.txt");
+    return { status: r.status, text: await r.text() };
+  });
+  check("出典の ファイルが 配られて いる", notice.status === 200, String(notice.status));
+  check("星表の 出典が 入って いる",
+    notice.text.includes("Yale Bright Star Catalogue") && notice.text.includes("Hoffleit"));
+  check("星座と 天の川の 表示（BSD 3-Clause 全文）が 入って いる",
+    notice.text.includes("Copyright (c) 2015, Olaf Frohn")
+    && notice.text.includes("Redistributions in binary form must reproduce")
+    && notice.text.includes("THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS"));
+  check("画面からも たどれる",
+    (await sp.locator('a[href="/THIRD-PARTY-NOTICES.txt"]').count()) === 1);
+
   // 見た ものは どこにも 送らない。のこるのは 向きと 出すものだけ
   const stored = await sp.evaluate(() => localStorage.getItem("sky.state.v1"));
   check("only the view is kept on the device", stored && !stored.includes("when"), String(stored));

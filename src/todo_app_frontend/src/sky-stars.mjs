@@ -1,3 +1,8 @@
+/*!
+ * 星の データ: Yale Bright Star Catalogue, 5th Revised Ed. (Hoffleit D., Warren Jr. W.H., 1991)
+ * VizieR / CDS カタログ V/50 (https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50)
+ * Astronomical Data Center (NSSDC/ADC) 経由。学術目的の 再配布可。
+ */
 // Yale Bright Star Catalogue (V/50, CDS) から 機械生成。編集しない。
 // 列: [赤経deg(J2000), 赤緯deg(J2000), V等級, B-V, 固有名(無ければ 0),
 //      バイエル符号の 番号(無ければ -1), 星座の 番号(無ければ -1)]
