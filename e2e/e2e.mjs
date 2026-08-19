@@ -40,8 +40,8 @@ async function openDrill(page) {
   await page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 }
 
-async function newPage(width = 1280, height = 900) {
-  const context = await browser.newContext({ viewport: { width, height }, locale: "en-US" });
+async function newPage(width = 1280, height = 900, extra = {}) {
+  const context = await browser.newContext({ viewport: { width, height }, locale: "en-US", ...extra });
   const page = await context.newPage();
   page.on("pageerror", error => check("no page error", false, String(error)));
   return { context, page };
@@ -862,7 +862,9 @@ for (const [file, want, ends] of [
 // ---- 12. そら ---------------------------------------------------------------
 
 {
-  const sky = await newPage(430, 940);
+  // そらは 端末の 時計で 日時を 読む。時間帯を きめないと、走らせる 場所（CI は UTC）で
+  // 「21:00」が 横浜の 昼に なり、星の 出ない 空を 見て 落ちる。
+  const sky = await newPage(430, 940, { timezoneId: "Asia/Tokyo" });
   const sp = sky.page;
   await sp.goto(BASE, { waitUntil: "networkidle" });
   check("the top screen offers three things", (await sp.locator(".pick-card").count()) === 3);
