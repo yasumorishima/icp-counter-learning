@@ -511,6 +511,8 @@ input[readonly] { color: var(--muted); }
 
 .lang select {
   width: auto;
+  /* 押すところは 44px 以上（ドリルの 画面でも 出すように なったので ここも そろえる） */
+  min-height: 44px;
   padding: 7px 12px;
   border: 2px solid var(--line-strong); border-radius: 999px;
   background: var(--card); color: var(--muted);

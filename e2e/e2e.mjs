@@ -46,7 +46,11 @@ async function newPage(width = 1280, height = 900, extra = {}) {
   const { lang = "ja", ...rest } = extra;
   const context = await browser.newContext({ viewport: { width, height }, locale: "en-US", ...rest });
   await context.addInitScript(code => {
-    try { localStorage.setItem("kimaru.lang", code); } catch (error) { /* 使えない 端末も ある */ }
+    // 種を まくのは まだ 何も 入って いない ときだけ。
+    // 毎回 書くと、画面で えらんだ ことばが 読み込み直しで 消える
+    try {
+      if (!localStorage.getItem("kimaru.lang")) localStorage.setItem("kimaru.lang", code);
+    } catch (error) { /* 使えない 端末も ある */ }
   }, lang);
   const page = await context.newPage();
   page.on("pageerror", error => check("no page error", false, String(error)));
