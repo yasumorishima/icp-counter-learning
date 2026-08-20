@@ -1,6 +1,6 @@
 import { Actor, HttpAgent } from "@icp-sdk/core/agent";
 import { idlFactory, canisterId as localCanisterId } from "../../declarations/todo_app_backend";
-import { LANGS, RTL, makeT, detectLang, saveLang } from "./i18n";
+import { LANGS, RTL, t, setLang, currentLang, detectLang, saveLang } from "./i18n";
 import { initDrill, renderHome as renderDrillHome, renderKiroku, renderAward } from "./drill";
 import { initShogi, renderShogi } from "./shogi";
 import { initSky, renderSky, stopSky } from "./sky";
@@ -27,11 +27,11 @@ async function ensureAgentReady() {
 
 // --- 言語 -------------------------------------------------------------------
 
-let lang = detectLang();
-let t = makeT(lang);
+setLang(detectLang());
 
+/** 見出しや 説明文を いまの ことばで 書き直す。動く 部分は route() が 描き直す */
 function applyLang() {
-  t = makeT(lang);
+  const lang = currentLang();
   document.documentElement.lang = lang;
   document.documentElement.dir = RTL.includes(lang) ? "rtl" : "ltr";
 
@@ -41,18 +41,32 @@ function applyLang() {
   document.querySelectorAll("[data-t-ph]").forEach(el => {
     el.placeholder = t(el.dataset.tPh);
   });
+  document.querySelectorAll("[data-t-aria]").forEach(el => {
+    el.setAttribute("aria-label", t(el.dataset.tAria));
+  });
+
+  // 検索や 共有に 出る ぶんも 合わせる
+  setMeta('meta[name="description"]', t("c_metaDesc"));
+  setMeta('meta[property="og:title"]', t("c_siteName"));
+  setMeta('meta[property="og:description"]', t("c_ogDesc"));
 
   $("legacy-counter").title = t("counterNote");
+}
+
+function setMeta(selector, value) {
+  const el = document.querySelector(selector);
+  if (el) el.setAttribute("content", value);
 }
 
 function setupLangSelect() {
   const select = $("lang-select");
   select.innerHTML = LANGS.map(l => `<option value="${l.code}">${l.label}</option>`).join("");
-  select.value = lang;
+  select.value = currentLang();
   select.addEventListener("change", () => {
-    lang = select.value;
-    saveLang(lang);
+    saveLang(setLang(select.value));
     applyLang();
+    // いま 出ている 画面の 中身も 書き直す（動く 部分は data-t では 直らない）
+    route();
   });
 }
 
@@ -131,7 +145,7 @@ const $ = id => document.getElementById(id);
 
 
 function formatNumber(value) {
-  return Number(value).toLocaleString(lang);
+  return Number(value).toLocaleString(currentLang());
 }
 
 
@@ -156,7 +170,7 @@ async function loadSupport() {
 
 /** 兆（T）でまるめる。桁が大きすぎて そのままでは意味が取れないため */
 function trillions(value) {
-  return (Number(BigInt(value) / 1_000_000_000n) / 1000).toLocaleString(lang, { maximumFractionDigits: 2 }) + " T";
+  return (Number(BigInt(value) / 1_000_000_000n) / 1000).toLocaleString(currentLang(), { maximumFractionDigits: 2 }) + " T";
 }
 
 /**
@@ -230,7 +244,6 @@ async function setupLegacyCounter() {
 const VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view-kiroku", "view-award",
   "view-shogi", "view-sky", "view-support"];
 
-// こどもむけの画面は日本語だけ。言語の切り替えは支援ページだけに出す
 const KIDS_VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view-kiroku", "view-award",
   "view-shogi", "view-sky"];
 

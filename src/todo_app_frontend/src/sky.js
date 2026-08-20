@@ -7,34 +7,40 @@
  */
 import { drawSky, describeStar } from "./sky-view";
 import { julianDay, jdTT, moonPhase, norm360 } from "./sky-astro.mjs";
+import { t, currentLang } from "./i18n";
 
 const $ = id => document.getElementById(id);
 const KEY = "sky.state.v1";
 
 /** 見る 場所。日本の 主な ところを 用意し、現在地も 選べる */
 export const PLACES = [
-  { id: "sapporo", name: "札幌", lat: 43.0642, lon: 141.3469 },
-  { id: "sendai", name: "仙台", lat: 38.2682, lon: 140.8694 },
-  { id: "tokyo", name: "東京", lat: 35.6895, lon: 139.6917 },
-  { id: "yokohama", name: "横浜", lat: 35.4437, lon: 139.6380 },
-  { id: "nagoya", name: "名古屋", lat: 35.1815, lon: 136.9066 },
-  { id: "osaka", name: "大阪", lat: 34.6937, lon: 135.5023 },
-  { id: "hiroshima", name: "広島", lat: 34.3853, lon: 132.4553 },
-  { id: "fukuoka", name: "福岡", lat: 33.5904, lon: 130.4017 },
-  { id: "naha", name: "那覇", lat: 26.2124, lon: 127.6809 },
-  { id: "ishigaki", name: "石垣島", lat: 24.3448, lon: 124.1572 },
+  { id: "sapporo", nameKey: "sk_place_sapporo", lat: 43.0642, lon: 141.3469 },
+  { id: "sendai", nameKey: "sk_place_sendai", lat: 38.2682, lon: 140.8694 },
+  { id: "tokyo", nameKey: "sk_place_tokyo", lat: 35.6895, lon: 139.6917 },
+  { id: "yokohama", nameKey: "sk_place_yokohama", lat: 35.4437, lon: 139.6380 },
+  { id: "nagoya", nameKey: "sk_place_nagoya", lat: 35.1815, lon: 136.9066 },
+  { id: "osaka", nameKey: "sk_place_osaka", lat: 34.6937, lon: 135.5023 },
+  { id: "hiroshima", nameKey: "sk_place_hiroshima", lat: 34.3853, lon: 132.4553 },
+  { id: "fukuoka", nameKey: "sk_place_fukuoka", lat: 33.5904, lon: 130.4017 },
+  { id: "naha", nameKey: "sk_place_naha", lat: 26.2124, lon: 127.6809 },
+  { id: "ishigaki", nameKey: "sk_place_ishigaki", lat: 24.3448, lon: 124.1572 },
 ];
 
 /** 送りの 速さ。1 秒あたり どれだけ 時計を 進めるか */
 const SPEEDS = [
-  { id: "stop", label: "とめる", perSec: 0 },
-  { id: "min", label: "1分", perSec: 60 },
-  { id: "hour", label: "1時間", perSec: 3600 },
-  { id: "day", label: "1日", perSec: 86400 },
+  { id: "stop", labelKey: "sk_speedStop", perSec: 0 },
+  { id: "min", labelKey: "sk_speedMin", perSec: 60 },
+  { id: "hour", labelKey: "sk_speedHour", perSec: 3600 },
+  { id: "day", labelKey: "sk_speedDay", perSec: 86400 },
 ];
 
-const DIR_NAMES = ["北", "北北東", "北東", "東北東", "東", "東南東", "南東", "南南東",
-  "南", "南南西", "南西", "西南西", "西", "西北西", "北西", "北北西"];
+const DIR_KEYS = ["sk_dirN", "sk_dirNNE", "sk_dirNE", "sk_dirENE",
+  "sk_dirE", "sk_dirESE", "sk_dirSE", "sk_dirSSE",
+  "sk_dirS", "sk_dirSSW", "sk_dirSW", "sk_dirWSW",
+  "sk_dirW", "sk_dirWNW", "sk_dirNW", "sk_dirNNW"];
+
+const WEEKDAY_KEYS = ["sk_wdSun", "sk_wdMon", "sk_wdTue", "sk_wdWed",
+  "sk_wdThu", "sk_wdFri", "sk_wdSat"];
 
 let canvas = null;
 let ctx = null;
@@ -112,12 +118,14 @@ function localInputValue(d) {
 }
 
 function whenText(d) {
-  const w = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
-  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日(${w}) ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  const w = t(WEEKDAY_KEYS[d.getDay()]);
+  const mo = d.getMonth() + 1, day = d.getDate();
+  return t("sk_whenFmt", d.getFullYear(), mo, day, w,
+    pad2(d.getHours()), pad2(d.getMinutes()), pad2(mo), pad2(day));
 }
 
 function dirText(az) {
-  return DIR_NAMES[Math.round(norm360(az) / 22.5) % 16];
+  return t(DIR_KEYS[Math.round(norm360(az) / 22.5) % 16]);
 }
 
 /** いまの 空の 時刻 */
@@ -143,7 +151,7 @@ function draw() {
   canvas.dataset.fov = state.fov.toFixed(1);
   canvas.dataset.picks = String(picks.length);
   $("sky-when").textContent = whenText(d);
-  $("sky-where").textContent = `${placeName()}　${dirText(state.az)}の 空`;
+  $("sky-where").textContent = t("sk_whereLine", placeName(), dirText(state.az));
   if (selected) drawSelection();
 }
 
@@ -168,7 +176,7 @@ function drawSelection() {
 
 function placeName() {
   const found = PLACES.find(p => p.id === state.place);
-  return found ? found.name : "いまいる ところ";
+  return t(found ? found.nameKey : "sk_place_here");
 }
 
 /** 次の 1 枚を 予約する。止まって いる ときは 描き直しを 1 回だけ */
@@ -222,7 +230,7 @@ function goNow() {
   });
   $("sky-now").classList.add("is-on");
   $("sky-shift").value = "0";
-  $("sky-shift-label").textContent = "いま";
+  $("sky-shift-label").textContent = t("c_skyNow");
   $("sky-date").value = localInputValue(skyDate());
   invalidate();
 }
@@ -237,8 +245,9 @@ function setShift(minutes) {
   $("sky-now").classList.remove("is-on");
   state.skyMs = Date.now() + minutes * 60000;
   const h = Math.trunc(minutes / 60), m = Math.abs(minutes % 60);
-  $("sky-shift-label").textContent = minutes === 0 ? "いま"
-    : (minutes > 0 ? "＋" : "−") + `${Math.abs(h)}時間${m ? pad2(m) + "分" : ""}`;
+  const mm = m ? t("sk_shiftMinPart", pad2(m)) : "";
+  $("sky-shift-label").textContent = minutes === 0 ? t("c_skyNow")
+    : t(minutes > 0 ? "sk_shiftPlus" : "sk_shiftMinus", Math.abs(h), mm);
   $("sky-date").value = localInputValue(skyDate());
   invalidate();
 }
@@ -333,21 +342,24 @@ function showTip(q) {
     title = d.title;
     sub = d.sub;
   } else if (q.kind === "planet") {
-    title = q.body.ja;
-    sub = `${q.body.mag.toFixed(1)} 等 ・ ${q.body.dist.toFixed(2)} 天文単位（光で ${(q.body.dist * 8.317).toFixed(0)} 分）`;
+    title = t("sk_planet_" + q.body.id);
+    sub = t("sk_tipPlanet", q.body.mag.toFixed(1), q.body.dist.toFixed(2),
+      (q.body.dist * 8.317).toFixed(0));
   } else if (q.kind === "moon") {
     const ph = moonPhase(jdTT(julianDay(skyDate())));
-    title = "月";
-    sub = `かがやいて いる ぶん ${(ph.illum * 100).toFixed(0)}% ・ ${Math.round(q.body.distKm).toLocaleString("ja-JP")} km`;
+    title = t("sk_moon");
+    sub = t("sk_tipMoon", (ph.illum * 100).toFixed(0),
+      Math.round(q.body.distKm).toLocaleString(currentLang()));
   } else {
-    title = "太陽";
-    sub = `${(q.body.distAU * 149597870.7 / 1e6).toFixed(1)} 百万 km ・ 光で ${(q.body.distAU * 8.317).toFixed(1)} 分`;
+    title = t("sk_sun");
+    sub = t("sk_tipSun", (q.body.distAU * 149597870.7 / 1e6).toFixed(1),
+      (q.body.distAU * 8.317).toFixed(1));
   }
   tip.innerHTML = "";
   const b = document.createElement("b");
   b.textContent = title;
   const s = document.createElement("span");
-  s.textContent = `高さ ${q.alt.toFixed(0)} 度 ・ ${sub}`;
+  s.textContent = t("sk_tipAlt", q.alt.toFixed(0), sub);
   tip.append(b, s);
   tip.classList.remove("is-hidden");
 }
@@ -362,7 +374,7 @@ function buildControls() {
     b.type = "button";
     b.className = "seg-btn";
     b.dataset.sec = String(s.perSec);
-    b.textContent = s.label;
+    b.textContent = t(s.labelKey);
     b.setAttribute("aria-pressed", String(s.perSec === 0));
     b.addEventListener("click", () => setSpeed(s.perSec));
     speeds.append(b);
@@ -373,12 +385,12 @@ function buildControls() {
   for (const p of PLACES) {
     const o = document.createElement("option");
     o.value = p.id;
-    o.textContent = p.name;
+    o.textContent = t(p.nameKey);
     sel.append(o);
   }
   const here = document.createElement("option");
   here.value = "here";
-  here.textContent = "いまいる ところ";
+  here.textContent = t("sk_place_here");
   sel.append(here);
   sel.value = state.place;
   sel.addEventListener("change", () => {
@@ -416,7 +428,7 @@ function buildControls() {
     });
     $("sky-now").classList.remove("is-on");
     $("sky-shift").value = "0";
-    $("sky-shift-label").textContent = "えらんだ 日時";
+    $("sky-shift-label").textContent = t("sk_pickedWhen");
     invalidate();
   });
   $("sky-shift").addEventListener("input", () => setShift(Number($("sky-shift").value)));
@@ -429,25 +441,46 @@ function buildControls() {
   });
 }
 
+/** 言語を 切りかえた ときに 作りなおす ぶん（動く 部分は data-t では 直らない） */
+function refreshLabels() {
+  const speeds = $("sky-speed");
+  if (speeds) {
+    speeds.querySelectorAll(".seg-btn").forEach((b, i) => {
+      if (SPEEDS[i]) b.textContent = t(SPEEDS[i].labelKey);
+    });
+  }
+  const sel = $("sky-place");
+  if (sel) {
+    for (const o of sel.options) {
+      const p = PLACES.find(q => q.id === o.value);
+      o.textContent = p ? t(p.nameKey) : t("sk_place_here");
+    }
+  }
+  const note = $("sky-note");
+  if (note && state.place === "here" && note.textContent) {
+    note.textContent = t("sk_geoAt", state.lat.toFixed(2), state.lon.toFixed(2));
+  }
+}
+
 /** 現在地を 使う。ことわられても そのままの 場所で 動く */
 function useGeolocation() {
   const sel = $("sky-place");
   if (!navigator.geolocation) {
     sel.value = state.place;
-    $("sky-note").textContent = "この 端末では 現在地を 使えません。";
+    $("sky-note").textContent = t("sk_geoNo");
     return;
   }
-  $("sky-note").textContent = "現在地を さがして います…";
+  $("sky-note").textContent = t("sk_geoSearch");
   navigator.geolocation.getCurrentPosition(pos => {
     state.place = "here";
     state.lat = pos.coords.latitude;
     state.lon = pos.coords.longitude;
-    $("sky-note").textContent = `北緯 ${state.lat.toFixed(2)} 度 ・ 東経 ${state.lon.toFixed(2)} 度`;
+    $("sky-note").textContent = t("sk_geoAt", state.lat.toFixed(2), state.lon.toFixed(2));
     save();
     invalidate();
   }, () => {
     sel.value = state.place;
-    $("sky-note").textContent = "現在地を 使えなかったので、えらんだ 街の 空を 出します。";
+    $("sky-note").textContent = t("sk_geoFail");
   }, { timeout: 8000, maximumAge: 600000 });
 }
 
@@ -492,12 +525,17 @@ export function initSky() {
 }
 
 export function renderSky() {
+  // ことばを 変えた ときも ここへ 来る。そのときは 見ている 空を そのままに して、
+  // 文言だけ 書き直す（えらんだ 日時が「いま」へ 戻って しまわない ように）
+  const entering = !active;
   active = true;
   selected = null;
   $("sky-tip").classList.add("is-hidden");
+  refreshLabels();
   $("sky-place").value = state.place;
   resize();
-  goNow();
+  if (entering) goNow();
+  else invalidate();
 }
 
 /** ほかの 画面へ 移る ときは 描くのを やめる（電池の ため） */

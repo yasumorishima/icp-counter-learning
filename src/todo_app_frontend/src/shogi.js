@@ -10,6 +10,17 @@ import {
   refereed, repetitionVerdict, declarationVerdict, declarationPoint, repetitionScore,
 } from "./shogi-referee";
 import { sounds, confetti } from "./effects";
+import { t } from "./i18n";
+
+/** 駒の 名前。文章の 中で 名ざしする ぶんだけ ことばに あわせる（盤の 字は 漢字の まま） */
+const pieceName = type => t("sg_pc" + type);
+/** 駒の うごきかたの 説明 */
+const howText = type => t("sg_how" + type);
+/** あいての つよさの 呼び名 */
+const levelName = level => t("sg_lv" + level);
+/** しょうぶが ついた ときの ひとこと。{ k, a } で 持っておき、出すときに ことばへ 直す */
+const noteText = note =>
+  typeof note === "string" ? note : note ? t(note.k, ...(note.a || [])) : "";
 
 const $ = id => document.getElementById(id);
 const SAVE_KEY = "shogi.game.v1";
@@ -148,7 +159,7 @@ function checkEnd(quiet) {
   if (!legal.length) {
     const loser = game.st.turn;
     const won = loser !== game.me;
-    finish(won ? "win" : "lose", won ? "つみ！ あなたの かちです" : "つみ。あなたの まけです", quiet);
+    finish(won ? "win" : "lose", { k: won ? "sg_mateWin" : "sg_mateLose" }, quiet);
     return;
   }
   if (sameCount() < 4) return;
@@ -159,17 +170,11 @@ function checkEnd(quiet) {
     console.error("審判が 千日手の 判決を 出せませんでした。引き分けに します");
   }
   if (verdict.checker === null) {
-    finish("draw", "おなじ ばんめんが 4 かい。ひきわけ（せんにちて）です", quiet);
+    finish("draw", { k: "sg_repDraw" }, quiet);
     return;
   }
   const mine = verdict.checker === game.me;
-  finish(
-    mine ? "lose" : "win",
-    mine
-      ? "おうてを かけつづけたので あなたの まけです（おなじ ばんめんが 4 かい）"
-      : "あいてが おうてを かけつづけたので あなたの かちです（おなじ ばんめんが 4 かい）",
-    quiet,
-  );
+  finish(mine ? "lose" : "win", { k: mine ? "sg_repLose" : "sg_repWin" }, quiet);
 }
 
 /** いまの ばんめんが これまでに 何かい 出たか（いまの ぶんも 数える） */
@@ -292,8 +297,8 @@ function renderBoard() {
     if (sq === lastTo) classes.push("is-last");
     if (hint && (hint.from === sq || hint.to === sq)) classes.push("is-hint");
     if (checkedKing >= 0 && sq === checkedKing) classes.push("is-check");
-    const name = p ? R.NAME[R.typeOf(p)] : "あき";
-    const side = p ? (R.colorOf(p) === game.me ? "じぶんの " : "あいての ") : "";
+    const name = p ? pieceName(R.typeOf(p)) : t("sg_empty");
+    const side = p ? (R.colorOf(p) === game.me ? t("sg_mine") : t("sg_theirs")) : "";
     let inner = "";
     if (p) {
       const komaClass = "koma" + (R.colorOf(p) === R.GOTE ? " is-gote" : "") + (R.typeOf(p) >= 9 ? " is-nari" : "");
@@ -328,36 +333,37 @@ function renderHands() {
 function paintHand(color, id, mine) {
   const hand = game.st.hands[color];
   const parts = [];
-  for (const t of R.HAND_ORDER) {
-    if (!hand[t]) continue;
-    const on = mine && sel && sel.drop === t ? " is-sel" : "";
-    const fresh = justTook && justTook.color === color && justTook.type === t ? " is-new" : "";
+  for (const type of R.HAND_ORDER) {
+    if (!hand[type]) continue;
+    const on = mine && sel && sel.drop === type ? " is-sel" : "";
+    const fresh = justTook && justTook.color === color && justTook.type === type ? " is-new" : "";
     parts.push(
-      '<button type="button" class="hand-piece' + on + fresh + '" data-hand="' + t + '"' +
-        (mine ? "" : " disabled") + ' aria-label="' + R.NAME[t] + " " + hand[t] + 'まい">' +
-        R.CHAR[t] + "<b>" + hand[t] + "</b></button>"
+      '<button type="button" class="hand-piece' + on + fresh + '" data-hand="' + type + '"' +
+        (mine ? "" : " disabled") +
+        ' aria-label="' + t("sg_handCount", pieceName(type), hand[type]) + '">' +
+        R.CHAR[type] + "<b>" + hand[type] + "</b></button>"
     );
   }
-  const label = mine ? "じぶんの もちごま" : "あいての もちごま";
-  const body = parts.length ? parts.join("") : '<span class="hand-none">なし</span>';
+  const label = mine ? t("sg_myHand") : t("sg_theirHand");
+  const body = parts.length ? parts.join("") : '<span class="hand-none">' + t("sg_handNone") + "</span>";
   $(id).innerHTML = '<span class="hand-owner">' + label + "</span>" + body;
 }
 
 function renderStatus() {
   const el = $("shogi-status");
   if (game.over) {
-    el.textContent = game.over.note;
+    el.textContent = noteText(game.over.note);
     el.className = "shogi-status is-over";
     return;
   }
   const mine = game.st.turn === game.me;
   const check = R.inCheck(game.st, game.st.turn);
   let text;
-  if (thinking) text = "あいてが かんがえています…";
-  else if (check) text = mine ? "王手！ にげてください" : "王手を かけました";
-  else text = mine ? "あなたの ばんです" : "あいての ばんです";
+  if (thinking) text = t("sg_thinking");
+  else if (check) text = mine ? t("sg_checkYou") : t("sg_checkThem");
+  else text = mine ? t("sg_yourTurn") : t("sg_theirTurn");
   if (!thinking && sameCount() === 3) {
-    text += "　（おなじ ばんめんが 3 かい。あと 1 かいで おわりです）";
+    text += t("sg_rep3");
   }
   el.textContent = text;
   el.className = "shogi-status" + (check ? " is-check" : "");
@@ -370,30 +376,31 @@ function renderHelp() {
     return;
   }
   if (!sel) {
-    el.textContent = "うごかしたい 駒を おしてね。";
+    el.textContent = t("sg_pickPiece");
     return;
   }
   if (sel.drop) {
-    el.textContent = R.NAME[sel.drop] + "を 打つ ばしょを おしてね。みどりの ますに おけます。";
+    el.textContent = t("sg_dropWhere", pieceName(sel.drop));
     return;
   }
   const type = R.typeOf(game.st.board[sel.from]);
   const canGo = legal.some(m => !R.moveDrop(m) && R.moveFrom(m) === sel.from);
   const stopped = blockedMap().size > 0;
-  const why = type === R.K
-    ? "✕ は あいてに ねらわれている ますです。玉は そこへ 入れません。"
-    : "✕ へ 動かすと 玉が 取られて しまうので 指せません。";
+  const why = type === R.K ? t("sg_whyKing") : t("sg_whyOther");
   if (!canGo) {
     if (stopped) {
-      el.textContent = (type === R.K ? "玉の まわりは 全部 ねらわれています。" : R.NAME[type] + "は いま 動かせません。") + why;
+      const head = type === R.K ? t("sg_kingSurrounded") : t("sg_cantMoveNow", pieceName(type));
+      el.textContent = t("sg_join", head, why);
     } else if (R.inCheck(game.st, game.me)) {
-      el.textContent = "王手が かかっています。この駒では 玉を 助けられません。ほかの駒を えらんでね。";
+      el.textContent = t("sg_checkOtherPiece");
     } else {
-      el.textContent = R.NAME[type] + "は いま うごけません（行ける ますが ありません）。";
+      el.textContent = t("sg_noSquares", pieceName(type));
     }
     return;
   }
-  el.textContent = R.NAME[type] + "：" + R.HOW[type] + (stopped ? "　" + why : "");
+  el.textContent = stopped
+    ? t("sg_howLineWhy", pieceName(type), howText(type), why)
+    : t("sg_howLine", pieceName(type), howText(type));
 }
 
 function renderDeclare() {
@@ -406,25 +413,28 @@ function renderDeclare() {
     return;
   }
   note.classList.remove("is-hidden");
-  const head = "おうが あいての じんちに 入りました。いまの てんすうは " + state.point + " てん。";
+  const head = t("sg_declHead", state.point);
   if (state.verdict) {
     button.classList.remove("is-hidden");
-    button.textContent = state.verdict === "win" ? "てんすうで かちに する" : "てんすうで ひきわけに する";
-    note.textContent = head + (state.verdict === "win"
-      ? "ここで おわりに すると あなたの かちです。"
-      : "ここで おわりに すると ひきわけです（31 てん いじょうで かち）。");
+    button.textContent = state.verdict === "win" ? t("sg_declWinBtn") : t("sg_declDrawBtn");
+    note.textContent = t(
+      "sg_join", head,
+      state.verdict === "win" ? t("sg_declWinNote") : t("sg_declDrawNote"),
+    );
     return;
   }
   button.classList.add("is-hidden");
   const short = [];
-  if (R.inCheck(game.st, game.me)) short.push("さきに 王手を ふせぐ");
-  if (state.inside < 10) short.push("じんちの こまが あと " + (10 - state.inside) + " まい");
-  if (state.point < 24) short.push("てんすうが あと " + (24 - state.point) + " てん");
-  note.textContent = head + (short.length ? short.join("／") + " で おわりに できます。" : "");
+  if (R.inCheck(game.st, game.me)) short.push(t("sg_declNeedCheck"));
+  if (state.inside < 10) short.push(t("sg_declNeedPieces", 10 - state.inside));
+  if (state.point < 24) short.push(t("sg_declNeedPoints", 24 - state.point));
+  note.textContent = short.length
+    ? t("sg_join", head, t("sg_declCanEnd", short.join(t("sg_declSlash"))))
+    : head;
 }
 
 function renderKifu() {
-  const list = game.kifu.map((t, i) => "<li><span>" + (i + 1) + "</span>" + t + "</li>");
+  const list = game.kifu.map((text, i) => "<li><span>" + (i + 1) + "</span>" + text + "</li>");
   $("shogi-kifu-list").innerHTML = list.join("");
 }
 
@@ -436,7 +446,7 @@ function render() {
   $("shogi-setup").classList.add("is-hidden");
   $("shogi-play").classList.remove("is-hidden");
   $("shogi-level-chip").textContent =
-    "あいて：" + LEVELS[game.level].label + "　じぶん：" + (game.me === R.SENTE ? "せんて" : "ごて");
+    t("sg_chip", levelName(game.level), game.me === R.SENTE ? t("sg_sente") : t("sg_gote"));
   renderBoard();
   renderHands();
   renderStatus();
@@ -451,15 +461,16 @@ function render() {
 
 function showOver() {
   const box = $("shogi-over");
-  // いちど 閉じたら、画面を 描き直すたびに 出しなおさない
-  if (overShown) return;
-  overShown = true;
   const result = game.over.result;
   $("shogi-over-face").textContent = result === "win" ? "🎉" : result === "lose" ? "🙂" : "🤝";
-  $("shogi-over-title").textContent = result === "win" ? "かちました！" : result === "lose" ? "まけました" : "ひきわけ";
+  $("shogi-over-title").textContent =
+    result === "win" ? t("sg_overWin") : result === "lose" ? t("sg_overLose") : t("sg_overDraw");
   const stats = readJson(STATS_KEY) || { win: 0, lose: 0, draw: 0 };
   $("shogi-over-note").textContent =
-    game.over.note + "　これまで " + (stats.win || 0) + " かち " + (stats.lose || 0) + " まけ " + (stats.draw || 0) + " わけ";
+    t("sg_noteRecord", noteText(game.over.note), stats.win || 0, stats.lose || 0, stats.draw || 0);
+  // いちど 閉じたら 出しなおさない（ことばを 変えた ときの 書き直しは 上で 済ませる）
+  if (overShown) return;
+  overShown = true;
   box.classList.remove("is-hidden");
   $("shogi-again").focus();
   if (result === "win") confetti($("shogi-confetti"), 80);
@@ -473,11 +484,11 @@ function renderSetup() {
 
   $("shogi-level").innerHTML = [1, 2, 3]
     .map(n => '<button type="button" class="shogi-seg-btn' + (setup.level === n ? " is-on" : "") +
-      '" data-level="' + n + '">' + LEVELS[n].label + "</button>")
+      '" data-level="' + n + '">' + levelName(n) + "</button>")
     .join("");
   $("shogi-side").innerHTML = [
-    [R.SENTE, "せんて（さきに 指す）"],
-    [R.GOTE, "ごて（あとから 指す）"],
+    [R.SENTE, t("sg_senteFull")],
+    [R.GOTE, t("sg_goteFull")],
   ]
     .map(pair => '<button type="button" class="shogi-seg-btn' + (setup.side === pair[0] ? " is-on" : "") +
       '" data-side="' + pair[0] + '">' + pair[1] + "</button>")
@@ -489,7 +500,7 @@ function renderSetup() {
 
   const stats = readJson(STATS_KEY);
   $("shogi-record").textContent = stats
-    ? "これまで " + (stats.win || 0) + " かち " + (stats.lose || 0) + " まけ " + (stats.draw || 0) + " わけ"
+    ? t("sg_record", stats.win || 0, stats.lose || 0, stats.draw || 0)
     : "";
 }
 
@@ -532,9 +543,11 @@ function choose(moves) {
   pending = { promote, plain, gen: generation };
   const type = R.typeOf(game.st.board[R.moveFrom(promote)]);
   const target = game.st.board[R.moveTo(promote)];
-  const takes = target ? R.NAME[R.typeOf(target)] + "を 取ります。" : "";
-  $("shogi-promote-note").textContent =
-    takes + R.NAME[type] + "は 成ると 「" + R.NAME[R.promoted(type)] + "」に なります（" + R.HOW[R.promoted(type)] + "）。";
+  const takes = target ? t("sg_takes", pieceName(R.typeOf(target))) : "";
+  const grows = t(
+    "sg_promoteNote", pieceName(type), pieceName(R.promoted(type)), howText(R.promoted(type)),
+  );
+  $("shogi-promote-note").textContent = takes ? t("sg_join", takes, grows) : grows;
   $("shogi-promote").classList.remove("is-hidden");
   $("shogi-promote-yes").focus();
 }
@@ -559,7 +572,7 @@ async function aiTurn() {
   const other = game.me === R.SENTE ? R.GOTE : R.SENTE;
   if (declarationVerdict(game.st, other) === "win") {
     thinking = false;
-    finish("lose", "あいてが おうを じんちへ はこんで、てんすうで かちました");
+    finish("lose", { k: "sg_aiDeclWin" });
     render();
     return;
   }
@@ -638,8 +651,8 @@ async function askHint() {
   const drop = R.moveDrop(m);
   hint = { from: drop ? -1 : R.moveFrom(m), to };
   hintText = drop
-    ? "もちごまの " + R.NAME[drop] + "を " + R.squareText(to) + "に 打つのは どうかな。"
-    : R.squareText(to) + "へ うごかすのは どうかな。";
+    ? t("sg_hintDrop", pieceName(drop), R.squareText(to))
+    : t("sg_hintMove", R.squareText(to));
   render();
 }
 
@@ -713,15 +726,15 @@ export function initShogi(options) {
     const state = declareState();
     if (!state || !state.verdict) return;
     if (state.verdict === "win") {
-      finish("win", "おうを あいての じんちへ はこんで、てんすう " + state.point + " てんで かちました");
+      finish("win", { k: "sg_declWinFinish", a: [state.point] });
     } else {
-      finish("draw", "てんすう " + state.point + " てんで ひきわけに しました");
+      finish("draw", { k: "sg_declDrawFinish", a: [state.point] });
     }
     render();
   });
   $("shogi-resign").addEventListener("click", () => {
     if (!game || game.over) return;
-    finish("lose", "まけを みとめました");
+    finish("lose", { k: "sg_resigned" });
     render();
   });
 
@@ -756,7 +769,7 @@ export function initShogi(options) {
     pending = null;
     $("shogi-promote").classList.add("is-hidden");
     render();
-    $("shogi-help").textContent = "その手は やめました。まだ 指していません。もう いちど ますを おしてね。";
+    $("shogi-help").textContent = t("sg_promoteCancel");
     return true;
   };
 

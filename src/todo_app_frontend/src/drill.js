@@ -1,9 +1,11 @@
 /**
  * ドリルの画面。問題は端末の中で作り、記録も端末の中だけに置く。
+ * 文言は i18n-drill.js にある。
  */
 import { GRADES, unitsOf, unitById, isCorrect, makeSet, makeDaily } from "./drill-data";
 import * as records from "./records";
 import { sounds, confetti, soundOn, toggleSound } from "./effects";
+import { t } from "./i18n";
 
 const $ = id => document.getElementById(id);
 const FACES = ["🐻", "🐰", "🐱", "🐶", "🦊", "🐼", "🐸", "🐧"];
@@ -16,6 +18,15 @@ let typed = "";
 let panelMode = "";
 let combo = 0;
 let timer = null;
+
+/**
+ * チャレンジの 名まえは 端末に のこる。
+ * あとから ことばを 変えても 追いつくように、のこすのは 辞書の かぎ。
+ * 前に 日本語の 文字列で のこした ぶんは、t() が そのまま 返すので これまで通り 出る。
+ */
+function challengeName(name) {
+  return t(String(name));
+}
 
 export function initDrill(options) {
   show = options.show;
@@ -132,19 +143,19 @@ export function initDrill(options) {
     if (!act) return;
     if (act.dataset.challenge === "summer") {
       const year = new Date().getFullYear();
-      records.startChallenge("なつやすみ チャレンジ", year + "-07-21", year + "-08-31");
+      records.startChallenge("dr_challengeSummer", year + "-07-21", year + "-08-31");
     } else if (act.dataset.challenge === "month") {
       const now = new Date();
       const from = todayKey(now);
       const end = new Date(now.getTime() + 29 * 24 * 60 * 60 * 1000);
-      records.startChallenge("30日 チャレンジ", from, todayKey(end));
+      records.startChallenge("dr_challengeMonth", from, todayKey(end));
     } else if (act.dataset.challenge === "award") {
       location.hash = "#/shoujou";
       return;
     } else if (act.dataset.challenge === "stop") {
       if (act.dataset.armed !== "1") {
         act.dataset.armed = "1";
-        act.textContent = "ほんとうに やめる？";
+        act.textContent = t("dr_reallyStop");
         return;
       }
       records.clearChallenge();
@@ -189,7 +200,7 @@ export function initDrill(options) {
     if (drop) {
       if (drop.dataset.armed !== "1") {
         drop.dataset.armed = "1";
-        drop.textContent = "ほんとうに けす？";
+        drop.textContent = t("dr_reallyDelete");
         return;
       }
       records.removeProfile(drop.dataset.drop);
@@ -225,18 +236,18 @@ export function renderHome() {
     $("who-name").textContent = profile.name;
     $("who-stars").textContent = profile.stars;
     const days = records.streak();
-    $("who-streak").textContent = days > 1 ? days + "日 つづいているよ" : "きょうも やろう";
+    $("who-streak").textContent = days > 1 ? t("dr_streakDays", days) : t("dr_streakToday");
     grade = profile.grade || grade;
   }
 
   const weak = records.weakUnits(3).filter(w => w.last < 100);
   $("weak-row").innerHTML = weak.length
-    ? '<p class="weak-title">にがてを もういちど</p>' +
+    ? '<p class="weak-title">' + t("dr_weakTitle") + "</p>" +
       weak
         .map(w => {
           const unit = unitById(w.id);
           if (!unit) return "";
-          return '<button type="button" class="weak-card" data-unit="' + w.id + '">' + unit.name + '<span class="weak-score">まえは ' + w.last + "点</span></button>";
+          return '<button type="button" class="weak-card" data-unit="' + w.id + '">' + unit.name + '<span class="weak-score">' + t("dr_lastScore", w.last) + "</span></button>";
         })
         .filter(Boolean)
         .join("")
@@ -250,16 +261,16 @@ export function renderHome() {
   renderLevel();
 
   $("grade-tabs").innerHTML = GRADES.map(
-    g => '<button type="button" class="grade-tab' + (g === grade ? " is-on" : "") + '" data-grade="' + g + '">' + g + "年</button>"
+    g => '<button type="button" class="grade-tab' + (g === grade ? " is-on" : "") + '" data-grade="' + g + '">' + t("dr_gradeTab", g) + "</button>"
   ).join("");
 
   $("unit-grid").innerHTML = unitsOf(grade)
     .map(unit => {
       const stat = records.unitStat(unit.id);
       const badge = stat
-        ? '<span class="unit-score">まえは ' + stat.last + "点</span>"
-        : '<span class="unit-score is-new">はじめて</span>';
-      const arrow = unit.variants ? '<span class="unit-more">どの だん？</span>' : "";
+        ? '<span class="unit-score">' + t("dr_lastScore", stat.last) + "</span>"
+        : '<span class="unit-score is-new">' + t("dr_firstTime") + "</span>";
+      const arrow = unit.variants ? '<span class="unit-more">' + t("dr_whichRow") + "</span>" : "";
       return (
         '<div class="unit-slot"><button type="button" class="unit-card" data-unit="' + unit.id + '">' +
         '<span class="unit-name">' + unit.name + "</span>" + badge + arrow +
@@ -282,7 +293,7 @@ function renderWhoPanel() {
     const people = records.profiles();
     const current = records.currentProfile();
     panel.innerHTML =
-      '<h2 class="panel-title">つかう人</h2>' +
+      '<h2 class="panel-title">' + t("dr_whoTitle") + "</h2>" +
       people
         .map(p => {
           const on = current && current.id === p.id ? " is-on" : "";
@@ -290,10 +301,10 @@ function renderWhoPanel() {
         })
         .join("") +
       '<div class="who-actions">' +
-      '<button type="button" class="btn-ghost" data-act="edit">なまえを かえる</button>' +
-      '<button type="button" class="btn-ghost" data-act="add">あたらしい人</button>' +
+      '<button type="button" class="btn-ghost" data-act="edit">' + t("dr_whoRename") + "</button>" +
+      '<button type="button" class="btn-ghost" data-act="add">' + t("dr_whoNew") + "</button>" +
       "</div>" +
-      '<button type="button" class="btn-ghost" data-act="close">とじる</button>';
+      '<button type="button" class="btn-ghost" data-act="close">' + t("dr_close") + "</button>";
     return;
   }
 
@@ -301,14 +312,14 @@ function renderWhoPanel() {
   const startName = panelMode === "edit" && current ? current.name : "";
   const startFace = panelMode === "edit" && current ? current.face : FACES[0];
   panel.innerHTML =
-    '<h2 class="panel-title">' + (panelMode === "add" ? "あたらしい人" : "なまえを かえる") + "</h2>" +
+    '<h2 class="panel-title">' + (panelMode === "add" ? t("dr_whoNew") : t("dr_whoRename")) + "</h2>" +
     '<div class="face-row">' +
     FACES.map(f => '<button type="button" class="face' + (f === startFace ? " is-on" : "") + '" data-face="' + f + '">' + f + "</button>").join("") +
     "</div>" +
-    '<input id="who-edit-name" type="text" maxlength="12" placeholder="なまえ" value="' + escapeText(startName) + '">' +
+    '<input id="who-edit-name" type="text" maxlength="12" placeholder="' + escapeText(t("dr_namePh")) + '" value="' + escapeText(startName) + '">' +
     '<div class="who-actions">' +
-    '<button type="button" class="cta" data-act="save"><span class="cta-label">ほぞん</span></button>' +
-    '<button type="button" class="btn-ghost" data-act="close">やめる</button>' +
+    '<button type="button" class="cta" data-act="save"><span class="cta-label">' + t("dr_save") + "</span></button>" +
+    '<button type="button" class="btn-ghost" data-act="close">' + t("dr_cancel") + "</button>" +
     "</div>";
 
   panel.querySelectorAll(".face").forEach(button => {
@@ -332,31 +343,31 @@ function renderChallenge() {
 
   if (!state) {
     box.innerHTML =
-      '<p class="challenge-title">つづける チャレンジ</p>' +
-      '<p class="challenge-line">まいにち 1まい やって、さいごに しょうじょうを もらおう。</p>' +
+      '<p class="challenge-title">' + t("dr_challengeTitle") + "</p>" +
+      '<p class="challenge-line">' + t("dr_challengeLede") + "</p>" +
       '<div class="challenge-actions">' +
-      '<button type="button" class="btn-ghost" data-challenge="summer">なつやすみ（7/21〜8/31）</button>' +
-      '<button type="button" class="btn-ghost" data-challenge="month">30日 チャレンジ</button>' +
+      '<button type="button" class="btn-ghost" data-challenge="summer">' + t("dr_challengeSummerBtn") + "</button>" +
+      '<button type="button" class="btn-ghost" data-challenge="month">' + t("dr_challengeMonth") + "</button>" +
       "</div>";
     return;
   }
 
   const percent = Math.min(100, Math.round((state.done / state.total) * 100));
   const line = state.complete
-    ? '<p class="challenge-line challenge-done">ぜんぶ たっせい！ しょうじょうを もらおう</p>'
+    ? '<p class="challenge-line challenge-done">' + t("dr_challengeAllDone") + "</p>"
     : state.finished
-      ? '<p class="challenge-line">おしまい。' + state.done + " / " + state.total + "日 やったよ</p>"
-      : '<p class="challenge-line">' + state.done + " / " + state.total + "日 ／ のこり " + state.left + "日</p>";
+      ? '<p class="challenge-line">' + t("dr_challengeEnded", state.done, state.total) + "</p>"
+      : '<p class="challenge-line">' + t("dr_challengeLeft", state.done, state.total, state.left) + "</p>";
 
   box.innerHTML =
-    '<p class="challenge-title">' + escapeText(state.name) + "</p>" +
+    '<p class="challenge-title">' + escapeText(challengeName(state.name)) + "</p>" +
     line +
     '<div class="challenge-bar"><span class="challenge-fill" style="width:' + percent + '%"></span></div>' +
     '<div class="challenge-actions">' +
     (state.complete || state.finished
-      ? '<button type="button" class="cta" data-challenge="award"><span class="cta-label">しょうじょうを みる</span></button>'
+      ? '<button type="button" class="cta" data-challenge="award"><span class="cta-label">' + t("dr_seeAward") + "</span></button>"
       : "") +
-    '<button type="button" class="btn-ghost" data-challenge="stop">やめる</button>' +
+    '<button type="button" class="btn-ghost" data-challenge="stop">' + t("dr_stop") + "</button>" +
     "</div>";
 }
 
@@ -364,7 +375,7 @@ function renderChallenge() {
 function startTimeAttack() {
   const list = makeSet(unitsOf(grade)[0], 1); // 形をそろえるための ひな型
   session = {
-    unit: { id: "time-" + grade, name: "タイムアタック（" + grade + "年）", kind: "num" },
+    unit: { id: "time-" + grade, name: t("dr_timeUnit", grade), kind: "num" },
     variant: undefined,
     time: true,
     endsAt: Date.now() + 60000,
@@ -396,7 +407,7 @@ function startTimer() {
   label.classList.remove("is-hidden");
   const tick = () => {
     const left = Math.max(0, Math.ceil((session.endsAt - Date.now()) / 1000));
-    label.textContent = "のこり " + left + "びょう";
+    label.textContent = t("dr_timeLeft", left);
     label.classList.toggle("is-low", left <= 10);
     if (left <= 0) {
       stopTimer();
@@ -420,24 +431,24 @@ function renderDaily() {
   const days = records.streak();
   $("daily-state").textContent = done
     ? days > 1
-      ? "きょうは おわり！ " + days + "日 つづいているよ"
-      : "きょうは おわり！"
+      ? t("dr_dailyDoneStreak", days)
+      : t("dr_dailyDone")
     : days > 0
-      ? "つづけると " + (days + 1) + "日 めだよ"
-      : "10もん やってみよう";
-  card.querySelector(".daily-go").textContent = done ? "もういちど" : "やる";
+      ? t("dr_dailyNext", days + 1)
+      : t("dr_dailyStart");
+  card.querySelector(".daily-go").textContent = done ? t("dr_dailyAgain") : t("dr_dailyGo");
 }
 
 function renderTimeCard() {
   const best = records.bestTime(grade);
-  $("time-best").textContent = best ? "いままでの さいこう " + best + "もん" : "60びょうで 何もん とける？";
+  $("time-best").textContent = best ? t("dr_bestCount", best) : t("dr_timePrompt");
 }
 
 function renderLevel() {
   const state = records.level();
-  $("level-rank").textContent = "レベル " + state.rank;
+  $("level-rank").textContent = t("dr_levelRank", state.rank);
   $("level-fill").style.width = Math.round((state.into / state.need) * 100) + "%";
-  $("level-need").textContent = "あと ★" + (state.need - state.into);
+  $("level-need").textContent = t("dr_levelNeed", state.need - state.into);
 }
 
 /** きょうの 1まい。その日ごとに 決まった 10 問 */
@@ -445,7 +456,7 @@ function startDaily() {
   const list = makeDaily(grade, todayKey(), QUESTIONS);
   if (!list.length) return;
   session = {
-    unit: { id: "daily-" + grade, name: "きょうの 1まい（" + grade + "年）", kind: "num" },
+    unit: { id: "daily-" + grade, name: t("dr_dailyUnit", grade), kind: "num" },
     variant: undefined,
     daily: true,
     list,
@@ -481,7 +492,7 @@ function renderQuestion() {
   $("quiz-feedback").textContent = "";
   $("quiz-feedback").className = "quiz-feedback";
   $("quiz-count").textContent = session.time
-    ? session.right + "もん せいかい"
+    ? t("dr_rightCount", session.right)
     : session.at + 1 + " / " + session.list.length;
   $("quiz-dots").innerHTML = session.list
     .map((_, i) => {
@@ -515,11 +526,11 @@ function padFor(kind) {
   const body = keys
     .map(k => {
       if (!k) return '<span class="pad-blank"></span>';
-      if (k === "del") return '<button type="button" class="pad pad-del" data-pad="del">けす</button>';
+      if (k === "del") return '<button type="button" class="pad pad-del" data-pad="del">' + t("dr_padDel") + "</button>";
       return '<button type="button" class="pad" data-pad="' + k + '">' + k + "</button>";
     })
     .join("");
-  return body + '<button type="button" class="pad pad-ok" data-pad="ok">こたえる</button>';
+  return body + '<button type="button" class="pad pad-ok" data-pad="ok">' + t("dr_padOk") + "</button>";
 }
 
 function press(pad) {
@@ -539,14 +550,14 @@ function answer(given) {
   session.locked = true;
 
   const feedback = $("quiz-feedback");
-  feedback.textContent = ok ? "せいかい！" : "こたえは " + q.answer;
+  feedback.textContent = ok ? t("dr_seikai") : t("dr_theAnswer", q.answer);
   feedback.className = "quiz-feedback " + (ok ? "is-ok" : "is-ng");
 
   // つづけて 正解すると コンボが たまる
   combo = ok ? combo + 1 : 0;
   const comboLabel = $("quiz-combo");
   comboLabel.classList.toggle("is-hidden", combo < 3);
-  if (combo >= 3) comboLabel.textContent = combo + "れんぞく！";
+  if (combo >= 3) comboLabel.textContent = t("dr_combo", combo);
 
   if (ok) sounds.right();
   else sounds.wrong();
@@ -584,9 +595,9 @@ function finish() {
   if (session.time) {
     const best = records.recordTime(grade, right);
     $("result-face").textContent = right >= best && right > 0 ? "🏆" : "⏱";
-    $("result-title").textContent = right >= best && right > 0 ? "さいこう記録！" : "おしまい";
-    $("result-score").textContent = "60びょうで " + right + "もん せいかい";
-    $("result-note").textContent = "いままでの さいこう " + best + "もん";
+    $("result-title").textContent = right >= best && right > 0 ? t("dr_newBest") : t("dr_finished");
+    $("result-score").textContent = t("dr_timeScore", right);
+    $("result-note").textContent = t("dr_bestCount", best);
     sounds.finish();
     if (right >= best && right > 0) confetti($("result-confetti"));
     show("view-result");
@@ -611,13 +622,13 @@ function finish() {
   const beforeLevel = records.level().rank;
   const perfect = right === total;
   $("result-face").textContent = perfect ? "🎉" : right >= total * 0.8 ? "😊" : "💪";
-  $("result-title").textContent = perfect ? "ぜんもん せいかい！" : right >= total * 0.8 ? "よく できました" : "もう いっかい やってみよう";
-  $("result-score").textContent = total + "もんちゅう " + right + "もん せいかい";
+  $("result-title").textContent = perfect ? t("dr_allCorrect") : right >= total * 0.8 ? t("dr_wellDone") : t("dr_tryAgain");
+  $("result-score").textContent = t("dr_scoreOf", total, right);
   const afterLevel = records.level().rank;
   const levelUp = afterLevel > beforeLevel;
   $("result-note").textContent = levelUp
-    ? "★を " + right + "こ もらって レベル " + afterLevel + " に なった！"
-    : "★を " + right + "こ もらったよ";
+    ? t("dr_starLevelUp", right, afterLevel)
+    : t("dr_starGain", right);
 
   if (levelUp) sounds.levelUp();
   else sounds.finish();
@@ -637,13 +648,13 @@ export function renderKiroku() {
           const now = current && current.id === p.id;
           return (
             '<div class="person' + (now ? " is-on" : "") + '">' +
-            '<button type="button" class="person-use" data-use="' + p.id + '">' + p.face + " " + escapeText(p.name) + (now ? "（つかっている）" : "") + "</button>" +
-            '<button type="button" class="person-drop btn-ghost" data-drop="' + p.id + '">けす</button>' +
+            '<button type="button" class="person-use" data-use="' + p.id + '">' + p.face + " " + escapeText(p.name) + (now ? t("dr_inUse") : "") + "</button>" +
+            '<button type="button" class="person-drop btn-ghost" data-drop="' + p.id + '">' + t("dr_delete") + "</button>" +
             "</div>"
           );
         })
         .join("")
-    : '<p class="lede">まだ だれも いません。</p>';
+    : '<p class="lede">' + t("dr_noPeople") + "</p>";
 
   if (!current) {
     $("kiroku-stats").innerHTML = "";
@@ -659,16 +670,16 @@ export function renderKiroku() {
       const stat = current.units[id];
       if (!unit) return "";
       const rate = stat.tried ? Math.round((stat.right / stat.tried) * 100) : 0;
-      return "<tr><th>" + unit.name + "</th><td>" + unit.grade + "年</td><td>" + stat.tried + "もん</td><td>" + rate + "%</td><td>" + stat.best + "点</td></tr>";
+      return "<tr><th>" + unit.name + "</th><td>" + t("dr_gradeTab", unit.grade) + "</td><td>" + t("dr_qCount", stat.tried) + "</td><td>" + rate + "%</td><td>" + t("dr_points", stat.best) + "</td></tr>";
     })
     .filter(Boolean)
     .join("");
 
   $("kiroku-stats").innerHTML =
-    '<p class="kiroku-line">★ ' + current.stars + " ／ " + records.streak() + "日 つづいている</p>" +
+    '<p class="kiroku-line">' + t("dr_kirokuLine", current.stars, records.streak()) + "</p>" +
     (rows
-      ? '<table class="kiroku-table"><thead><tr><th>たんげん</th><th>学年</th><th>やった数</th><th>できた</th><th>さいこう</th></tr></thead><tbody>' + rows + "</tbody></table>"
-      : '<p class="lede">まだ きろくが ありません。</p>');
+      ? '<table class="kiroku-table"><thead><tr><th>' + t("dr_thUnit") + "</th><th>" + t("dr_thGrade") + "</th><th>" + t("dr_thTried") + "</th><th>" + t("dr_thRate") + "</th><th>" + t("dr_thBest") + "</th></tr></thead><tbody>" + rows + "</tbody></table>"
+      : '<p class="lede">' + t("dr_noRecords") + "</p>");
 }
 
 function escapeText(text) {
@@ -683,7 +694,7 @@ function exportRecords() {
   link.download = "drill-kiroku.json";
   link.click();
   URL.revokeObjectURL(url);
-  $("kiroku-status").textContent = "かきだしました。";
+  $("kiroku-status").textContent = t("dr_exported");
   $("kiroku-status").className = "status is-ok";
 }
 
@@ -693,7 +704,7 @@ function importRecords(event) {
   const reader = new FileReader();
   reader.onload = () => {
     const ok = records.importAll(String(reader.result));
-    $("kiroku-status").textContent = ok ? "よみこみました。" : "よみこめませんでした。";
+    $("kiroku-status").textContent = ok ? t("dr_imported") : t("dr_importFailed");
     $("kiroku-status").className = "status " + (ok ? "is-ok" : "is-error");
     if (ok) renderKiroku();
   };
@@ -780,7 +791,7 @@ function drawClock(clock) {
 /** 今月の カレンダー。やった日に 色が つく */
 function renderCalendar() {
   const { year, month, startWeekday, marks } = records.monthMarks();
-  const week = ["日", "月", "火", "水", "木", "金", "土"];
+  const week = t("dr_weekdays").split(" ");
   const blanks = Array.from({ length: startWeekday }, () => '<span class="calendar-cell is-blank"></span>').join("");
   const cells = marks
     .map(m => {
@@ -790,7 +801,7 @@ function renderCalendar() {
     .join("");
   const doneCount = marks.filter(m => m.done).length;
   $("kiroku-calendar").innerHTML =
-    '<p class="calendar-head">' + year + "年 " + month + "月 ／ " + doneCount + "日 やったよ</p>" +
+    '<p class="calendar-head">' + t("dr_calHead", year, month, doneCount) + "</p>" +
     '<div class="calendar-grid">' +
     week.map(w => '<span class="calendar-cell is-blank">' + w + "</span>").join("") +
     blanks +
@@ -805,23 +816,20 @@ export function renderAward() {
   const box = $("award-body");
 
   if (!person || !state) {
-    box.innerHTML = '<p class="award-body">まだ チャレンジを していません。</p>';
+    box.innerHTML = '<p class="award-body">' + t("dr_noChallenge") + "</p>";
     return;
   }
 
   const today = new Date();
-  const date = today.getFullYear() + "年 " + (today.getMonth() + 1) + "月 " + today.getDate() + "日";
-  const title = state.complete ? "しょうじょう" : "がんばりカード";
+  const date = t("dr_awardDate", today.getFullYear(), today.getMonth() + 1, today.getDate());
+  const title = state.complete ? t("dr_awardTitle") : t("dr_awardCard");
   const level = records.level();
 
   box.innerHTML =
     '<p class="award-title">' + title + "</p>" +
-    '<p class="award-name">' + escapeText(person.name) + " どの</p>" +
+    '<p class="award-name">' + t("dr_awardTo", escapeText(person.name)) + "</p>" +
     '<p class="award-body">' +
-    escapeText(state.name) + " で<br>" +
-    state.total + "日 のうち <b>" + state.done + "日</b> やりました。<br>" +
-    "★を " + level.stars + "こ あつめて レベル " + level.rank + " に なりました。<br>" +
-    "その がんばりを ここに たたえます。" +
+    t("dr_awardBody", escapeText(challengeName(state.name)), state.total, state.done, level.stars, level.rank) +
     "</p>" +
     '<p class="award-body">' + date + "</p>";
 }

@@ -653,7 +653,6 @@ input[readonly] { color: var(--muted); }
 /* ================= ドリル ================= */
 
 /* ドリルの画面では言語切り替えを出さない（日本語のこどもむけ） */
-body.on-drill .lang { display: none; }
 
 .drill-top {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;

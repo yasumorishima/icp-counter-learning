@@ -41,7 +41,13 @@ async function openDrill(page) {
 }
 
 async function newPage(width = 1280, height = 900, extra = {}) {
-  const context = await browser.newContext({ viewport: { width, height }, locale: "en-US", ...extra });
+  // ことばは 端末の 設定に まかせない。検査の たびに はっきり きめる
+  //（既定は 日本語。英語の 検査は { lang: "en" } を わたす）
+  const { lang = "ja", ...rest } = extra;
+  const context = await browser.newContext({ viewport: { width, height }, locale: "en-US", ...rest });
+  await context.addInitScript(code => {
+    try { localStorage.setItem("kimaru.lang", code); } catch (error) { /* 使えない 端末も ある */ }
+  }, lang);
   const page = await context.newPage();
   page.on("pageerror", error => check("no page error", false, String(error)));
   return { context, page };
@@ -252,6 +258,42 @@ const contrastSweep = async (target = page) =>
       }
     });
     return bad;
+  });
+
+/**
+ * 英語の 画面に 日本語が のこって いないかを 総なめする。
+ *
+ * しょうぎの 盤・持ち駒・すじだん・棋譜は どの ことばでも 漢字の ままに する 決まりなので
+ * その 中は 見ない（i18n-shogi.js の 先頭に 同じ ことを 書いて ある）。
+ * 文章の 中に 出てくる 棋譜（▲７六歩 など）だけは 見のがす ため、
+ * 記譜に つかう 漢字は ゆるす。ひらがな・カタカナは 1 文字でも あれば 出しわすれ。
+ */
+const japaneseLeftovers = async (target = page) =>
+  target.evaluate(() => {
+    const SKIP = "#shogi-board, .hand-row, #shogi-kifu-list, .board-files, .board-ranks";
+    // 「と金」だけは ひらがなで 書く 駒なので ゆるす（それ以外の かなは 出しわすれ）
+    const KEEP = "一二三四五六七八九同打成不歩香桂銀金角飛玉王馬龍杏圭全と";
+    const kana = /[\u3040-\u309F\u30A0-\u30FF]/;
+    const kanji = /[\u3400-\u9FFF]/;
+    const bad = [];
+    document.querySelectorAll("body *").forEach(el => {
+      if (el.closest(SKIP)) return;
+      const box = el.getBoundingClientRect();
+      if (box.width === 0 || box.height === 0) return;
+      const style = getComputedStyle(el);
+      if (style.visibility === "hidden" || style.display === "none") return;
+      for (const node of el.childNodes) {
+        if (node.nodeType !== 3) continue;
+        const text = node.textContent.trim();
+        if (!text) continue;
+        const hit = [...text].filter(ch =>
+          !KEEP.includes(ch) && (kana.test(ch) || kanji.test(ch)));
+        if (hit.length) {
+          bad.push((el.id || el.className || el.tagName) + ":" + text.slice(0, 24));
+        }
+      }
+    });
+    return [...new Set(bad)];
   });
 
 const lightBad = await contrastSweep();
@@ -1063,6 +1105,109 @@ for (const [file, want, ends] of [
   }
 
   await sky.context.close();
+}
+
+// ---- 13. ことば ------------------------------------------------------------
+
+{
+  const en = await newPage(430, 940, { lang: "en", timezoneId: "Asia/Tokyo" });
+  const ep = en.page;
+
+  // 画面ごとに 日本語の のこりを 総なめする（出しわすれは ここで 落ちる）
+  for (const [name, hash] of [["choosing", "#/"], ["drill", "#/drill"], ["records", "#/kiroku"],
+    ["shogi", "#/shogi"], ["sky", "#/sky"], ["support", "#/support"]]) {
+    await ep.goto(BASE + hash, { waitUntil: "domcontentloaded" });
+    await ep.reload({ waitUntil: "domcontentloaded" });
+    await ep.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+    await ep.waitForTimeout(200);
+    const left = await japaneseLeftovers(ep);
+    check(`nothing is left in Japanese on the ${name} screen in English`,
+      left.length === 0, left.slice(0, 6).join(" | "));
+  }
+
+  // しょうぎは 対局を 始めて からが 本番（盤の まわりの 文言）
+  await ep.goto(BASE + "#/shogi", { waitUntil: "domcontentloaded" });
+  await ep.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  await ep.click("#shogi-start");
+  await ep.waitForSelector("#shogi-play:not(.is-hidden)", { timeout: 15000 });
+  await ep.waitForTimeout(300);
+  const playing = await japaneseLeftovers(ep);
+  check("nothing is left in Japanese once a game is on",
+    playing.length === 0, playing.slice(0, 6).join(" | "));
+
+  // ことばを 変えると その場で 書き直る
+  await ep.goto(BASE + "#/sky", { waitUntil: "domcontentloaded" });
+  await ep.waitForSelector("#sky-canvas");
+  await ep.selectOption("#sky-place", "yokohama");
+  await ep.fill("#sky-date", "2026-08-19T21:00");
+  await ep.dispatchEvent("#sky-date", "change");
+  await ep.click("#sky-reset");
+  await ep.waitForTimeout(200);
+  const whenEn = (await ep.locator("#sky-when").textContent()).trim();
+  const whereEn = (await ep.locator("#sky-where").textContent()).trim();
+  check("the clock reads in English", /2026-08-19/.test(whenEn) && !/[\u3040-\u30FF]/.test(whenEn), whenEn);
+  check("the way you are facing reads in English",
+    whereEn === "Yokohama · looking S", whereEn);
+
+  // 星の 名前も 英語（同梱データは 日本語名しか 持って いないので、対応表が きいて いるか）
+  await ep.evaluate(() => window.scrollTo(0, 0));
+  await ep.waitForTimeout(60);
+  const skyBox = await ep.locator("#sky-canvas").boundingBox();
+  const spotEn = await ep.evaluate(() => {
+    const c = document.getElementById("sky-canvas");
+    const ratio = c.width / c.clientWidth;
+    const top = Math.round(70 * ratio), bottom = Math.round(c.clientHeight * 0.70 * ratio);
+    const d = c.getContext("2d").getImageData(0, top, c.width, bottom - top).data;
+    let best = -1, bx = 0, by = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const lum = d[i] + d[i + 1] + d[i + 2];
+      if (lum > best) { best = lum; bx = (i / 4) % c.width; by = top + Math.floor((i / 4) / c.width); }
+    }
+    return { x: bx / ratio, y: by / ratio };
+  });
+  await ep.mouse.click(skyBox.x + spotEn.x, skyBox.y + spotEn.y);
+  await ep.waitForSelector("#sky-tip:not(.is-hidden)", { timeout: 5000 }).catch(() => {});
+  const tipEn = (await ep.locator("#sky-tip").textContent()).trim();
+  // 最輝点は 星とは かぎらない（月や 惑星の ことも ある）ので、
+  // 「英語で 名前と 数が 出る」ところまでを 見る
+  check("what you press is named in English",
+    /[A-Za-z]{3}/.test(tipEn) && /[0-9]/.test(tipEn)
+    && !/[\u3040-\u30FF]/.test(tipEn), tipEn);
+
+  // 日本語へ 切り替えると その場で 書き直り、読み込み直しても のこる
+  await ep.selectOption("#lang-select", "ja");
+  await ep.waitForFunction(() => document.documentElement.lang === "ja", null, { timeout: 5000 });
+  await ep.waitForTimeout(200);
+  const whereJa = (await ep.locator("#sky-where").textContent()).trim();
+  check("switching to Japanese rewrites the screen at once", whereJa.includes("南"), whereJa);
+  // ことばを 変えただけで、えらんだ 日時が「いま」へ 戻っては いけない
+  const whenJa = (await ep.locator("#sky-when").textContent()).trim();
+  check("the moment you picked survives a language change",
+    whenJa.includes("2026年8月19日"), whenJa);
+  check("the star name follows the language", await ep.evaluate(() => {
+    const tip = document.getElementById("sky-tip");
+    return tip.classList.contains("is-hidden") || /[\u3040-\u30FF]/.test(tip.textContent);
+  }));
+
+  await ep.reload({ waitUntil: "domcontentloaded" });
+  await ep.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  check("the chosen language survives a reload",
+    (await ep.evaluate(() => document.documentElement.lang)) === "ja");
+  check("the language box shows the chosen one",
+    (await ep.locator("#lang-select").inputValue()) === "ja");
+
+  // ことばは 2 つ、どの 画面からでも 選べる
+  check("both languages are offered", (await ep.locator("#lang-select option").count()) === 2);
+  for (const hash of ["#/", "#/drill", "#/kiroku", "#/shogi", "#/sky", "#/support"]) {
+    await ep.goto(BASE + hash, { waitUntil: "domcontentloaded" });
+    await ep.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+    if (!(await ep.locator("#lang-select").isVisible())) {
+      check(`the language box is on ${hash}`, false);
+    }
+  }
+  check("the language box is on every screen", true);
+
+  await en.context.close();
 }
 
 await browser.close();

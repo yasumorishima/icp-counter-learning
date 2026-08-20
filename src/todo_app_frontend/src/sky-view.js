@@ -11,6 +11,8 @@ import {
 } from "./sky-astro.mjs";
 import { STARS, BAYER_LETTERS, CONSTELLATION_ABBR } from "./sky-stars.mjs";
 import { CONSTELLATION_LINES, CONSTELLATION_NAMES, MILKY_WAY } from "./sky-figures.mjs";
+import { t, currentLang } from "./i18n";
+import { starProperName } from "./sky-names.mjs";
 
 /** B-V 色指数 → 表面温度（K）。Ballesteros の 近似 */
 export function bvToKelvin(bv) {
@@ -76,7 +78,7 @@ function precessed(T) {
   const lines = CONSTELLATION_LINES.map((f) => ({ c: f.c, s: f.s.map(conv) }));
   const names = CONSTELLATION_NAMES.map((n) => {
     const p = precessFromJ2000(n.p[0], n.p[1], T);
-    return { ja: n.ja, v: unit(p.ra, p.dec) };
+    return { ja: n.ja, la: n.la, v: unit(p.ra, p.dec) };
   });
   const mw = MILKY_WAY.map((m) => ({ level: m.level, polys: m.polys.map(conv) }));
   cache = { T, sv, lines, names, mw };
@@ -161,6 +163,7 @@ export function drawSky(ctx, w, h, opts) {
   const scale = (Math.min(w, h) / 2) / (2 * Math.tan((fov / 4) * D2R));
   const cx = w / 2, cy = h / 2;
   const zoom = Math.pow(110 / fov, 0.35);
+  const lang = currentLang();
 
   const sun = sunPosition(jde);
   const sunH = toHorizontal(sun.ra, sun.dec, lst, lat);
@@ -310,7 +313,7 @@ export function drawSky(ctx, w, h, opts) {
     let b = buckets.get(key);
     if (!b) { b = { col, alpha: Math.round(alpha * 14) / 14, pts: [] }; buckets.set(key, b); }
     b.pts.push(x, y, rad);
-    if (s[4]) named.push({ x, y, text: s[4], rad, mag });
+    if (s[4]) named.push({ x, y, text: starProperName(s[4], lang), rad, mag });
     if (mag <= 5.2) picks.push({ x, y, r: Math.max(rad, 9), kind: "star", i, alt });
   }
   for (const b of buckets.values()) {
@@ -369,7 +372,7 @@ export function drawSky(ctx, w, h, opts) {
     ctx.beginPath(); ctx.arc(p.x, p.y, rad * 5, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = rgba(col, 1);
     ctx.beginPath(); ctx.arc(p.x, p.y, rad, 0, Math.PI * 2); ctx.fill();
-    marks.push({ x: p.x, y: p.y, text: pl.ja, rad });
+    marks.push({ x: p.x, y: p.y, text: t("sk_planet_" + pl.id), rad });
     picks.push({ x: p.x, y: p.y, r: Math.max(rad, 14), kind: "planet", body: pl, alt: p.alt });
   }
   {
@@ -395,7 +398,7 @@ export function drawSky(ctx, w, h, opts) {
       ctx.ellipse(0, 0, Math.abs(rad * k), rad, 0, Math.PI / 2, -Math.PI / 2, k > 0);
       ctx.fill();
       ctx.restore();
-      marks.push({ x: p.x, y: p.y, text: "月", rad });
+      marks.push({ x: p.x, y: p.y, text: t("sk_moon"), rad });
       picks.push({ x: p.x, y: p.y, r: Math.max(rad, 16), kind: "moon",
         body: { ...moon, illum: ph.illum, age: ph.age }, alt: p.alt });
     }
@@ -411,7 +414,7 @@ export function drawSky(ctx, w, h, opts) {
       ctx.beginPath(); ctx.arc(p.x, p.y, rad * 9, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = "#fff7dc";
       ctx.beginPath(); ctx.arc(p.x, p.y, rad, 0, Math.PI * 2); ctx.fill();
-      marks.push({ x: p.x, y: p.y, text: "太陽", rad });
+      marks.push({ x: p.x, y: p.y, text: t("sk_sun"), rad });
       picks.push({ x: p.x, y: p.y, r: Math.max(rad, 16), kind: "sun", body: sun, alt: p.alt });
     }
   }
@@ -476,7 +479,7 @@ export function drawSky(ctx, w, h, opts) {
       if (!proj(v[0], v[1], v[2])) continue;
       const alt = Math.asin(Math.max(-1, Math.min(1, out.up))) / D2R;
       if (alt < 4) continue;
-      place(o.n.ja, out.x, out.y, "12px system-ui, sans-serif",
+      place(conLabel(o.n, lang), out.x, out.y, "12px system-ui, sans-serif",
         "rgba(146,176,222," + (0.55 * night).toFixed(2) + ")", "center");
     }
   }
@@ -484,14 +487,15 @@ export function drawSky(ctx, w, h, opts) {
   ctx.font = "600 15px system-ui, sans-serif";
   ctx.textAlign = "center";
   ctx.fillStyle = "rgba(196,212,238,0.9)";
-  const DIRS = [[0, "北"], [45, "北東"], [90, "東"], [135, "南東"],
-    [180, "南"], [225, "南西"], [270, "西"], [315, "北西"]];
+  const DIRS = [[0, "sk_dirN"], [45, "sk_dirNE"], [90, "sk_dirE"], [135, "sk_dirSE"],
+    [180, "sk_dirS"], [225, "sk_dirSW"], [270, "sk_dirW"], [315, "sk_dirNW"]];
   for (const d of DIRS) {
     const p = projAltAz(0, d[0]);
     if (!p || p.z < 0.1) continue;
+    const label = t(d[1]);
     // 画面の きわに 来た ときは 切れない ように 内へ 寄せる
-    const half = ctx.measureText(d[1]).width / 2;
-    ctx.fillText(d[1], Math.max(half + 6, Math.min(w - half - 6, p.x)), p.y + 20);
+    const half = ctx.measureText(label).width / 2;
+    ctx.fillText(label, Math.max(half + 6, Math.min(w - half - 6, p.x)), p.y + 20);
   }
   ctx.restore();
   ctx.restore();
@@ -499,8 +503,19 @@ export function drawSky(ctx, w, h, opts) {
   return { sunAlt: sunH.alt, moonIllum: ph.illum, lst, night, picks };
 }
 
-/** 星座の 略号 → 日本語の 名前 */
+/** 星座の 名前。英語は ラテン語の 正式名（IAU）を 出す */
 const CON_JA = new Map(CONSTELLATION_NAMES.map((n) => [n.c, n.ja]));
+const CON_LA = new Map(CONSTELLATION_NAMES.map((n) => [n.c, n.la]));
+const conLabel = (n, lang) => (lang === "ja" ? n.ja : n.la);
+const conName = (abbr, lang) =>
+  (abbr ? (lang === "ja" ? CON_JA.get(abbr) : CON_LA.get(abbr)) : null) || null;
+
+/**
+ * バイエル符号の 書きかたは ことばで ちがう。
+ * 日本語は「はくちょう座 α」、英語は 星図の 定番の「α Cyg」。
+ */
+const bayerText = (greek, abbr, conText, lang) =>
+  (lang === "ja" ? conText + " " + greek : greek + " " + abbr);
 
 /**
  * 星 1 つの 説明。固有名／バイエル符号＋星座／等級を 組み立てる。
@@ -508,15 +523,19 @@ const CON_JA = new Map(CONSTELLATION_NAMES.map((n) => [n.c, n.ja]));
  */
 export function describeStar(i) {
   const s = STARS[i];
+  const lang = currentLang();
   const con = s[6] >= 0 ? CONSTELLATION_ABBR[s[6]] : null;
-  const conJa = con ? CON_JA.get(con) : null;
+  const conText = conName(con, lang);
   const greek = s[5] >= 0 ? BAYER_LETTERS[s[5]] : null;
-  const title = s[4] || (greek && conJa ? conJa + " " + greek : conJa ? conJa + " の 星" : "星");
+  const bayer = greek && conText ? bayerText(greek, con, conText, lang) : null;
+  const proper = starProperName(s[4], lang);
+  const title = proper || bayer
+    || (conText ? t("sk_starInCon", conText) : t("sk_starOnly"));
   const parts = [];
-  if (s[4] && greek && conJa) parts.push(conJa + " " + greek);
-  else if (s[4] && conJa) parts.push(conJa);
-  parts.push(s[2].toFixed(2) + " 等");
+  if (proper && bayer) parts.push(bayer);
+  else if (proper && conText) parts.push(conText);
+  parts.push(t("sk_mag", s[2].toFixed(2)));
   const k = Math.round(bvToKelvin(s[3]));
-  parts.push("表面 およそ " + k.toLocaleString("ja-JP") + " 度");
-  return { title, sub: parts.join(" ・ ") };
+  parts.push(t("sk_surfaceTemp", k.toLocaleString(currentLang())));
+  return { title, sub: parts.join(t("sk_sep")) };
 }
