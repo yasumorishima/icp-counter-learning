@@ -64,6 +64,11 @@ export const sounds = {
   tick: () => tone([440], 0.05, "square", 0.05),
 };
 
+/** あそびの おと。1 つの 音を すこし 長く 鳴らす */
+export function note(freq) {
+  tone([freq], 0.5, "sine", 0.18);
+}
+
 /** かみふぶき。1 回だけ 舞って 消える */
 export function confetti(canvas, count) {
   if (!canvas) return;
