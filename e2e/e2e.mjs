@@ -1151,7 +1151,7 @@ for (const [file, want, ends] of [
   check("the play screen offers six games",
     (await kp.locator(".as-game").count()) === 6, String(await kp.locator(".as-game").count()));
 
-  for (const id of ["mogura", "fuusen", "meiro", "kazoeru", "katachi", "ookii"]) {
+  for (const id of ["mogura", "fuusen", "kotoba", "sakana", "oekaki", "oto"]) {
     await kp.goto(BASE + "#/asobi/" + id, { waitUntil: "domcontentloaded" });
     await kp.waitForSelector(".as-title", { timeout: 20000 });
     const title = (await kp.locator(".as-title").textContent()).trim();
@@ -1190,73 +1190,74 @@ for (const [file, want, ends] of [
     && (await kp.locator(".as-sky .as-balloon").count()) === 0
     && (await kp.locator(".as-game").count()) === 6);
 
-  // めいろ: 行き止まりの ない 1 本道で、なぞると ゴールに 着く
-  await kp.goto(BASE + "#/asobi/meiro", { waitUntil: "domcontentloaded" });
-  await kp.waitForSelector(".as-maze .as-cell", { timeout: 20000 });
-  const steps = await kp.$$eval(".as-cell",
-    els => els.map(el => Number(el.dataset.step)).filter(n => n >= 0).sort((a, b) => a - b));
-  check("the maze is one road without dead ends",
-    steps.length >= 7 && steps.every((n, i) => n === i), steps.join(","));
-  check("it has one start and one goal",
-    (await kp.locator(".as-cell.is-start").count()) === 1
-    && (await kp.locator(".as-cell.is-goal").count()) === 1);
-
-  const centre = async step => {
-    const box = await kp.locator(`.as-cell[data-step="${step}"]`).boundingBox();
-    return [box.x + box.width / 2, box.y + box.height / 2];
-  };
-  const [sx, sy] = await centre(0);
-  await kp.mouse.move(sx, sy);
-  await kp.mouse.down();
-  for (let step = 1; step < steps.length; step++) {
-    const [x, y] = await centre(step);
-    await kp.mouse.move(x, y);
-  }
-  await kp.mouse.up();
+  // ことば: 絵と 文字が そろって いて、さわると 数が 進み、絵が 入れ替わる
+  await kp.goto(BASE + "#/asobi/kotoba", { waitUntil: "domcontentloaded" });
+  await kp.waitForSelector(".as-word", { timeout: 20000 });
+  const cards = await kp.locator(".as-word").count();
+  const drawn = await kp.locator(".as-word .as-illust svg").count();
+  const named = (await kp.locator(".as-word-name").allTextContents()).filter(one => one.trim().length > 0);
+  check("every word card has a picture and a word",
+    cards === 4 && drawn === 4 && named.length === 4, `${cards} / ${drawn} / ${named.join(",")}`);
+  check("the words are all different", new Set(named).size === named.length, named.join(","));
+  const firstWord = named[0];
+  await kp.locator(".as-word").first().dispatchEvent("pointerdown");
   await kp.waitForTimeout(250);
-  check("tracing to the goal counts", (await count()).startsWith("1"), await count());
+  check("tapping a word counts", (await count()).startsWith("1"), await count());
+  await kp.waitForTimeout(1100);
+  const after = await kp.locator(".as-word-name").first().textContent();
+  check("the tapped picture is replaced by a new one", after.trim() !== firstWord, `${firstWord} -> ${after}`);
 
-  // かぞえる: ひとつずつ 番号が つき、正しい 数だけが 先へ 進める
-  await kp.goto(BASE + "#/asobi/kazoeru", { waitUntil: "domcontentloaded" });
-  await kp.waitForSelector(".as-thing", { timeout: 20000 });
-  const things = kp.locator(".as-thing");
-  const many = await things.count();
-  check("counting starts with one to five things", many >= 1 && many <= 5, String(many));
-  for (let i = 0; i < many; i++) await things.nth(i).dispatchEvent("pointerdown");
-  await kp.waitForTimeout(200);
-  check("each tap gets its own number",
-    (await kp.locator(".as-tag").allTextContents()).join(",")
-      === Array.from({ length: many }, (_, i) => String(i + 1)).join(","));
-  const numbers = kp.locator(".as-choices .as-num");
-  const labels = await numbers.allTextContents();
-  check("three numbers to choose from, with the right one among them",
-    labels.length === 3 && labels.includes(String(many)), labels.join(","));
-  await numbers.nth(labels.findIndex(v => v !== String(many))).dispatchEvent("pointerdown");
-  await kp.waitForTimeout(250);
-  check("a wrong tap does not move on", (await count()).startsWith("0"), await count());
-  await numbers.nth(labels.indexOf(String(many))).dispatchEvent("pointerdown");
+  // さかな: はじめから 泳いで いて、時間で 場所が 動き、さわると 減る
+  await kp.goto(BASE + "#/asobi/sakana", { waitUntil: "domcontentloaded" });
+  await kp.waitForSelector(".as-fish", { timeout: 20000 });
+  check("the tank is not empty when it opens", (await kp.locator(".as-fish").count()) >= 3,
+    String(await kp.locator(".as-fish").count()));
+  const fishX1 = await kp.locator(".as-fish").first().evaluate(el => el.getBoundingClientRect().left);
   await kp.waitForTimeout(700);
-  check("the right number moves on", (await count()).startsWith("1"), await count());
+  const fishX2 = await kp.locator(".as-fish").first().evaluate(el => el.getBoundingClientRect().left);
+  check("the fish swim", Math.abs(fishX2 - fishX1) > 6, `${Math.round(fishX1)} -> ${Math.round(fishX2)}`);
+  await kp.locator(".as-fish").first().dispatchEvent("pointerdown");
+  await kp.waitForTimeout(250);
+  check("scooping one counts", (await count()).startsWith("1"), await count());
 
-  // かたち: 色で 当てられないように、3 つとも 同じ色に して ある
-  await kp.goto(BASE + "#/asobi/katachi", { waitUntil: "domcontentloaded" });
-  await kp.waitForSelector(".as-model .as-shape", { timeout: 20000 });
-  const colours = await kp.$$eval(".as-choices .as-shape",
-    els => els.map(el => getComputedStyle(el).backgroundColor));
-  check("the choices share one colour, so only the shape tells them apart",
-    colours.length === 3 && new Set(colours).size === 1, colours.join(" | "));
+  // おえかき: なぞった ところに 色が のこる（何も 描いて いない ときは 白い まま）
+  await kp.goto(BASE + "#/asobi/oekaki", { waitUntil: "domcontentloaded" });
+  await kp.waitForSelector(".as-canvas", { timeout: 20000 });
+  const inked = async () => kp.$eval(".as-canvas", el => {
+    const g = el.getContext("2d");
+    const data = g.getImageData(0, 0, el.width, el.height).data;
+    let on = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) on += 1;
+    return on;
+  });
+  check("the paper starts blank", (await inked()) === 0);
+  const pad = await kp.locator(".as-canvas").boundingBox();
+  await kp.mouse.move(pad.x + 40, pad.y + 60);
+  await kp.mouse.down();
+  for (let i = 1; i <= 12; i++) await kp.mouse.move(pad.x + 40 + i * 12, pad.y + 60 + i * 6);
+  await kp.mouse.up();
+  const painted = await inked();
+  check("drawing leaves a line", painted > 500, String(painted));
+  await kp.locator(".as-clear").dispatchEvent("pointerdown");
+  await kp.waitForTimeout(200);
+  check("clearing wipes it", (await inked()) === 0);
+  const inks = await kp.locator(".as-ink").count();
+  check("there are colours to choose from", inks === 6, String(inks));
 
-  // おおきい ほう: 迷わない 差を つける
-  await kp.goto(BASE + "#/asobi/ookii", { waitUntil: "domcontentloaded" });
-  await kp.waitForSelector(".as-blob .as-round", { timeout: 20000 });
-  const widths = await kp.$$eval(".as-blob .as-round",
-    els => els.map(el => el.getBoundingClientRect().width));
-  check("the two sizes are far apart",
-    widths.length === 2 && Math.max(...widths) / Math.min(...widths) >= 1.5, widths.join(","));
+  // おと: たたく ところが そろって いて、押すと 見た目が 返る
+  await kp.goto(BASE + "#/asobi/oto", { waitUntil: "domcontentloaded" });
+  await kp.waitForSelector(".as-key", { timeout: 20000 });
+  check("there are six keys", (await kp.locator(".as-key").count()) === 6,
+    String(await kp.locator(".as-key").count()));
+  await kp.locator(".as-key").first().dispatchEvent("pointerdown");
+  check("a key answers when tapped", (await kp.locator(".as-key.is-hit").count()) === 1);
+  const keyTall = await kp.$$eval(".as-key",
+    els => els.map(el => el.getBoundingClientRect().height).filter(h => h < 44).length);
+  check("the keys are big enough to hit", keyTall === 0, String(keyTall));
 
   // 小さい 画面でも はみ出さない・押す ところは 指の 大きさ
   await kp.setViewportSize({ width: 320, height: 760 });
-  for (const hash of ["#/asobi", "#/asobi/mogura", "#/asobi/meiro", "#/asobi/kazoeru"]) {
+  for (const hash of ["#/asobi", "#/asobi/mogura", "#/asobi/kotoba", "#/asobi/oekaki", "#/asobi/oto"]) {
     await kp.goto(BASE + hash, { waitUntil: "domcontentloaded" });
     await kp.waitForTimeout(300);
     const over = await kp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -1282,7 +1283,7 @@ for (const [file, want, ends] of [
   // 画面ごとに 日本語の のこりを 総なめする（出しわすれは ここで 落ちる）
   for (const [name, hash] of [["choosing", "#/"], ["drill", "#/drill"], ["records", "#/kiroku"],
     ["shogi", "#/shogi"], ["sky", "#/sky"], ["play", "#/asobi"], ["moles", "#/asobi/mogura"],
-    ["counting", "#/asobi/kazoeru"], ["support", "#/support"]]) {
+    ["words", "#/asobi/kotoba"], ["drawing", "#/asobi/oekaki"], ["support", "#/support"]]) {
     await ep.goto(BASE + hash, { waitUntil: "domcontentloaded" });
     await ep.reload({ waitUntil: "domcontentloaded" });
     await ep.waitForSelector("body[data-ready='1']", { timeout: 30000 });

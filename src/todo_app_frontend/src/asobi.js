@@ -2,20 +2,20 @@
  * あそび（幼児向け）。3 さいくらいの 子が、文字を 読めなくても 遊べる ことだけを 目当てに する。
  *
  * 守って いる こと:
- *   ・さわるだけ で 進む（めいろ だけ なぞる）。当たり判定は 指の 大きさ（64px 以上）
+ *   ・さわるだけ で 進む（おえかき だけ なぞる）。当たり判定は 指の 大きさ（64px 以上）
  *   ・まちがいを 出さない。×も 減点も 時間切れも 無い。外した ときは 何も 起きない
  *   ・絵は すべて 自前で 描く（絵文字は 端末に よって 出ないので 使わない）
  *   ・記録は 残さない。キャニスターにも localStorage にも 書かない
  *   ・画面を 離れたら タイマーと 描画を かならず 止める（電池の ため）
  */
 
-import { t } from "./i18n";
-import { sounds, confetti } from "./effects";
+import { t, currentLang } from "./i18n";
+import { sounds, confetti, note } from "./effects";
+import { WORDS, illust } from "./asobi-art";
 
-const GAMES = ["mogura", "fuusen", "meiro", "kazoeru", "katachi", "ookii"];
+const GAMES = ["mogura", "fuusen", "kotoba", "sakana", "oekaki", "oto"];
 
 const COLORS = ["#38bdf8", "#a78bfa", "#f472b6", "#fbbf24", "#34d399", "#fb7185"];
-const SHAPES = ["circle", "square", "triangle", "star"];
 
 let host = null;
 let cleanups = [];
@@ -66,22 +66,6 @@ function reduceMotion() {
   return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-/** かたちを 1 つ 描く。色は 呼ぶ側が 決める（かたち あてでは 全部 同じ色に する） */
-function shapeNode(kind, size, color) {
-  const node = el("span", "as-shape as-shape-" + kind);
-  node.style.width = size + "px";
-  node.style.height = size + "px";
-  node.style.background = color;
-  return node;
-}
-
-function ballNode(size) {
-  const node = el("span", "as-ball");
-  node.style.width = size + "px";
-  node.style.height = size + "px";
-  return node;
-}
-
 // --- 画面の 骨 --------------------------------------------------------------
 
 /** どの あそびにも ある 上の帯（もどる・題・進み具合）を 作る */
@@ -102,6 +86,11 @@ function makeFrame(titleKey, total) {
   const count = el("p", "as-count", t("as_count", 0, total));
 
   const stage = el("div", "as-stage");
+  // 数を かぞえない あそび（おえかき・おと）は 進み具合を 出さない
+  if (!total) {
+    host.append(bar, title, stage);
+    return { stage, progress() {} };
+  }
   host.append(bar, title, track, count, stage);
 
   return {
@@ -289,312 +278,317 @@ function playFuusen() {
   });
 }
 
-// --- 3. めいろ --------------------------------------------------------------
+// --- 3. ことば --------------------------------------------------------------
 
-const MAZE_N = 5;
-const MAZE_ROUNDS = 3;
-
-/**
- * 行き止まりの ない 1 本道を 作る（幼児が 迷わない ため）。
- * 左上から 右下へ 自分と ぶつからない ように 歩き、着いた ところで その道を 採る。
- */
-function makePath(n) {
-  const seen = new Set();
-  const path = [];
-  const key = (x, y) => y * n + x;
-
-  function walk(x, y) {
-    path.push([x, y]);
-    seen.add(key(x, y));
-    if (x === n - 1 && y === n - 1) return true;
-    for (const [dx, dy] of shuffle([[1, 0], [0, 1], [-1, 0], [0, -1]])) {
-      const nx = x + dx;
-      const ny = y + dy;
-      if (nx < 0 || ny < 0 || nx >= n || ny >= n || seen.has(key(nx, ny))) continue;
-      if (walk(nx, ny)) return true;
-    }
-    path.pop();
-    seen.delete(key(x, y));
-    return false;
+/** 声で 読む。声を 持たない 端末でも だまって 先へ 進む（音は 別に 鳴らす） */
+function say(text) {
+  try {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    synth.cancel();
+    const line = new window.SpeechSynthesisUtterance(text);
+    line.lang = currentLang() === "ja" ? "ja-JP" : "en-US";
+    line.rate = 0.8;
+    synth.speak(line);
+  } catch (error) {
+    /* 読み上げが 無くても あそびは 続く */
   }
-
-  for (let attempt = 0; attempt < 40; attempt++) {
-    seen.clear();
-    path.length = 0;
-    walk(0, 0);
-    // 短すぎると つまらない・長すぎると 3 さいには つらい
-    if (path.length >= 7 && path.length <= 15) return path.slice();
-  }
-  return path.slice();
 }
 
-function playMeiro() {
-  const frame = makeFrame("as_meiroTitle", MAZE_ROUNDS);
-  let cleared = 0;
-  let board = null;
-  let path = [];
-  let cells = [];
+function stopSpeech() {
+  try {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+  } catch (error) {
+    /* 止められなくても 画面遷移は 続ける */
+  }
+}
+
+function wordText(word) {
+  return currentLang() === "ja" ? word.ja : word.en;
+}
+
+function playKotoba() {
+  const TARGET = 8;
+  const frame = makeFrame("as_kotobaTitle", TARGET);
+  const yard = el("div", "as-words");
+  frame.stage.append(yard);
+
+  let bag = shuffle(WORDS);
   let at = 0;
-  let holding = false;
+  let said = 0;
+  let done = false;
 
-  function build() {
-    if (board) board.remove();
-    path = makePath(MAZE_N);
-    at = 0;
-    board = el("div", "as-maze");
-    board.style.gridTemplateColumns = "repeat(" + MAZE_N + ", 1fr)";
-    cells = [];
-    const onPath = new Map();
-    path.forEach(([x, y], i) => onPath.set(y * MAZE_N + x, i));
-
-    for (let y = 0; y < MAZE_N; y++) {
-      for (let x = 0; x < MAZE_N; x++) {
-        const index = onPath.has(y * MAZE_N + x) ? onPath.get(y * MAZE_N + x) : -1;
-        const cell = el("div", "as-cell" + (index < 0 ? " is-wall" : " is-path"));
-        if (index === 0) cell.classList.add("is-start");
-        if (index === path.length - 1) cell.classList.add("is-goal");
-        cell.dataset.step = String(index);
-        board.append(cell);
-        cells.push(cell);
-      }
+  function nextWord() {
+    if (at >= bag.length) {
+      bag = shuffle(WORDS);
+      at = 0;
     }
-    frame.stage.append(board);
-    mark();
+    return bag[at++];
   }
 
-  function mark() {
-    cells.forEach(cell => {
-      const step = Number(cell.dataset.step);
-      cell.classList.toggle("is-drawn", step >= 0 && step <= at);
-      cell.classList.toggle("is-here", step === at);
+  function makeCard(word) {
+    const card = el("button", "as-word");
+    card.type = "button";
+    card.setAttribute("aria-label", wordText(word));
+    card.append(illust(word.id), el("b", "as-word-name", wordText(word)));
+    card.addEventListener("pointerdown", event => {
+      event.preventDefault();
+      tap(card, word);
     });
+    return card;
   }
 
-  function moveTo(step) {
-    if (step === at + 1 || step === at - 1) {
-      at = step;
-      mark();
-      if (step === path.length - 1) {
-        sounds.right();
-        cleared += 1;
-        frame.progress(cleared);
-        holding = false;
-        if (cleared >= MAZE_ROUNDS) {
-          window.setTimeout(() => finish("meiro"), 320);
-        } else {
-          window.setTimeout(build, 420);
-        }
-      }
+  function tap(card, word) {
+    // 同じ 絵を 続けて 押しても 二重に 数えない
+    if (done || card.dataset.used === "1") return;
+    card.dataset.used = "1";
+    card.classList.add("is-said");
+    sounds.right();
+    say(wordText(word));
+    said += 1;
+    frame.progress(said);
+    if (said >= TARGET) {
+      done = true;
+      window.setTimeout(() => finish("kotoba"), 900);
+      return;
+    }
+    window.setTimeout(() => {
+      if (done) return;
+      card.replaceWith(makeCard(nextWord()));
+    }, 900);
+  }
+
+  // 4 枚（2 かける 2）。3 枚だと 並びに 穴が あく
+  for (let i = 0; i < 4; i++) yard.append(makeCard(nextWord()));
+
+  onLeave(() => {
+    done = true;
+    stopSpeech();
+  });
+}
+
+// --- 4. さかな --------------------------------------------------------------
+
+function playSakana() {
+  const TARGET = 8;
+  const frame = makeFrame("as_sakanaTitle", TARGET);
+  const tank = el("div", "as-tank");
+  frame.stage.append(tank);
+
+  // 水草。動かないので 描くだけ
+  for (let i = 0; i < 5; i++) {
+    const weed = el("span", "as-weed");
+    weed.style.left = 8 + i * 20 + "%";
+    weed.style.height = randInt(34, 64) + "px";
+    tank.append(weed);
+  }
+
+  const live = [];
+  let caught = 0;
+  let done = false;
+  let raf = 0;
+  let last = 0;
+  let sinceSpawn = 99;
+
+  function spawn(inside) {
+    const width = tank.clientWidth || 320;
+    const height = tank.clientHeight || 300;
+    const toRight = Math.random() < 0.5;
+    const node = el("button", "as-fish");
+    node.type = "button";
+    node.setAttribute("aria-label", t("as_sakana"));
+    node.append(illust("sakana"));
+    // 同じ 絵の まま 色だけ 変えて 何匹も いるように 見せる
+    node.style.filter = "hue-rotate(" + pick([0, 0, 40, 150, 205, 300]) + "deg)";
+    tank.append(node);
+
+    const item = {
+      node,
+      y: randInt(6, Math.max(6, height - 96)),
+      x: inside ? randInt(10, Math.max(10, width - 100)) : toRight ? -96 : width + 16,
+      // ゆっくり（幼児が 指で 追える 速さ）
+      v: (reduceMotion() ? randInt(22, 34) : randInt(38, 66)) * (toRight ? 1 : -1),
+      toRight,
+    };
+    node.addEventListener("pointerdown", event => {
+      event.preventDefault();
+      scoop(item);
+    });
+    live.push(item);
+  }
+
+  function scoop(item) {
+    // 泳ぎ去った あとに さわっても 何も 起きない（外しても とがめない）
+    if (done || item.gone) return;
+    item.gone = true;
+    item.node.classList.add("is-caught");
+    window.setTimeout(() => item.node.remove(), 320);
+    const at = live.indexOf(item);
+    if (at >= 0) live.splice(at, 1);
+    sounds.right();
+    caught += 1;
+    frame.progress(caught);
+    if (caught >= TARGET) {
+      done = true;
+      window.setTimeout(() => finish("sakana"), 320);
     }
   }
 
-  function stepAt(x, y) {
-    const node = document.elementFromPoint(x, y);
-    if (!node || !node.classList.contains("as-cell")) return null;
-    const step = Number(node.dataset.step);
-    return Number.isFinite(step) ? step : null;
+  function frameStep(now) {
+    if (done) return;
+    const dt = last ? Math.min(0.05, (now - last) / 1000) : 0;
+    last = now;
+    sinceSpawn += dt;
+    if (sinceSpawn > 0.9 && live.length < 5) {
+      spawn();
+      sinceSpawn = 0;
+    }
+    const width = tank.clientWidth || 320;
+    for (let i = live.length - 1; i >= 0; i--) {
+      const item = live[i];
+      item.x += item.v * dt;
+      item.node.style.transform =
+        "translate(" + Math.round(item.x) + "px, " + item.y + "px) scaleX(" + (item.toRight ? -1 : 1) + ")";
+      // 画面の 外へ 出たら だまって 消える。逃した ことは 責めない
+      if (item.x < -140 || item.x > width + 140) {
+        item.node.remove();
+        live.splice(i, 1);
+      }
+    }
+    raf = window.requestAnimationFrame(frameStep);
   }
 
-  function down(event) {
-    const step = stepAt(event.clientX, event.clientY);
-    if (step === null) return;
-    event.preventDefault();
-    // どこから 始めても よい。いま 通って いる ところに 触れたら 続きから
-    if (step === 0) at = 0;
-    holding = step >= 0 && step <= at + 1;
-    if (step === at + 1) moveTo(step);
-    else mark();
-  }
+  // はじめから 何匹か 泳がせる（空の 水そうを 見せない）
+  for (let i = 0; i < 3; i++) spawn(true);
 
-  function move(event) {
-    if (!holding) return;
-    const step = stepAt(event.clientX, event.clientY);
-    if (step === null || step < 0) return;   // 壁に 入っても 何も 起きない
-    event.preventDefault();
-    moveTo(step);
-  }
-
-  function up() {
-    holding = false;
-  }
-
-  frame.stage.addEventListener("pointerdown", down);
-  frame.stage.addEventListener("pointermove", move);
-  window.addEventListener("pointerup", up);
-  window.addEventListener("pointercancel", up);
+  raf = window.requestAnimationFrame(frameStep);
   onLeave(() => {
-    window.removeEventListener("pointerup", up);
-    window.removeEventListener("pointercancel", up);
+    done = true;
+    window.cancelAnimationFrame(raf);
+  });
+}
+
+// --- 5. おえかき ------------------------------------------------------------
+
+function playOekaki() {
+  const frame = makeFrame("as_oekakiTitle", 0);
+  const pad = el("div", "as-pad");
+  const canvas = el("canvas", "as-canvas");
+  pad.append(canvas);
+
+  const tools = el("div", "as-tools");
+  frame.stage.append(pad, tools);
+
+  const g = canvas.getContext("2d");
+  let color = COLORS[2];
+  let drawing = false;
+
+  function fit() {
+    const width = pad.clientWidth || 320;
+    const height = pad.clientHeight || 320;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.lineCap = "round";
+    g.lineJoin = "round";
+    g.lineWidth = 18;
+  }
+
+  function spot(event) {
+    const box = canvas.getBoundingClientRect();
+    return { x: event.clientX - box.left, y: event.clientY - box.top };
+  }
+
+  canvas.addEventListener("pointerdown", event => {
+    event.preventDefault();
+    drawing = true;
+    try {
+      canvas.setPointerCapture(event.pointerId);
+    } catch (error) {
+      /* 捕まえられない 端末でも 描ける */
+    }
+    const at = spot(event);
+    g.strokeStyle = color;
+    g.beginPath();
+    g.moveTo(at.x, at.y);
+    // 点を 1 つ 置く（ちょんと さわっただけでも 色が つく）
+    g.lineTo(at.x + 0.1, at.y);
+    g.stroke();
   });
 
-  build();
+  canvas.addEventListener("pointermove", event => {
+    if (!drawing) return;
+    event.preventDefault();
+    const at = spot(event);
+    g.lineTo(at.x, at.y);
+    g.stroke();
+  });
+
+  ["pointerup", "pointercancel", "pointerleave"].forEach(kind => {
+    canvas.addEventListener(kind, () => {
+      drawing = false;
+    });
+  });
+
+  COLORS.forEach(one => {
+    const swatch = el("button", "as-ink");
+    swatch.type = "button";
+    swatch.style.background = one;
+    swatch.setAttribute("aria-label", one);
+    if (one === color) swatch.classList.add("is-on");
+    swatch.addEventListener("pointerdown", event => {
+      event.preventDefault();
+      color = one;
+      tools.querySelectorAll(".as-ink").forEach(node => node.classList.remove("is-on"));
+      swatch.classList.add("is-on");
+      sounds.tick();
+    });
+    tools.append(swatch);
+  });
+
+  const clear = el("button", "as-clear", t("as_oekakiClear"));
+  clear.type = "button";
+  clear.addEventListener("pointerdown", event => {
+    event.preventDefault();
+    g.clearRect(0, 0, canvas.width, canvas.height);
+    sounds.tick();
+  });
+  tools.append(clear);
+
+  // 画面が 出てから でないと 大きさが 取れない
+  window.requestAnimationFrame(fit);
+  const onResize = () => fit();
+  window.addEventListener("resize", onResize);
+  onLeave(() => window.removeEventListener("resize", onResize));
 }
 
-// --- 4. かぞえる ------------------------------------------------------------
+// --- 6. おと ----------------------------------------------------------------
 
-const QUIZ_ROUNDS = 5;
+const SCALE = [523.25, 587.33, 659.25, 698.46, 783.99, 880];
 
-function playKazoeru() {
-  const frame = makeFrame("as_kazoeruTitle", QUIZ_ROUNDS);
-  let cleared = 0;
+function playOto() {
+  const frame = makeFrame("as_otoTitle", 0);
+  const rack = el("div", "as-keys");
+  frame.stage.append(rack);
 
-  function round() {
-    frame.stage.replaceChildren();
-    const total = randInt(1, 5);
-    const yard = el("div", "as-yard");
-    const ask = el("p", "as-ask");
-    const choices = el("div", "as-choices");
-    frame.stage.append(yard, ask, choices);
-
-    let tapped = 0;
-    for (let i = 0; i < total; i++) {
-      const thing = el("button", "as-thing");
-      thing.type = "button";
-      thing.setAttribute("aria-label", String(i + 1));
-      thing.append(ballNode(52));
-      thing.addEventListener("pointerdown", event => {
-        event.preventDefault();
-        if (thing.classList.contains("is-tapped")) return;
-        tapped += 1;
-        thing.classList.add("is-tapped");
-        thing.append(el("span", "as-tag", String(tapped)));
-        sounds.tick();
-        if (tapped === total) askNumber(total, ask, choices);
-      });
-      yard.append(thing);
-    }
-  }
-
-  function askNumber(total, ask, choices) {
-    ask.textContent = t("as_kazoeruAsk");
-    const wrong = shuffle([1, 2, 3, 4, 5, 6].filter(n => n !== total)).slice(0, 2);
-    shuffle([total].concat(wrong)).forEach(n => {
-      const card = el("button", "as-card as-num");
-      card.type = "button";
-      card.textContent = String(n);
-      card.addEventListener("pointerdown", event => {
-        event.preventDefault();
-        answer(card, n === total);
-      });
-      choices.append(card);
+  SCALE.forEach((freq, i) => {
+    const key = el("button", "as-key");
+    key.type = "button";
+    key.style.background = COLORS[i % COLORS.length];
+    key.style.width = 100 - i * 7 + "%";
+    key.setAttribute("aria-label", t("as_oto"));
+    let timer = 0;
+    key.addEventListener("pointerdown", event => {
+      event.preventDefault();
+      note(freq);
+      key.classList.add("is-hit");
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => key.classList.remove("is-hit"), 200);
     });
-  }
-
-  function answer(card, right) {
-    if (!right) {
-      // まちがいは 出さない。すこし 揺れて もう一度
-      card.classList.remove("is-shake");
-      void card.offsetWidth;
-      card.classList.add("is-shake");
-      sounds.wrong();
-      return;
-    }
-    card.classList.add("is-right");
-    sounds.right();
-    cleared += 1;
-    frame.progress(cleared);
-    window.setTimeout(() => (cleared >= QUIZ_ROUNDS ? finish("kazoeru") : round()), 480);
-  }
-
-  round();
-}
-
-// --- 5. おなじ かたち -------------------------------------------------------
-
-function playKatachi() {
-  const frame = makeFrame("as_katachiTitle", QUIZ_ROUNDS);
-  let cleared = 0;
-
-  function round() {
-    frame.stage.replaceChildren();
-    // 色は 3 つとも 同じに する。色で 当てられると かたちを 見なくなる
-    const color = pick(COLORS);
-    const kinds = shuffle(SHAPES).slice(0, 3);
-    const answerKind = kinds[0];
-
-    const model = el("div", "as-model");
-    model.append(shapeNode(answerKind, 84, color));
-    const choices = el("div", "as-choices");
-    frame.stage.append(model, choices);
-
-    shuffle(kinds).forEach(kind => {
-      const card = el("button", "as-card");
-      card.type = "button";
-      card.setAttribute("aria-label", kind);
-      card.append(shapeNode(kind, 62, color));
-      card.addEventListener("pointerdown", event => {
-        event.preventDefault();
-        answer(card, kind === answerKind);
-      });
-      choices.append(card);
-    });
-  }
-
-  function answer(card, right) {
-    if (!right) {
-      card.classList.remove("is-shake");
-      void card.offsetWidth;
-      card.classList.add("is-shake");
-      sounds.wrong();
-      return;
-    }
-    card.classList.add("is-right");
-    sounds.right();
-    cleared += 1;
-    frame.progress(cleared);
-    window.setTimeout(() => (cleared >= QUIZ_ROUNDS ? finish("katachi") : round()), 480);
-  }
-
-  round();
-}
-
-// --- 6. おおきい ほう -------------------------------------------------------
-
-function playOokii() {
-  const frame = makeFrame("as_ookiiTitle", QUIZ_ROUNDS);
-  let cleared = 0;
-
-  function round() {
-    frame.stage.replaceChildren();
-    const color = pick(COLORS);
-    const small = randInt(52, 74);
-    const big = Math.round(small * (1.6 + Math.random() * 0.5));   // 迷わない 差を つける
-    const yard = el("div", "as-yard as-yard-wide");
-    frame.stage.append(yard);
-
-    shuffle([big, small]).forEach(size => {
-      const card = el("button", "as-blob");
-      card.type = "button";
-      card.setAttribute("aria-label", size === big ? "big" : "small");
-      const dot = el("span", "as-round");
-      dot.style.width = size + "px";
-      dot.style.height = size + "px";
-      dot.style.background = color;
-      card.append(dot);
-      card.addEventListener("pointerdown", event => {
-        event.preventDefault();
-        answer(card, size === big);
-      });
-      yard.append(card);
-    });
-  }
-
-  function answer(card, right) {
-    if (!right) {
-      card.classList.remove("is-shake");
-      void card.offsetWidth;
-      card.classList.add("is-shake");
-      sounds.wrong();
-      return;
-    }
-    card.classList.add("is-right");
-    sounds.right();
-    cleared += 1;
-    frame.progress(cleared);
-    window.setTimeout(() => (cleared >= QUIZ_ROUNDS ? finish("ookii") : round()), 480);
-  }
-
-  round();
+    onLeave(() => window.clearTimeout(timer));
+    rack.append(key);
+  });
 }
 
 // --- えらぶ 画面 ------------------------------------------------------------
@@ -614,28 +608,14 @@ function hubArt(id) {
     body.style.background = "radial-gradient(circle at 34% 28%, #ffffff 0%, #f472b6 74%)";
     balloon.append(body, el("span", "as-balloon-string"));
     art.append(balloon);
-  } else if (id === "meiro") {
-    const mini = el("div", "as-maze as-maze-mini");
-    mini.style.gridTemplateColumns = "repeat(3, 1fr)";
-    ["is-start", "is-path", "is-wall", "is-wall", "is-path", "is-path", "is-wall", "is-wall", "is-goal"]
-      .forEach(kind => mini.append(el("div", "as-cell " + kind)));
-    art.append(mini);
-  } else if (id === "kazoeru") {
-    const row = el("div", "as-art-row");
-    row.append(ballNode(24), ballNode(24), el("span", "as-art-num", "2"));
-    art.append(row);
-  } else if (id === "katachi") {
-    const row = el("div", "as-art-row");
-    row.append(shapeNode("circle", 30, "#38bdf8"), shapeNode("square", 30, "#f472b6"));
-    art.append(row);
+  } else if (id === "kotoba") {
+    art.append(illust("neko"));
+  } else if (id === "sakana") {
+    art.append(illust("sakana"));
+  } else if (id === "oekaki") {
+    art.append(illust("pen"));
   } else {
-    const row = el("div", "as-art-row");
-    const smallDot = el("span", "as-round");
-    smallDot.style.cssText = "width:24px;height:24px;background:#a78bfa";
-    const bigDot = el("span", "as-round");
-    bigDot.style.cssText = "width:44px;height:44px;background:#a78bfa";
-    row.append(smallDot, bigDot);
-    art.append(row);
+    art.append(illust("oto"));
   }
   return art;
 }
@@ -662,10 +642,10 @@ function renderHub() {
 const PLAYERS = {
   mogura: playMogura,
   fuusen: playFuusen,
-  meiro: playMeiro,
-  kazoeru: playKazoeru,
-  katachi: playKatachi,
-  ookii: playOokii,
+  kotoba: playKotoba,
+  sakana: playSakana,
+  oekaki: playOekaki,
+  oto: playOto,
 };
 
 function start(id) {
