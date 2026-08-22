@@ -29,6 +29,8 @@ export const coreEn = {
   c_pickShogiNote: "Play against the computer",
   c_pickSky: "Sky",
   c_pickSkyNote: "The real sky, right now",
+  c_pickAsobi: "Play",
+  c_pickAsobiNote: "For little ones, from age 3",
   c_go: "Start",
   c_look: "Look",
 
@@ -185,6 +187,8 @@ export const coreJa = {
   c_pickShogiNote: "ひとりで あいてと たいきょく",
   c_pickSky: "そら",
   c_pickSkyNote: "いまの 星空を そのまま",
+  c_pickAsobi: "あそび",
+  c_pickAsobiNote: "3さいから ゆびで さわるだけ",
   c_go: "やる",
   c_look: "みる",
 

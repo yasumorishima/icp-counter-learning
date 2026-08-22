@@ -1,7 +1,7 @@
 /**
  * 表示言語。いまは 英語と 日本語 の 2 つ。
  *
- * 辞書は 画面ごとに 別ファイルへ 分けてある（core / drill / shogi / sky）。
+ * 辞書は 画面ごとに 別ファイルへ 分けてある（core / drill / shogi / sky / asobi）。
  * 新しい言語を 足すときは LANGS に 1 行、各辞書に 1 ブロック 足す。
  *
  * 使いかた:
@@ -14,6 +14,7 @@ import { coreEn, coreJa } from "./i18n-core";
 import { drillEn, drillJa } from "./i18n-drill";
 import { shogiEn, shogiJa } from "./i18n-shogi";
 import { skyEn, skyJa } from "./i18n-sky";
+import { asobiEn, asobiJa } from "./i18n-asobi";
 
 export const LANGS = [
   { code: "en", label: "English" },
@@ -24,8 +25,8 @@ export const LANGS = [
 export const RTL = [];
 
 const DICT = {
-  en: { ...coreEn, ...drillEn, ...shogiEn, ...skyEn },
-  ja: { ...coreJa, ...drillJa, ...shogiJa, ...skyJa },
+  en: { ...coreEn, ...drillEn, ...shogiEn, ...skyEn, ...asobiEn },
+  ja: { ...coreJa, ...drillJa, ...shogiJa, ...skyJa, ...asobiJa },
 };
 
 const STORAGE_KEY = "kimaru.lang";
