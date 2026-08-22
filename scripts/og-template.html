@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="utf-8">
+<!-- サイト本体の見た目を そのまま使う（色や影を ここで作り直さない） -->
+<link rel="stylesheet" href="../src/todo_app_frontend/assets/style.css">
+<style>
+  /* 1200x630 の 1 枚に収めるための 枠取りだけ。色は style.css の変数のまま */
+  html { font-size: 20px; }
+  body { width: 1200px; height: 630px; margin: 0; overflow: hidden; }
+  .og-wrap {
+    width: 1200px; height: 630px; padding: 46px 64px;
+    display: flex; flex-direction: column; justify-content: center; gap: 20px;
+  }
+  .og-head { display: flex; align-items: center; justify-content: center; gap: 18px; }
+  .og-head svg { width: 58px; height: 58px; }
+  .og-title { font-size: 58px; font-weight: 800; letter-spacing: .02em; color: var(--ink); }
+  .og-lede { margin: 0; text-align: center; color: var(--muted); font-size: 23px; }
+  .pick-grid { grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .pick-card { padding: 30px 26px; }
+</style>
+</head>
+<body>
+  <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <div class="og-wrap">
+    <div class="og-head">
+      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="ic" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#38bdf8"/>
+            <stop offset="0.36" stop-color="#a78bfa"/>
+            <stop offset="0.68" stop-color="#f472b6"/>
+            <stop offset="1" stop-color="#fbbf24"/>
+          </linearGradient>
+        </defs>
+        <path d="M7 16.5 13 22l12-12" stroke="url(#ic)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="og-title">さんすう しょうぎ そら</span>
+    </div>
+    <p class="og-lede">こうこくは ありません。きろくは この たんまつの なかだけに のこります。</p>
+
+    <div class="pick-grid">
+      <div class="pick-card pick-drill">
+        <span class="pick-face">＋−</span>
+        <b class="pick-name">さんすう ドリル</b>
+        <span class="pick-note">1〜6年　36 の たんげん</span>
+      </div>
+      <div class="pick-card pick-shogi">
+        <span class="pick-face pick-koma">王</span>
+        <b class="pick-name">しょうぎ</b>
+        <span class="pick-note">ひとりで あいてと たいきょく</span>
+      </div>
+      <div class="pick-card pick-sky">
+        <span class="pick-face pick-star">✦</span>
+        <b class="pick-name">そら</b>
+        <span class="pick-note">いまの 星空を そのまま</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

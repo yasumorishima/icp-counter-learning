@@ -174,6 +174,34 @@ for (const icon of manifest.icons) {
 }
 check("every icon in the manifest exists", true);
 
+// ---- リンクを 貼った ときの 画像（OGP）------------------------------------
+// 貼り先（LINE / X など）は 一度 取り込むと しばらく やり直せないので、
+// タグの 中身も 画像の 実物も ここで 守る。
+const og = await page.evaluate(() => {
+  const get = (sel) => { const el = document.querySelector(sel); return el ? el.content : ""; };
+  return {
+    image: get('meta[property="og:image"]'),
+    width: get('meta[property="og:image:width"]'),
+    height: get('meta[property="og:image:height"]'),
+    url: get('meta[property="og:url"]'),
+    card: get('meta[name="twitter:card"]'),
+    twImage: get('meta[name="twitter:image"]'),
+  };
+});
+check("og:image は 絶対 URL で 指して いる（相対だと 取りに 来られない）",
+  /^https:\/\/[^ ]+\/og\.png$/.test(og.image), og.image);
+check("og:url が 絶対 URL で 入って いる", /^https:\/\//.test(og.url), og.url);
+check("1200x630 と 書いて ある", og.width === "1200" && og.height === "630", `${og.width}x${og.height}`);
+check("X でも 大きい 画像で 同じ ものを 指す",
+  og.card === "summary_large_image" && og.twImage === og.image, `${og.card} / ${og.twImage}`);
+
+const ogFile = await page.request.get(`${BASE}og.png`);
+const ogType = ogFile.headers()["content-type"] || "";
+check("og.png が 配られて いる", ogFile.status() === 200 && ogType.includes("image/png"),
+  `${ogFile.status()} ${ogType}`);
+const ogBytes = (await ogFile.body()).length;
+check("og.png が 空でない", ogBytes > 20000, `${ogBytes} bytes`);
+
 const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 check("no horizontal overflow on a phone-sized screen", overflow <= 0, `overflowX=${overflow}px`);
 
