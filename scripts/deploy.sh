@@ -62,6 +62,11 @@ npm ci
 echo "==> 前回ビルドの残骸を掃除（webpack に output.clean が無いため）"
 rm -rf dist
 
+echo "==> バックエンドの 型宣言を 作る"
+# clone したての ときは src/declarations/ が 無く（生成物なので git に 置いて いない）、
+# webpack が その 参照を 解けずに こける（Cannot resolve declarations/todo_app_backend）。
+dfxx generate "$BACKEND"
+
 echo "==> フロントエンドをビルド（network=ic）"
 DFX_NETWORK=ic CANISTER_ID_TODO_APP_BACKEND="$BACKEND_ID" npx webpack --mode production
 
