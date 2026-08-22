@@ -4,6 +4,7 @@ import { LANGS, RTL, t, setLang, currentLang, detectLang, saveLang } from "./i18
 import { initDrill, renderHome as renderDrillHome, renderKiroku, renderAward } from "./drill";
 import { initShogi, renderShogi } from "./shogi";
 import { initSky, renderSky, stopSky } from "./sky";
+import { renderAsobi, stopAsobi } from "./asobi";
 
 // --- 接続 -------------------------------------------------------------------
 
@@ -242,14 +243,16 @@ async function setupLegacyCounter() {
 // --- 画面切り替え -----------------------------------------------------------
 
 const VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view-kiroku", "view-award",
-  "view-shogi", "view-sky", "view-support"];
+  "view-shogi", "view-sky", "view-asobi", "view-support"];
 
 const KIDS_VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view-kiroku", "view-award",
-  "view-shogi", "view-sky"];
+  "view-shogi", "view-sky", "view-asobi"];
 
 function showView(id) {
   // そらは 出て いない あいだ 描き つづけない（電池の ため）
   if (id !== "view-sky") stopSky();
+  // あそびも 同じ。もぐらの タイマーや ふうせんの 描画を 置き去りに しない
+  if (id !== "view-asobi") stopAsobi();
   VIEWS.forEach(view => $(view).classList.toggle("is-hidden", view !== id));
   document.body.classList.toggle("on-drill", KIDS_VIEWS.indexOf(id) >= 0);
   window.scrollTo(0, 0);
@@ -285,6 +288,12 @@ async function route() {
   if (hash === "#/sky") {
     showView("view-sky");
     renderSky();
+    return;
+  }
+
+  if (hash === "#/asobi" || hash.startsWith("#/asobi/")) {
+    showView("view-asobi");
+    renderAsobi(hash.slice("#/asobi/".length));
     return;
   }
 

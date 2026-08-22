@@ -64,8 +64,8 @@ await page.goto(BASE, { waitUntil: "domcontentloaded" });
 await page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 check("home loads", true);
 check("the top page asks which one to play", await page.locator("#view-pick").isVisible());
-check("the drill, the shogi and the sky are each one tap away",
-  (await page.locator(".pick-card").count()) === 3);
+check("the drill, the shogi, the sky and the play are each one tap away",
+  (await page.locator(".pick-card").count()) === 4);
 check("scheduling is gone from the site", (await page.locator("a[href='#/kimaru']").count()) === 0);
 check("no developer wording in the footer", !(await page.locator(".site-footer").textContent()).includes("Internet Computer"));
 await page.screenshot({ path: `${shots}/01-home.png`, fullPage: true });
@@ -941,7 +941,7 @@ for (const [file, want, ends] of [
   const sky = await newPage(430, 940, { timezoneId: "Asia/Tokyo" });
   const sp = sky.page;
   await sp.goto(BASE, { waitUntil: "networkidle" });
-  check("the top screen offers three things", (await sp.locator(".pick-card").count()) === 3);
+  check("the top screen offers four things", (await sp.locator(".pick-card").count()) === 4);
   check("one of them goes to the sky", (await sp.locator('a[href="#/sky"]').count()) === 1);
 
   // えらぶ画面にも コントラストの 総なめを かける
@@ -1139,7 +1139,141 @@ for (const [file, want, ends] of [
   await sky.context.close();
 }
 
-// ---- 13. ことば ------------------------------------------------------------
+// ---- 13. あそび（幼児向け）--------------------------------------------------
+
+{
+  // 3 さいの 子が さわる ところ。読めなくても 進めることを 数で 確かめる
+  const kid = await newPage(390, 860, { timezoneId: "Asia/Tokyo" });
+  const kp = kid.page;
+  const count = async () => (await kp.locator(".as-count").textContent()).trim();
+
+  await kp.goto(BASE + "#/asobi", { waitUntil: "networkidle" });
+  check("the play screen offers six games",
+    (await kp.locator(".as-game").count()) === 6, String(await kp.locator(".as-game").count()));
+
+  for (const id of ["mogura", "fuusen", "meiro", "kazoeru", "katachi", "ookii"]) {
+    await kp.goto(BASE + "#/asobi/" + id, { waitUntil: "domcontentloaded" });
+    await kp.waitForSelector(".as-title", { timeout: 20000 });
+    const title = (await kp.locator(".as-title").textContent()).trim();
+    const back = await kp.locator('.as-back[href="#/asobi"]').count();
+    if (!title || back !== 1) check(`${id} opens with a title and a way back`, false, `${title} / ${back}`);
+  }
+  check("every game opens with a title and a way back", true);
+
+  // もぐら: 出て いる ものを さわった ときだけ 進む（外しても とがめない）
+  await kp.goto(BASE + "#/asobi/mogura", { waitUntil: "domcontentloaded" });
+  await kp.waitForSelector(".as-mole.is-up", { timeout: 20000 });
+  check("a mole comes up by itself", true);
+  await kp.locator(".as-mole:not(.is-up)").first().dispatchEvent("pointerdown");
+  await kp.waitForTimeout(150);
+  check("tapping an empty hole costs nothing", (await count()).startsWith("0"), await count());
+  await kp.locator(".as-mole.is-up").first().dispatchEvent("pointerdown");
+  await kp.waitForTimeout(200);
+  check("tapping a mole counts", (await count()).startsWith("1"), await count());
+
+  // ふうせん: ひとりでに 上がって いき、さわると 割れる
+  await kp.goto(BASE + "#/asobi/fuusen", { waitUntil: "domcontentloaded" });
+  await kp.waitForSelector(".as-balloon", { timeout: 20000 });
+  const top1 = await kp.locator(".as-balloon").first().evaluate(el => el.getBoundingClientRect().top);
+  await kp.waitForTimeout(900);
+  const top2 = await kp.locator(".as-balloon").first().evaluate(el => el.getBoundingClientRect().top);
+  check("balloons drift upward", top2 < top1 - 4, `${Math.round(top1)} -> ${Math.round(top2)}`);
+  await kp.locator(".as-balloon").first().dispatchEvent("pointerdown");
+  await kp.waitForTimeout(200);
+  check("popping one counts", (await count()).startsWith("1"), await count());
+
+  // 画面を 出たら 止める（もぐらの タイマー・ふうせんの 描画を 置き去りに しない）
+  await kp.click(".as-back");
+  await kp.waitForTimeout(400);
+  check("leaving a game clears it away",
+    (await kp.locator(".as-sky").count()) === 0
+    && (await kp.locator(".as-sky .as-balloon").count()) === 0
+    && (await kp.locator(".as-game").count()) === 6);
+
+  // めいろ: 行き止まりの ない 1 本道で、なぞると ゴールに 着く
+  await kp.goto(BASE + "#/asobi/meiro", { waitUntil: "domcontentloaded" });
+  await kp.waitForSelector(".as-maze .as-cell", { timeout: 20000 });
+  const steps = await kp.$$eval(".as-cell",
+    els => els.map(el => Number(el.dataset.step)).filter(n => n >= 0).sort((a, b) => a - b));
+  check("the maze is one road without dead ends",
+    steps.length >= 7 && steps.every((n, i) => n === i), steps.join(","));
+  check("it has one start and one goal",
+    (await kp.locator(".as-cell.is-start").count()) === 1
+    && (await kp.locator(".as-cell.is-goal").count()) === 1);
+
+  const centre = async step => {
+    const box = await kp.locator(`.as-cell[data-step="${step}"]`).boundingBox();
+    return [box.x + box.width / 2, box.y + box.height / 2];
+  };
+  const [sx, sy] = await centre(0);
+  await kp.mouse.move(sx, sy);
+  await kp.mouse.down();
+  for (let step = 1; step < steps.length; step++) {
+    const [x, y] = await centre(step);
+    await kp.mouse.move(x, y);
+  }
+  await kp.mouse.up();
+  await kp.waitForTimeout(250);
+  check("tracing to the goal counts", (await count()).startsWith("1"), await count());
+
+  // かぞえる: ひとつずつ 番号が つき、正しい 数だけが 先へ 進める
+  await kp.goto(BASE + "#/asobi/kazoeru", { waitUntil: "domcontentloaded" });
+  await kp.waitForSelector(".as-thing", { timeout: 20000 });
+  const things = kp.locator(".as-thing");
+  const many = await things.count();
+  check("counting starts with one to five things", many >= 1 && many <= 5, String(many));
+  for (let i = 0; i < many; i++) await things.nth(i).dispatchEvent("pointerdown");
+  await kp.waitForTimeout(200);
+  check("each tap gets its own number",
+    (await kp.locator(".as-tag").allTextContents()).join(",")
+      === Array.from({ length: many }, (_, i) => String(i + 1)).join(","));
+  const numbers = kp.locator(".as-choices .as-num");
+  const labels = await numbers.allTextContents();
+  check("three numbers to choose from, with the right one among them",
+    labels.length === 3 && labels.includes(String(many)), labels.join(","));
+  await numbers.nth(labels.findIndex(v => v !== String(many))).dispatchEvent("pointerdown");
+  await kp.waitForTimeout(250);
+  check("a wrong tap does not move on", (await count()).startsWith("0"), await count());
+  await numbers.nth(labels.indexOf(String(many))).dispatchEvent("pointerdown");
+  await kp.waitForTimeout(700);
+  check("the right number moves on", (await count()).startsWith("1"), await count());
+
+  // かたち: 色で 当てられないように、3 つとも 同じ色に して ある
+  await kp.goto(BASE + "#/asobi/katachi", { waitUntil: "domcontentloaded" });
+  await kp.waitForSelector(".as-model .as-shape", { timeout: 20000 });
+  const colours = await kp.$$eval(".as-choices .as-shape",
+    els => els.map(el => getComputedStyle(el).backgroundColor));
+  check("the choices share one colour, so only the shape tells them apart",
+    colours.length === 3 && new Set(colours).size === 1, colours.join(" | "));
+
+  // おおきい ほう: 迷わない 差を つける
+  await kp.goto(BASE + "#/asobi/ookii", { waitUntil: "domcontentloaded" });
+  await kp.waitForSelector(".as-blob .as-round", { timeout: 20000 });
+  const widths = await kp.$$eval(".as-blob .as-round",
+    els => els.map(el => el.getBoundingClientRect().width));
+  check("the two sizes are far apart",
+    widths.length === 2 && Math.max(...widths) / Math.min(...widths) >= 1.5, widths.join(","));
+
+  // 小さい 画面でも はみ出さない・押す ところは 指の 大きさ
+  await kp.setViewportSize({ width: 320, height: 760 });
+  for (const hash of ["#/asobi", "#/asobi/mogura", "#/asobi/meiro", "#/asobi/kazoeru"]) {
+    await kp.goto(BASE + hash, { waitUntil: "domcontentloaded" });
+    await kp.waitForTimeout(300);
+    const over = await kp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    if (over > 0) check(`nothing spills sideways on ${hash}`, false, `${over}px`);
+  }
+  check("nothing spills sideways on a small screen", true);
+
+  await kp.goto(BASE + "#/asobi", { waitUntil: "domcontentloaded" });
+  await kp.waitForSelector(".as-game", { timeout: 20000 });
+  const tooSmall = await kp.$$eval(".as-game, .as-back",
+    els => els.map(el => el.getBoundingClientRect()).filter(box => box.height < 44).length);
+  check("everything you tap is big enough", tooSmall === 0, String(tooSmall));
+
+  await kid.context.close();
+}
+
+// ---- 14. ことば ------------------------------------------------------------
 
 {
   const en = await newPage(430, 940, { lang: "en", timezoneId: "Asia/Tokyo" });
@@ -1147,7 +1281,8 @@ for (const [file, want, ends] of [
 
   // 画面ごとに 日本語の のこりを 総なめする（出しわすれは ここで 落ちる）
   for (const [name, hash] of [["choosing", "#/"], ["drill", "#/drill"], ["records", "#/kiroku"],
-    ["shogi", "#/shogi"], ["sky", "#/sky"], ["support", "#/support"]]) {
+    ["shogi", "#/shogi"], ["sky", "#/sky"], ["play", "#/asobi"], ["moles", "#/asobi/mogura"],
+    ["counting", "#/asobi/kazoeru"], ["support", "#/support"]]) {
     await ep.goto(BASE + hash, { waitUntil: "domcontentloaded" });
     await ep.reload({ waitUntil: "domcontentloaded" });
     await ep.waitForSelector("body[data-ready='1']", { timeout: 30000 });
@@ -1230,7 +1365,7 @@ for (const [file, want, ends] of [
 
   // ことばは 2 つ、どの 画面からでも 選べる
   check("both languages are offered", (await ep.locator("#lang-select option").count()) === 2);
-  for (const hash of ["#/", "#/drill", "#/kiroku", "#/shogi", "#/sky", "#/support"]) {
+  for (const hash of ["#/", "#/drill", "#/kiroku", "#/shogi", "#/sky", "#/asobi", "#/support"]) {
     await ep.goto(BASE + hash, { waitUntil: "domcontentloaded" });
     await ep.waitForSelector("body[data-ready='1']", { timeout: 30000 });
     if (!(await ep.locator("#lang-select").isVisible())) {
