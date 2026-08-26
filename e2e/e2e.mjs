@@ -1254,10 +1254,16 @@ for (const [file, want, ends] of [
   await kp.waitForSelector(".as-fish", { timeout: 20000 });
   check("the tank is not empty when it opens", (await kp.locator(".as-fish").count()) >= 3,
     String(await kp.locator(".as-fish").count()));
-  const fishX1 = await kp.locator(".as-fish").first().evaluate(el => el.getBoundingClientRect().left);
-  await kp.waitForTimeout(700);
-  const fishX2 = await kp.locator(".as-fish").first().evaluate(el => el.getBoundingClientRect().left);
-  check("the fish swim", Math.abs(fishX2 - fishX1) > 6, `${Math.round(fishX1)} -> ${Math.round(fishX2)}`);
+  // 魚の 見かけの 速さは コマ数で 変わる（frameStep の dt は 1 コマ 0.05 秒で 頭打ちなので、
+  // 混んだ 機械で コマが 間引かれると その ぶん 進まない）。決まった 時間で 測ると
+  // 泳いで いても 落ちるので、"動くまで 待つ" 形にする。同じ 1 ぴきを 見る。
+  const fish = await kp.locator(".as-fish").first().elementHandle();
+  const fishX1 = await fish.evaluate(el => el.getBoundingClientRect().left);
+  const swam = await kp.waitForFunction(
+    ([el, x0]) => el.isConnected && Math.abs(el.getBoundingClientRect().left - x0) > 6,
+    [fish, fishX1], { timeout: 15000 }).then(() => true).catch(() => false);
+  const fishX2 = await fish.evaluate(el => el.getBoundingClientRect().left).catch(() => fishX1);
+  check("the fish swim", swam, `${Math.round(fishX1)} -> ${Math.round(fishX2)}`);
   await kp.locator(".as-fish").first().dispatchEvent("pointerdown");
   await kp.waitForTimeout(250);
   check("scooping one counts", (await count()).startsWith("1"), await count());
