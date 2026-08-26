@@ -268,7 +268,9 @@ const contrastSweep = async (target = page) =>
       const text = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim().length > 0);
       if (!text) return;
       const box = el.getBoundingClientRect();
-      if (box.width === 0 || box.height === 0) return;
+      // 1 ピクセルの ものは 目には 見えない（読み上げ だけに 渡す .sr-only）。
+      // 色の 読みやすさは 目で 見る 文字の 話なので、ここでは 見ない。
+      if (box.width <= 1 || box.height <= 1) return;
       const style = getComputedStyle(el);
       if (style.visibility === "hidden" || style.opacity === "0") return;
       if (style.webkitTextFillColor === "rgba(0, 0, 0, 0)") return; // 文字自体がグラデーション
