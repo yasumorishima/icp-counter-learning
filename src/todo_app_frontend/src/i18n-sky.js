@@ -60,6 +60,10 @@ export const skyEn = {
   // {0}年 {1}月 {2}日 {3}曜 {4}時 {5}分 {6}月(2けた) {7}日(2けた)
   sk_whenFmt: "{3}, {0}-{6}-{7} {4}:{5}",
   sk_whereLine: "{0} · looking {1}",
+  // --- 見えない 人への 読み上げ（#sky-read） ---
+  sk_readLook: "Looking {1} degrees up, {0}. {2} degrees wide",
+  sk_readNear: "Nearest the middle: {0}",
+  sk_readNone: "Nothing bright near the middle",
   // {1} は 分の ぶん。0 分の ときは 空なので、あいだの 空白は 分の 側に つける
   sk_shiftPlus: "+{0} h{1}",
   sk_shiftMinus: "-{0} h{1}",
@@ -146,6 +150,10 @@ export const skyJa = {
   // {0}年 {1}月 {2}日 {3}曜 {4}時 {5}分 {6}月(2けた) {7}日(2けた)
   sk_whenFmt: "{0}年{1}月{2}日({3}) {4}:{5}",
   sk_whereLine: "{0}　{1}の 空",
+  // --- 見えない 人への 読み上げ（#sky-read） ---
+  sk_readLook: "{0}の 空・高さ {1} 度・見える 広さ {2} 度",
+  sk_readNear: "まんなかに ちかいのは {0}",
+  sk_readNone: "まんなかの あたりには 明るい ものが ありません",
   sk_shiftPlus: "＋{0}時間{1}",
   sk_shiftMinus: "−{0}時間{1}",
   sk_shiftMinPart: "{0}分",

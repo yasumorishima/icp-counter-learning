@@ -52,6 +52,8 @@ let baseSky = 0;          // 送りの 基準（空の 時刻）
 let speed = 0;
 let picks = [];
 let selected = null;
+// 次の 描画の あとに 読み上げるか（矢印で 見まわした とき だけ 立てる）
+let announceNext = false;
 let active = false;
 
 const state = {
@@ -153,6 +155,8 @@ function draw() {
   $("sky-when").textContent = whenText(d);
   $("sky-where").textContent = t("sk_whereLine", placeName(), dirText(state.az));
   if (selected) drawSelection();
+  // 描き終わって picks が そろってから 読み上げる
+  if (announceNext) { announceNext = false; sayLook(); }
 }
 
 /** 選んだ ものに 輪を つける（押した ことが 分かる ように） */
@@ -334,27 +338,67 @@ function pick(e) {
   invalidate();
 }
 
-function showTip(q) {
-  const tip = $("sky-tip");
-  let title = "", sub = "";
+/** 画面の まんなかに いちばん 近い もの。近くに 無ければ null */
+function centerPick() {
+  if (!canvas || !picks.length) return null;
+  const cx = canvas.clientWidth / 2, cy = canvas.clientHeight / 2;
+  let best = null, bestD = Infinity;
+  for (const q of picks) {
+    const d = Math.hypot(q.x - cx, q.y - cy);
+    if (d < bestD) { bestD = d; best = q; }
+  }
+  // 画面の 短い ほうの 4 分の 1 より 遠い ものは「まんなか」と 言わない
+  return bestD <= Math.min(canvas.clientWidth, canvas.clientHeight) / 4 ? best : null;
+}
+
+/**
+ * いま 見ている 空を ことばで 出す（#sky-read は role="status"）。
+ * canvas の 絵は 読み上げに 何も 渡さないので、矢印で 見まわすたびに
+ * 方角・高さ・見える 広さと、まんなかに 近い ものの 名前を 書き出す。
+ */
+function sayLook() {
+  const read = $("sky-read");
+  if (!read) return;
+  const q = centerPick();
+  read.textContent = [
+    t("sk_readLook", dirText(state.az), state.alt.toFixed(0), state.fov.toFixed(0)),
+    q ? t("sk_readNear", pickText(q).title) : t("sk_readNone"),
+  ].join(t("sk_sep"));
+}
+
+/** 押した もの・まんなかの ものの 名前と 説明 */
+function pickText(q) {
   if (q.kind === "star") {
     const d = describeStar(q.i);
-    title = d.title;
-    sub = d.sub;
-  } else if (q.kind === "planet") {
-    title = t("sk_planet_" + q.body.id);
-    sub = t("sk_tipPlanet", q.body.mag.toFixed(1), q.body.dist.toFixed(2),
-      (q.body.dist * 8.317).toFixed(0));
-  } else if (q.kind === "moon") {
-    const ph = moonPhase(jdTT(julianDay(skyDate())));
-    title = t("sk_moon");
-    sub = t("sk_tipMoon", (ph.illum * 100).toFixed(0),
-      Math.round(q.body.distKm).toLocaleString(currentLang()));
-  } else {
-    title = t("sk_sun");
-    sub = t("sk_tipSun", (q.body.distAU * 149597870.7 / 1e6).toFixed(1),
-      (q.body.distAU * 8.317).toFixed(1));
+    return { title: d.title, sub: d.sub };
   }
+  if (q.kind === "planet") {
+    return {
+      title: t("sk_planet_" + q.body.id),
+      sub: t("sk_tipPlanet", q.body.mag.toFixed(1), q.body.dist.toFixed(2),
+        (q.body.dist * 8.317).toFixed(0)),
+    };
+  }
+  if (q.kind === "moon") {
+    const ph = moonPhase(jdTT(julianDay(skyDate())));
+    return {
+      title: t("sk_moon"),
+      sub: t("sk_tipMoon", (ph.illum * 100).toFixed(0),
+        Math.round(q.body.distKm).toLocaleString(currentLang())),
+    };
+  }
+  return {
+    title: t("sk_sun"),
+    sub: t("sk_tipSun", (q.body.distAU * 149597870.7 / 1e6).toFixed(1),
+      (q.body.distAU * 8.317).toFixed(1)),
+  };
+}
+
+function showTip(q) {
+  const tip = $("sky-tip");
+  const named = pickText(q);
+  const title = named.title;
+  const sub = named.sub;
   tip.innerHTML = "";
   const b = document.createElement("b");
   b.textContent = title;
@@ -494,8 +538,20 @@ function onKeydown(e) {
   else if (c === "ArrowDown") state.alt = Math.max(-25, state.alt - step10);
   else if (c === "Equal" || c === "NumpadAdd") setFov(state.fov / 1.3);
   else if (c === "Minus" || c === "NumpadSubtract") setFov(state.fov * 1.3);
+  else if (c === "Enter" || c === "NumpadEnter" || c === "Space") {
+    // まんなかの ものを 選ぶ（指で 押すのと 同じ。輪も つく）
+    const q = centerPick();
+    if (q) { selected = pickKey(q); showTip(q); }
+    // 何も 無い ときは 前に 選んだ 輪と 名前を 消す（指で 押した ときと そろえる）
+    else { selected = null; $("sky-tip").classList.add("is-hidden"); }
+    sayLook();
+    e.preventDefault();
+    invalidate();
+    return;
+  }
   else return;
   e.preventDefault();
+  announceNext = true;
   save();
   invalidate();
 }
@@ -534,6 +590,7 @@ export function renderSky() {
   refreshLabels();
   $("sky-place").value = state.place;
   resize();
+  announceNext = true;
   if (entering) goNow();
   else invalidate();
 }

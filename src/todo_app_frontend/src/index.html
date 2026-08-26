@@ -330,7 +330,9 @@
             <section id="view-sky" class="view is-hidden">
                 <div class="sky-stage">
                     <canvas id="sky-canvas" class="sky-canvas" tabindex="0"
-                            data-t-aria="c_skyCanvas" aria-label="星空。指で なぞると 見まわせます"></canvas>
+                            data-t-aria="c_skyCanvas" aria-label="星空。指で なぞると 見まわせます。矢印キーで 見まわし、＋と−で ちかづいたり はなれたり、エンターで まんなかを 読みます"></canvas>
+                    <!-- 絵は 読み上げに 何も 渡さないので、見ている 空を ことばでも 出す -->
+                    <p id="sky-read" class="sr-only" role="status"></p>
                     <div class="sky-head">
                         <b id="sky-when" class="sky-when"></b>
                         <span id="sky-where" class="sky-where"></span>
