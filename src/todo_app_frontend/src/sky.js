@@ -5,7 +5,7 @@
  * ここが 持つのは「指で どう 動かすか」と「何を 出すか」だけ。
  * 星表も 計算も この 端末の 中に あるので、電波が 無くても 動く。
  */
-import { drawSky, describeStar } from "./sky-view";
+import { drawSky, describeStar, starMag } from "./sky-view";
 import { julianDay, jdTT, moonPhase, norm360 } from "./sky-astro.mjs";
 import { t, currentLang } from "./i18n";
 
@@ -361,9 +361,23 @@ function sayLook() {
   if (!read) return;
   const q = centerPick();
   read.textContent = [
-    t("sk_readLook", dirText(state.az), state.alt.toFixed(0), state.fov.toFixed(0)),
-    q ? t("sk_readNear", pickText(q).title) : t("sk_readNone"),
+    // 方角は ことばだけだと 22.5 度ごとで、矢印を 押しても 変わらない ことが 多い。
+    // 動いた ことが 分かる ように 度も 言う
+    t("sk_readLook", dirText(state.az), state.alt.toFixed(0), state.fov.toFixed(0),
+      norm360(state.az).toFixed(0)),
+    q ? t("sk_readNear", nearName(q)) : t("sk_readNone"),
   ].join(t("sk_sep"));
+}
+
+/**
+ * まんなかの ものの 呼び名。
+ * 名前の ある 星は その まま。名前の 無い 星は「星」としか 出ないので、
+ * 明るさを そえて 別の 星と 区べつ できる ように する。
+ */
+function nearName(q) {
+  const title = pickText(q).title;
+  if (q.kind !== "star") return title;
+  return title + t("sk_sep") + t("sk_mag", starMag(q.i).toFixed(1));
 }
 
 /** 押した もの・まんなかの ものの 名前と 説明 */

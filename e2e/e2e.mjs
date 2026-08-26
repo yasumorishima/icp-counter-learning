@@ -1073,8 +1073,13 @@ for (const [file, want, ends] of [
   await waitAttr("az", azBeforeKey);
   await sp.waitForFunction(
     b => document.getElementById("sky-read").textContent !== b, readBefore);
-  check("looking around with the arrow keys changes the words",
-    (await readText()) !== readBefore, readBefore + " -> " + (await readText()));
+  // 方角の ことばは 22.5 度ごとなので、矢印 1 回では 変わらない ことが 多い。
+  // 度の 数が 動いて いる ことまで 見る（動いた ことが 耳で 分かる 条件）
+  const degreesIn = txt => Number((txt.match(/（([0-9]+) 度）/) || [0, -1])[1]);
+  const readAfter = await readText();
+  check("the arrow key moves the direction the words say",
+    degreesIn(readAfter) >= 0 && degreesIn(readAfter) !== degreesIn(readBefore),
+    readBefore + " -> " + readAfter);
 
   // まんなかに 何が あるかは 見る 向きで 変わるので、
   // 「名前の ふきだし」と「ことば」が いつも 同じ ことを 言うかを 見る

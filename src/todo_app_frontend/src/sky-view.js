@@ -521,6 +521,11 @@ const bayerText = (greek, abbr, conText, lang) =>
  * 星 1 つの 説明。固有名／バイエル符号＋星座／等級を 組み立てる。
  * 名前の 無い 星でも 「はくちょう座の 4.2 等の 星」と 言えるように する。
  */
+/** 星の 明るさ（等級）。名前の 無い 星を ことばで 区べつする ため */
+export function starMag(i) {
+  return STARS[i][2];
+}
+
 export function describeStar(i) {
   const s = STARS[i];
   const lang = currentLang();
