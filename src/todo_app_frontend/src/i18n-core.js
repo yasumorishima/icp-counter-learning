@@ -107,7 +107,7 @@ export const coreEn = {
   c_kirokuImport: "Read a file",
 
   // --- そら ---
-  c_skyCanvas: "The night sky. Drag to look around.",
+  c_skyCanvas: "The night sky. Drag to look around. Arrow keys look around, plus and minus zoom, Enter reads what is in the middle.",
   c_skyIn: "Closer",
   c_skyOut: "Further",
   c_skyNow: "Now",
@@ -265,7 +265,7 @@ export const coreJa = {
   c_kirokuImport: "よみこむ",
 
   // --- そら ---
-  c_skyCanvas: "星空。指で なぞると 見まわせます",
+  c_skyCanvas: "星空。指で なぞると 見まわせます。矢印キーで 見まわし、＋と−で ちかづいたり はなれたり、エンターで まんなかを 読みます",
   c_skyIn: "ちかづく",
   c_skyOut: "はなれる",
   c_skyNow: "いま",

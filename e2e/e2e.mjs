@@ -268,7 +268,9 @@ const contrastSweep = async (target = page) =>
       const text = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim().length > 0);
       if (!text) return;
       const box = el.getBoundingClientRect();
-      if (box.width === 0 || box.height === 0) return;
+      // 1 ピクセルの ものは 目には 見えない（読み上げ だけに 渡す .sr-only）。
+      // 色の 読みやすさは 目で 見る 文字の 話なので、ここでは 見ない。
+      if (box.width <= 1 || box.height <= 1) return;
       const style = getComputedStyle(el);
       if (style.visibility === "hidden" || style.opacity === "0") return;
       if (style.webkitTextFillColor === "rgba(0, 0, 0, 0)") return; // 文字自体がグラデーション
@@ -1053,6 +1055,46 @@ for (const [file, want, ends] of [
   const tipText = (await sp.locator("#sky-tip").textContent()).trim();
   check("the name comes with how high it is", tipText.includes("高さ"), tipText);
   check("the name comes with a number", /[0-9]/.test(tipText), tipText);
+
+  // 目が 見えない 人は 絵を 受け取れない。矢印で 見まわすたびに
+  // 「どこを 見ているか」を ことばで 出しているかを 見る（#sky-read は role="status"）。
+  const readText = () => sp.locator("#sky-read").textContent();
+  check("the sky tells you in words where you are looking",
+    (await readText()).includes("の 空"), await readText());
+  check("the words say how high you are looking",
+    (await readText()).includes("高さ"), await readText());
+  check("the words are only for the screen reader",
+    await sp.locator("#sky-read").evaluate(el => el.getBoundingClientRect().width <= 1));
+
+  await sp.focus("#sky-canvas");
+  const readBefore = await readText();
+  const azBeforeKey = await sp.locator("#sky-canvas").getAttribute("data-az");
+  await sp.keyboard.press("ArrowLeft");
+  await waitAttr("az", azBeforeKey);
+  await sp.waitForFunction(
+    b => document.getElementById("sky-read").textContent !== b, readBefore);
+  // 方角の ことばは 22.5 度ごとなので、矢印 1 回では 変わらない ことが 多い。
+  // 度の 数が 動いて いる ことまで 見る（動いた ことが 耳で 分かる 条件）
+  const degreesIn = txt => Number((txt.match(/（([0-9]+) 度）/) || [0, -1])[1]);
+  const readAfter = await readText();
+  check("the arrow key moves the direction the words say",
+    degreesIn(readAfter) >= 0 && degreesIn(readAfter) !== degreesIn(readBefore),
+    readBefore + " -> " + readAfter);
+
+  // まんなかに 何が あるかは 見る 向きで 変わるので、
+  // 「名前の ふきだし」と「ことば」が いつも 同じ ことを 言うかを 見る
+  await sp.keyboard.press("Enter");
+  await nextFrame();
+  const named = !(await sp.locator("#sky-tip")
+    .evaluate(el => el.classList.contains("is-hidden")));
+  const words = await readText();
+  check("pressing enter reads the middle, and the bubble and the words agree",
+    named ? /まんなかに ちかいのは/.test(words) : /ありません/.test(words),
+    (named ? "named: " : "empty: ") + words);
+
+  const azAfterKeys = await sp.locator("#sky-canvas").getAttribute("data-az");
+  await sp.click("#sky-reset");
+  await waitAttr("az", azAfterKeys);
 
   // 出すものの 切り替えが 絵に きいて いる
   const sign = () => sp.evaluate(() => {
