@@ -28,8 +28,15 @@ BACKEND="todo_app_backend"
 FRONTEND="todo_app_frontend"
 SITE="https://iqjbc-7aaaa-aaaaj-qnnsa-cai.icp0.io/"
 
-# 実行に使う identity。RPi5 から動かすときは KIMARU_IDENTITY=kimaru-deploy を渡す
+# 実行に使う identity。RPi5 から動かすときは KIMARU_IDENTITY=kimaru-deploy を渡す。
+# 渡し忘れると default identity になり、アセット canister には controller とは別に
+# Prepare/Commit 権限が要るので「Caller does not have Prepare permission」で落ちる
+# （2026-08-27 に踏んだ）。配備鍵が入っている機械では既定でそれを使う。
 IDENTITY="${KIMARU_IDENTITY:-}"
+if [ -z "$IDENTITY" ] && dfx identity list 2>/dev/null | grep -qx "kimaru-deploy"; then
+  IDENTITY="kimaru-deploy"
+  echo "==> identity: kimaru-deploy（KIMARU_IDENTITY 未指定のため）"
+fi
 dfxx() {
   if [ -n "$IDENTITY" ]; then dfx --identity "$IDENTITY" "$@"; else dfx "$@"; fi
 }
