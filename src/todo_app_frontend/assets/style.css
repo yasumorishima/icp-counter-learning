@@ -1577,7 +1577,10 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
   display: flex;
   align-items: center;
   font-weight: 800;
-  color: var(--grape);
+  /* --grape は 明るい 画面で 2.6 しか 出ない（14px は 4.5 が 要る）。
+     押せる ことは 下線で 見せて、色は 明暗で 反転する --ink に する */
+  color: var(--ink);
+  text-decoration: underline;
 }
 .pick-help-list {
   margin: 6px 0 0;
