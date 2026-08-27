@@ -1357,6 +1357,49 @@ for (const [file, want, ends] of [
     els => els.map(el => el.getBoundingClientRect()).filter(box => box.height < 44).length);
   check("everything you tap is big enough", tooSmall === 0, String(tooSmall));
 
+  // 目が 見えない 人は 名前でしか 見わけられない。さわる ところ 全部に
+  // 名前が 付いて いるかを 画面ごとに 総なめする（1 つでも 無ければ そこで 詰む）。
+  const NAME_SCREENS = ["#/", "#/drill", "#/kiroku", "#/shogi", "#/sky", "#/asobi",
+    "#/asobi/mogura", "#/asobi/fuusen", "#/asobi/kotoba", "#/asobi/sakana",
+    "#/asobi/oekaki", "#/asobi/oto", "#/shien"];
+  let namedTotal = 0;
+  const unnamed = [];
+  for (const hash of NAME_SCREENS) {
+    await kp.goto(BASE + hash, { waitUntil: "domcontentloaded" });
+    await kp.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+    await kp.waitForTimeout(400);
+    const res = await kp.evaluate(() => {
+      const out = { n: 0, bad: [] };
+      const sel = 'button, a, input, select, textarea, [tabindex], [role="button"]';
+      document.querySelectorAll(sel).forEach(el => {
+        const box = el.getBoundingClientRect();
+        if (box.width === 0 && box.height === 0) return;
+        if (el.closest(".is-hidden, [hidden]")) return;
+        const cs = getComputedStyle(el);
+        if (cs.display === "none" || cs.visibility === "hidden") return;
+        out.n += 1;
+        const named = (el.getAttribute("aria-label") || "").trim()
+          || (el.getAttribute("title") || "").trim()
+          || (el.textContent || "").trim()
+          || (el.labels && el.labels.length ? el.labels[0].textContent.trim() : "");
+        if (!named) out.bad.push(el.tagName.toLowerCase() + (el.id ? "#" + el.id : ""));
+      });
+      return out;
+    });
+    namedTotal += res.n;
+    if (res.bad.length) unnamed.push(hash + ": " + [...new Set(res.bad)].join(", "));
+  }
+  check("everything you can touch has a name a screen reader can read",
+    unnamed.length === 0, unnamed.join(" / ") || `${namedTotal} 個`);
+
+  // 使いかたが 画面に 書いて ある（読み上げの 人が 最初の 画面で 見つけられる）
+  await kp.goto(BASE + "#/", { waitUntil: "domcontentloaded" });
+  await kp.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  check("the top screen says how to use it without sight",
+    (await kp.locator(".pick-help").count()) === 1);
+  const helpText = await kp.locator(".pick-help").textContent();
+  check("the help names the keys", /矢印|エンター/.test(helpText), helpText.slice(0, 60));
+
   await kid.context.close();
 }
 

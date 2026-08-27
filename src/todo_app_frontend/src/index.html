@@ -101,6 +101,15 @@
                         <span class="pick-go" data-t="c_go">やる</span>
                     </a>
                 </div>
+                <details class="pick-help">
+                    <summary data-t="c_a11yTitle">よみあげ・キーボードで つかうとき</summary>
+                    <ul class="pick-help-list">
+                        <li data-t="c_a11ySky">そら＝矢印キーで 見まわし、＋と−で ちかづいたり はなれたり、エンターで まんなかの 星の 名前を 読みます。見て いる 方角と 高さは 動かすたびに ことばで 出ます</li>
+                        <li data-t="c_a11yAsobi">あそび＝タブで うつり、エンターか スペースで さわれます。もぐらと ふうせんは 出た ときに 音が 鳴ります</li>
+                        <li data-t="c_a11yShogi">しょうぎ＝ますは ぜんぶ ボタンです。「５五 先手歩」のように 名前が つきます</li>
+                        <li data-t="c_a11ySound">音は 上の 音符ボタンで 切れます。文字の 大きさは その となりで 3 だんかい</li>
+                    </ul>
+                </details>
             </section>
 
             <!-- ============ あそび（幼児向け） ============ -->
@@ -225,7 +234,8 @@
                     <h2 class="panel-title" data-t="c_whoNameTitle">なまえを きめよう</h2>
                     <p class="lede" data-t="c_whoNameLede">この きろくは この たんまつの なかだけに のこります。</p>
                     <div class="face-row" id="face-row"></div>
-                    <input id="who-input" type="text" maxlength="12" data-t-ph="c_whoNamePh" placeholder="なまえ">
+                    <input id="who-input" type="text" maxlength="12" data-t-ph="c_whoNamePh"
+                           data-t-aria="c_whoNameLabel" aria-label="きろくを のこす なまえ" placeholder="なまえ">
                     <button type="button" id="who-add" class="cta"><span class="cta-label" data-t="c_whoStart">はじめる</span></button>
                 </div>
 
