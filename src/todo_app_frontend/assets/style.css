@@ -1560,3 +1560,31 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
   display: block; width: 46px; height: 56px; border-radius: 50% 50% 46% 46%;
   background: radial-gradient(circle at 34% 28%, #ffffff 0%, #f472b6 74%);
 }
+
+/* えらぶ 画面の「よみあげ・キーボードで つかうとき」。
+   ふだんは たたんで あるので 目には じゃまに ならず、
+   読み上げと キーボードには 最初の 画面で 届く。 */
+.pick-help {
+  max-width: 720px;
+  margin: 18px auto 0;
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.pick-help summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-weight: 800;
+  /* --grape は 明るい 画面で 2.6 しか 出ない（14px は 4.5 が 要る）。
+     押せる ことは 下線で 見せて、色は 明暗で 反転する --ink に する */
+  color: var(--ink);
+  text-decoration: underline;
+}
+.pick-help-list {
+  margin: 6px 0 0;
+  padding-left: 1.2em;
+  line-height: 1.8;
+}
+.pick-help-list li { margin: 6px 0; }
