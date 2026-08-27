@@ -1317,6 +1317,11 @@ for (const [file, want, ends] of [
   const inks = await kp.locator(".as-ink").count();
   check("there are colours to choose from", inks === 6, String(inks));
 
+  // 色の 番号（#38bdf8）が そのまま 読まれない ように 名前を 付けて ある
+  const inkNames = await kp.$$eval(".as-ink", els => els.map(el => el.getAttribute("aria-label")));
+  check("the colours are named, not written as codes",
+    inkNames.every(n => n && !n.startsWith("#")), inkNames.join(" / "));
+
   // おと: たたく ところが そろって いて、押すと 見た目が 返る
   await kp.goto(BASE + "#/asobi/oto", { waitUntil: "domcontentloaded" });
   await kp.waitForSelector(".as-key", { timeout: 20000 });
@@ -1329,6 +1334,9 @@ for (const [file, want, ends] of [
   await kp.locator(".as-key").nth(1).evaluate(el => el.click());
   check("a key answers the screen reader way of pressing too",
     (await kp.locator(".as-key.is-hit").count()) >= 1);
+  // 6 枚とも 同じ 名前だと 読み上げでは どれが どれか 分からない
+  const keyNames = await kp.$$eval(".as-key", els => els.map(el => el.getAttribute("aria-label")));
+  check("each key has its own name", new Set(keyNames).size === 6, keyNames.join(" / "));
   const keyTall = await kp.$$eval(".as-key",
     els => els.map(el => el.getBoundingClientRect().height).filter(h => h < 44).length);
   check("the keys are big enough to hit", keyTall === 0, String(keyTall));

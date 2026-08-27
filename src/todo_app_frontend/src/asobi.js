@@ -162,7 +162,6 @@ function playMogura() {
     const hole = el("div", "as-hole");
     const mole = el("button", "as-mole");
     mole.type = "button";
-    mole.setAttribute("aria-label", t("as_mogura"));
     mole.append(el("i", "as-eye as-eye-l"), el("i", "as-eye as-eye-r"), el("b", "as-nose"));
     hole.append(mole);
     board.append(hole);
@@ -199,7 +198,7 @@ function playMogura() {
     const slot = pick(idle);
     slot.up = true;
     slot.mole.classList.add("is-up");
-    slot.mole.setAttribute("aria-label", t("as_mogura"));
+    slot.mole.setAttribute("aria-label", t("as_moguraUp"));
     // 見えなくても 出た ことが 分かる ように 小さく 鳴らす（音は 設定で 切れる）
     sounds.tick();
     window.clearTimeout(slot.timer);
@@ -238,7 +237,7 @@ function playFuusen() {
     const width = sky.clientWidth || 320;
     const node = el("button", "as-balloon");
     node.type = "button";
-    node.setAttribute("aria-label", t("as_fuusen"));
+    node.setAttribute("aria-label", t("as_fuusenOne"));
     const body = el("span", "as-balloon-body");
     body.style.background = "radial-gradient(circle at 34% 28%, #ffffff 0%, " + pick(COLORS) + " 74%)";
     node.append(body, el("span", "as-balloon-string"));
@@ -417,7 +416,7 @@ function playSakana() {
     const toRight = Math.random() < 0.5;
     const node = el("button", "as-fish");
     node.type = "button";
-    node.setAttribute("aria-label", t("as_sakana"));
+    node.setAttribute("aria-label", t("as_sakanaOne"));
     node.append(illust("sakana"));
     // 同じ 絵の まま 色だけ 変えて 何匹も いるように 見せる
     node.style.filter = "hue-rotate(" + pick([0, 0, 40, 150, 205, 300]) + "deg)";
@@ -549,11 +548,11 @@ function playOekaki() {
     });
   });
 
-  COLORS.forEach(one => {
+  COLORS.forEach((one, i) => {
     const swatch = el("button", "as-ink");
     swatch.type = "button";
     swatch.style.background = one;
-    swatch.setAttribute("aria-label", one);
+    swatch.setAttribute("aria-label", t("as_ink" + i));
     if (one === color) swatch.classList.add("is-on");
     onTap(swatch, () => {
       color = one;
@@ -593,7 +592,7 @@ function playOto() {
     key.type = "button";
     key.style.background = COLORS[i % COLORS.length];
     key.style.width = 100 - i * 7 + "%";
-    key.setAttribute("aria-label", t("as_oto"));
+    key.setAttribute("aria-label", t("as_otoKey", String(i + 1)));
     let timer = 0;
     onTap(key, () => {
       note(freq);
