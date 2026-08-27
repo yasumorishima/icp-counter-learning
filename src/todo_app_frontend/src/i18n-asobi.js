@@ -18,8 +18,21 @@ export const asobiEn = {
   as_oto: "Sounds",
   as_otoNote: "Tap to make a sound",
 
-  // 出て いない あな。読み上げが どこに もぐらが 居るかを 言える ように する
+  // ここから 下は 1 つ 1 つの ボタンの 名前（読み上げ用）。
+  // えらぶ 画面の 名前（Moles / Balloons / Sounds）は まとまりの 言いかたなので、
+  // ボタンに そのまま 使うと 1 ぴきなのに 複数形で 読まれる。
   as_moguraHole: "An empty hole",
+  as_moguraUp: "A mole",
+  as_fuusenOne: "A balloon",
+  as_sakanaOne: "A fish",
+  as_otoKey: "Sound {0}",
+  // おえかきの 色。読み上げが 色の 番号（#38bdf8）を 読まない ように 名前で 持つ
+  as_ink0: "Sky blue",
+  as_ink1: "Purple",
+  as_ink2: "Pink",
+  as_ink3: "Yellow",
+  as_ink4: "Green",
+  as_ink5: "Red",
   as_moguraTitle: "Tap the moles",
   as_fuusenTitle: "Pop the balloons",
   as_kotobaTitle: "Tap and listen",
@@ -52,8 +65,19 @@ export const asobiJa = {
   as_oto: "おと",
   as_otoNote: "さわると おとが なる",
 
-  // 出て いない あな。読み上げが どこに もぐらが 居るかを 言える ように する
+  // ここから 下は 1 つ 1 つの ボタンの 名前（読み上げ用）
   as_moguraHole: "あな",
+  as_moguraUp: "もぐら",
+  as_fuusenOne: "ふうせん",
+  as_sakanaOne: "さかな",
+  as_otoKey: "おと {0}",
+  // おえかきの 色。読み上げが 色の 番号（#38bdf8）を 読まない ように 名前で 持つ
+  as_ink0: "みずいろ",
+  as_ink1: "むらさき",
+  as_ink2: "ピンク",
+  as_ink3: "きいろ",
+  as_ink4: "みどり",
+  as_ink5: "あか",
   as_moguraTitle: "もぐらを さわろう",
   as_fuusenTitle: "ふうせんを われよう",
   as_kotobaTitle: "さわって きいてみよう",
