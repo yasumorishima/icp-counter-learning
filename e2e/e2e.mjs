@@ -1213,6 +1213,26 @@ for (const [file, want, ends] of [
   await kp.waitForTimeout(200);
   check("tapping a mole counts", (await count()).startsWith("1"), await count());
 
+  // 目が 見えない 人は 読み上げ（TalkBack の 2 回たたき）か キーボードで 押す。
+  // どちらも click しか 出さないので、pointerdown だけを 見て いると 何も 起きない。
+  // el.click() は detail が 0＝機械が 起こした click＝その 道すじの 再現。
+  check("an empty hole says it is a hole",
+    (await kp.locator(".as-mole:not(.is-up)").first().getAttribute("aria-label")) === "あな",
+    await kp.locator(".as-mole:not(.is-up)").first().getAttribute("aria-label"));
+  check("a mole that came up says it is a mole",
+    (await kp.locator(".as-mole.is-up").first().getAttribute("aria-label")) === "もぐら",
+    await kp.locator(".as-mole.is-up").first().getAttribute("aria-label"));
+  await kp.locator(".as-mole.is-up").first().evaluate(el => el.click());
+  await kp.waitForTimeout(200);
+  check("the screen reader way of pressing counts too", (await count()).startsWith("2"), await count());
+
+  // 指の タップは pointerdown と click の 両方が 出る。二重に 数えて いないか
+  await kp.waitForSelector(".as-mole.is-up", { timeout: 20000 });
+  const box = await kp.locator(".as-mole.is-up").first().boundingBox();
+  await kp.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await kp.waitForTimeout(250);
+  check("one tap counts once, not twice", (await count()).startsWith("3"), await count());
+
   // ふうせん: ひとりでに 上がって いき、さわると 割れる
   await kp.goto(BASE + "#/asobi/fuusen", { waitUntil: "domcontentloaded" });
   await kp.waitForSelector(".as-balloon", { timeout: 20000 });
@@ -1248,6 +1268,11 @@ for (const [file, want, ends] of [
   await kp.waitForTimeout(1100);
   const after = await kp.locator(".as-word-name").first().textContent();
   check("the tapped picture is replaced by a new one", after.trim() !== firstWord, `${firstWord} -> ${after}`);
+  // ことばも 読み上げ・キーボードの 押しかたで 進む
+  await kp.locator(".as-word").first().evaluate(el => el.click());
+  await kp.waitForTimeout(250);
+  check("the words game answers the screen reader way of pressing too",
+    (await count()).startsWith("2"), await count());
 
   // さかな: はじめから 泳いで いて、時間で 場所が 動き、さわると 減る
   await kp.goto(BASE + "#/asobi/sakana", { waitUntil: "domcontentloaded" });
@@ -1299,6 +1324,11 @@ for (const [file, want, ends] of [
     String(await kp.locator(".as-key").count()));
   await kp.locator(".as-key").first().dispatchEvent("pointerdown");
   check("a key answers when tapped", (await kp.locator(".as-key.is-hit").count()) === 1);
+  // おとも 読み上げ・キーボードの 押しかたで 光る（＝鳴る）
+  await kp.waitForTimeout(260);
+  await kp.locator(".as-key").nth(1).evaluate(el => el.click());
+  check("a key answers the screen reader way of pressing too",
+    (await kp.locator(".as-key.is-hit").count()) >= 1);
   const keyTall = await kp.$$eval(".as-key",
     els => els.map(el => el.getBoundingClientRect().height).filter(h => h < 44).length);
   check("the keys are big enough to hit", keyTall === 0, String(keyTall));
