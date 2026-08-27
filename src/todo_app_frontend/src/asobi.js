@@ -126,6 +126,27 @@ function finish(gameId) {
 
 // --- 1. もぐら --------------------------------------------------------------
 
+/**
+ * さわる・おす の 受け口。
+ *
+ * pointerdown だけを 見て いると、指では 遊べるが
+ * **読み上げ（TalkBack の 2 回たたき）と キーボードの エンター・スペースでは
+ * 何も 起きない**（どちらも click しか 出さない）。
+ * 指・マウスの click は detail が 1 以上、機械が 起こした click は detail が 0 なので、
+ * 0 の ときだけ 通せば 二重に 数えない。
+ */
+function onTap(node, run) {
+  node.addEventListener("pointerdown", event => {
+    event.preventDefault();
+    run();
+  });
+  node.addEventListener("click", event => {
+    if (event.detail !== 0) return;
+    event.preventDefault();
+    run();
+  });
+}
+
 function playMogura() {
   const TARGET = 10;
   const HOLES = 6;
@@ -146,11 +167,10 @@ function playMogura() {
     hole.append(mole);
     board.append(hole);
     const slot = { mole, up: false, timer: 0 };
+    // はじめは 出て いない＝「あな」。出入りの たびに 言いかたを 変える
+    mole.setAttribute("aria-label", t("as_moguraHole"));
     moles.push(slot);
-    mole.addEventListener("pointerdown", event => {
-      event.preventDefault();
-      hit(slot);
-    });
+    onTap(mole, () => hit(slot));
   }
 
   function hit(slot) {
@@ -158,6 +178,7 @@ function playMogura() {
     if (!slot.up || done) return;
     slot.up = false;
     slot.mole.classList.remove("is-up");
+    slot.mole.setAttribute("aria-label", t("as_moguraHole"));
     slot.mole.classList.add("is-hit");
     window.clearTimeout(slot.timer);
     slot.timer = window.setTimeout(() => slot.mole.classList.remove("is-hit"), 260);
@@ -178,10 +199,14 @@ function playMogura() {
     const slot = pick(idle);
     slot.up = true;
     slot.mole.classList.add("is-up");
+    slot.mole.setAttribute("aria-label", t("as_mogura"));
+    // 見えなくても 出た ことが 分かる ように 小さく 鳴らす（音は 設定で 切れる）
+    sounds.tick();
     window.clearTimeout(slot.timer);
     slot.timer = window.setTimeout(() => {
       slot.up = false;
       slot.mole.classList.remove("is-up");
+      slot.mole.setAttribute("aria-label", t("as_moguraHole"));
     }, randInt(1400, 2200));
   }
 
@@ -226,10 +251,9 @@ function playFuusen() {
       // ゆっくり（幼児が 追いつける 速さ）。動きを 減らす 設定なら さらに ゆっくり
       v: reduceMotion() ? randInt(14, 20) : randInt(26, 42),
     };
-    node.addEventListener("pointerdown", event => {
-      event.preventDefault();
-      pop(item);
-    });
+    onTap(node, () => pop(item));
+    // 見えなくても 出た ことが 分かる ように 小さく 鳴らす
+    sounds.tick();
     live.push(item);
   }
 
@@ -331,10 +355,7 @@ function playKotoba() {
     card.type = "button";
     card.setAttribute("aria-label", wordText(word));
     card.append(illust(word.id), el("b", "as-word-name", wordText(word)));
-    card.addEventListener("pointerdown", event => {
-      event.preventDefault();
-      tap(card, word);
-    });
+    onTap(card, () => tap(card, word));
     return card;
   }
 
@@ -410,10 +431,7 @@ function playSakana() {
       v: (reduceMotion() ? randInt(22, 34) : randInt(38, 66)) * (toRight ? 1 : -1),
       toRight,
     };
-    node.addEventListener("pointerdown", event => {
-      event.preventDefault();
-      scoop(item);
-    });
+    onTap(node, () => scoop(item));
     live.push(item);
   }
 
@@ -537,8 +555,7 @@ function playOekaki() {
     swatch.style.background = one;
     swatch.setAttribute("aria-label", one);
     if (one === color) swatch.classList.add("is-on");
-    swatch.addEventListener("pointerdown", event => {
-      event.preventDefault();
+    onTap(swatch, () => {
       color = one;
       tools.querySelectorAll(".as-ink").forEach(node => node.classList.remove("is-on"));
       swatch.classList.add("is-on");
@@ -549,8 +566,7 @@ function playOekaki() {
 
   const clear = el("button", "as-clear", t("as_oekakiClear"));
   clear.type = "button";
-  clear.addEventListener("pointerdown", event => {
-    event.preventDefault();
+  onTap(clear, () => {
     g.clearRect(0, 0, canvas.width, canvas.height);
     sounds.tick();
   });
@@ -579,8 +595,7 @@ function playOto() {
     key.style.width = 100 - i * 7 + "%";
     key.setAttribute("aria-label", t("as_oto"));
     let timer = 0;
-    key.addEventListener("pointerdown", event => {
-      event.preventDefault();
+    onTap(key, () => {
       note(freq);
       key.classList.add("is-hit");
       window.clearTimeout(timer);

@@ -18,6 +18,8 @@ export const asobiEn = {
   as_oto: "Sounds",
   as_otoNote: "Tap to make a sound",
 
+  // 出て いない あな。読み上げが どこに もぐらが 居るかを 言える ように する
+  as_moguraHole: "An empty hole",
   as_moguraTitle: "Tap the moles",
   as_fuusenTitle: "Pop the balloons",
   as_kotobaTitle: "Tap and listen",
@@ -50,6 +52,8 @@ export const asobiJa = {
   as_oto: "おと",
   as_otoNote: "さわると おとが なる",
 
+  // 出て いない あな。読み上げが どこに もぐらが 居るかを 言える ように する
+  as_moguraHole: "あな",
   as_moguraTitle: "もぐらを さわろう",
   as_fuusenTitle: "ふうせんを われよう",
   as_kotobaTitle: "さわって きいてみよう",
