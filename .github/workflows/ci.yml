@@ -43,6 +43,7 @@ jobs:
           node tests/shogi-endings.test.mjs
           node tests/sky-astro.test.mjs
           node tests/sky-names.test.mjs
+          node tests/i18n-keys.test.mjs
 
       # 自分の 実装を 自分で 採点しない。外の OSS（tsshogi・MIT）と 合法手を 全数 突き合わせる。
       - name: しょうぎの きまりを 外の OSS と 突き合わせ
