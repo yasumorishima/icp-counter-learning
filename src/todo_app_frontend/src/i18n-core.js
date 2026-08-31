@@ -90,6 +90,8 @@ export const coreEn = {
   c_whoNameLabel: "The name to keep records under",
   // えらぶ 画面の「よみあげ・キーボードで つかうとき」
   c_a11yTitle: "Using this with a screen reader or a keyboard",
+  c_a11yStart: "The reading aloud comes from your device, not from this site: TalkBack on Android, VoiceOver on iPhone and Mac, Narrator on Windows. This site hands that reader a name for everything on the page.",
+  c_a11yDrill: "Arithmetic: the question and every answer button are reached with Tab and chosen with Enter. Whether you got it right is shown as text, not only as a sound, and it is read aloud.",
   c_a11ySky: "Sora: arrow keys look around, plus and minus zoom, Enter reads what is in the middle. The direction and height you are looking at are spoken every time you move.",
   c_a11yAsobi: "Play: Tab moves between things, Enter or Space touches them. Moles and balloons make a small sound when they appear.",
   c_a11yShogi: "Shogi: every square is a button, named like \"5e black pawn\".",
@@ -255,6 +257,8 @@ export const coreJa = {
   c_whoNameLabel: "きろくを のこす なまえ",
   // えらぶ 画面の「よみあげ・キーボードで つかうとき」
   c_a11yTitle: "よみあげ・キーボードで つかうとき",
+  c_a11yStart: "よみあげを するのは この サイトでは なく たんまつの きのうです（Android は TalkBack、iPhone・Mac は VoiceOver、Windows は ナレーター）。この サイトは その よみあげに、画面の ぜんぶの 名前を わたします",
+  c_a11yDrill: "さんすう＝もんだいも こたえの ボタンも タブで うつり、エンターで えらべます。あって いるかは 音だけで なく 文字でも 出て、よみあげにも 流れます",
   c_a11ySky: "そら＝矢印キーで 見まわし、＋と−で ちかづいたり はなれたり、エンターで まんなかの 星の 名前を 読みます。見て いる 方角と 高さは 動かすたびに ことばで 出ます",
   c_a11yAsobi: "あそび＝タブで うつり、エンターか スペースで さわれます。もぐらと ふうせんは 出た ときに 音が 鳴ります",
   c_a11yShogi: "しょうぎ＝ますは ぜんぶ ボタンです。「５五 先手歩」のように 名前が つきます",

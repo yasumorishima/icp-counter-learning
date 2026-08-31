@@ -1399,6 +1399,12 @@ for (const [file, want, ends] of [
     (await kp.locator(".pick-help").count()) === 1);
   const helpText = await kp.locator(".pick-help").textContent();
   check("the help names the keys", /矢印|エンター/.test(helpText), helpText.slice(0, 60));
+  // 読み上げを どこから 始めるのかが 書いて ある（サイトが 喋る わけでは ない）
+  check("the help says where the reading aloud comes from",
+    /TalkBack/.test(helpText) && /VoiceOver/.test(helpText), helpText.slice(0, 80));
+  // 4つ ぜんぶに ふれて いる（さんすうだけ 抜けて いた）
+  check("the help covers all four things",
+    ["さんすう", "しょうぎ", "そら", "あそび"].every(w => helpText.includes(w)));
 
   await kid.context.close();
 }
