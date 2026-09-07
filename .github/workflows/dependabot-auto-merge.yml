@@ -1,0 +1,115 @@
+name: Dependabot auto-merge
+
+# CI が緑になった Dependabot の PR を、パッチとマイナーに限って自動で取り込む。
+#
+# pull_request ではなく workflow_run を引き金にしているのは 2 つの理由から。
+#   - Dependabot の PR に渡る GITHUB_TOKEN は読み取り専用で、そもそも merge できない
+#   - workflow_run は「CI が終わったこと」そのものが引き金なので、緑を待つ処理を
+#     自分で書かずに済む（待ち合わせを書くとそこが壊れる）
+# workflow_run で走るのは main に置かれたこのファイルなので、PR 側で中身を
+# 書き換えても差し替わらない。
+#
+# 判定は fail-closed。Dependabot の PR だと確認できない・版が読み取れない・
+# CI が見たコミットと先端が違う、のいずれでも「何もしない」で終える。
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: dependabot-auto-merge-${{ github.event.workflow_run.head_branch }}
+
+jobs:
+  merge:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 緑になった Dependabot の PR を取り込む
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+        run: |
+          set -euo pipefail
+
+          if [ "$HEAD_REPO" != "$REPO" ]; then
+            echo "枝が $HEAD_REPO ＝ fork。何もしない"
+            exit 0
+          fi
+
+          case "$BRANCH" in
+            dependabot/*) ;;
+            *) echo "$BRANCH は Dependabot の枝ではない。何もしない"; exit 0 ;;
+          esac
+
+          pr=$(gh pr list --repo "$REPO" --head "$BRANCH" --state open \
+                 --json number,author,headRefOid,title,body --jq '.[0] // empty')
+          if [ -z "$pr" ]; then
+            echo "$BRANCH に開いている PR が無い。何もしない"
+            exit 0
+          fi
+
+          number=$(jq -r '.number' <<<"$pr")
+          author=$(jq -r '.author.login' <<<"$pr")
+          head=$(jq -r '.headRefOid' <<<"$pr")
+          jq -r '.title' <<<"$pr" > pr-title.txt
+          jq -r '.body' <<<"$pr" > pr-body.txt
+
+          # gh は GitHub App の作者を版によって dependabot[bot] とも app/dependabot とも返す
+          case "$author" in
+            'dependabot[bot]'|'app/dependabot') ;;
+            *) echo "PR #$number の作者は $author ＝ Dependabot ではない。何もしない"; exit 0 ;;
+          esac
+
+          # CI が見たコミットと今の先端が違えば、その緑は今の中身の緑ではない
+          if [ "$head" != "$HEAD_SHA" ]; then
+            echo "PR #$number の先端は $head で、CI が見た $HEAD_SHA と違う。何もしない"
+            exit 0
+          fi
+
+          # 版は本文から読む。Dependabot は依存ごとに 1 行ずつ、単独なら
+          # 「Bumps <名前> from <旧> to <新>」、group なら「Updates ...」を書く。
+          # 🔴 本文全体を見てはいけない：取り込んだ変更履歴の引用にも
+          # 「bump postcss from 8.5.15 to 8.5.18」のような行が現れる（PR #18 で実測）。
+          # 行頭が Bumps / Updates の要約行だけを対象にする。
+          verdict=$(python3 - <<'PY'
+          import pathlib, re
+
+          body = pathlib.Path("pr-body.txt").read_text(encoding="utf-8", errors="replace")
+          pairs = re.findall(
+              r"^(?:Bumps|Updates) .*?\bfrom v?(\d+(?:\.\d+)*) to v?(\d+(?:\.\d+)*)",
+              body,
+              re.MULTILINE,
+          )
+          if not pairs:
+              print("unreadable")
+          elif all(a.split(".")[0] == b.split(".")[0] for a, b in pairs):
+              print("ok %d" % len(pairs))
+          else:
+              print("major")
+          PY
+          )
+          echo "版の読み取り: $verdict"
+
+          case "$verdict" in
+            ok\ *)
+              gh pr merge "$number" --repo "$REPO" --squash --delete-branch
+              echo "PR #$number を取り込んだ"
+              ;;
+            major)
+              echo "メジャー更新を含むので自動では入れない。PR #$number は開いたままにする"
+              ;;
+            *)
+              echo "本文から版を読み取れなかった。PR #$number は開いたままにする"
+              ;;
+          esac
