@@ -15,9 +15,9 @@
     "prestart": "dfx generate"
   },
   "devDependencies": {
-    "@dfinity/agent": "^1.0.1",
-    "@dfinity/candid": "^1.0.1",
-    "@dfinity/principal": "^1.0.1",
+    "@dfinity/agent": "^3.4.3",
+    "@dfinity/candid": "^3.4.3",
+    "@dfinity/principal": "^3.4.3",
     "@icp-sdk/core": "^6.1.0",
     "assert": "^2.0.0",
     "buffer": "^6.0.3",
