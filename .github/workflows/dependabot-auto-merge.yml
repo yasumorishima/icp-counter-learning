@@ -7,7 +7,7 @@ name: Dependabot auto-merge
 #   - workflow_run は「CI が終わったこと」そのものが引き金なので、緑を待つ処理を
 #     自分で書かずに済む（待ち合わせを書くとそこが壊れる）
 # workflow_run で走るのは main に置かれたこのファイルなので、PR 側で中身を
-# 書き換えても差し替わらない。
+# 書き換えても差し替わらない。checkout は一切しない。
 #
 # 判定は fail-closed。Dependabot の PR だと確認できない・版が読み取れない・
 # CI が見たコミットと先端が違う、のいずれでも「何もしない」で終える。
@@ -20,6 +20,9 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  # 取り込んだ後の main を確かめるために CI を手動起動する。GITHUB_TOKEN による
+  # push はワークフローを起こさないが、workflow_dispatch は明文の例外。
+  actions: write
 
 concurrency:
   group: dependabot-auto-merge-${{ github.event.workflow_run.head_branch }}
@@ -52,24 +55,24 @@ jobs:
             *) echo "$BRANCH は Dependabot の枝ではない。何もしない"; exit 0 ;;
           esac
 
+          # 🔴 --head は fork の PR も返す。同じ枝名の PR を fork に立てられると
+          # そちらが先頭に来て本物が素通しされるので、同一リポジトリのものだけに絞る。
+          # gh は GitHub App の作者を版によって app/dependabot とも
+          # dependabot[bot] とも返す（このリポジトリの PR #18 は app/dependabot）。
           pr=$(gh pr list --repo "$REPO" --head "$BRANCH" --state open \
-                 --json number,author,headRefOid,title,body --jq '.[0] // empty')
+                 --json number,author,headRefOid,title,body,isCrossRepository \
+                 --jq '[ .[]
+                         | select(.isCrossRepository | not)
+                         | select(.author.login == "app/dependabot"
+                                  or .author.login == "dependabot[bot]") ][0] // empty')
           if [ -z "$pr" ]; then
-            echo "$BRANCH に開いている PR が無い。何もしない"
+            echo "$BRANCH に Dependabot の開いた PR が無い。何もしない"
             exit 0
           fi
 
           number=$(jq -r '.number' <<<"$pr")
-          author=$(jq -r '.author.login' <<<"$pr")
           head=$(jq -r '.headRefOid' <<<"$pr")
-          jq -r '.title' <<<"$pr" > pr-title.txt
           jq -r '.body' <<<"$pr" > pr-body.txt
-
-          # gh は GitHub App の作者を版によって dependabot[bot] とも app/dependabot とも返す
-          case "$author" in
-            'dependabot[bot]'|'app/dependabot') ;;
-            *) echo "PR #$number の作者は $author ＝ Dependabot ではない。何もしない"; exit 0 ;;
-          esac
 
           # CI が見たコミットと今の先端が違えば、その緑は今の中身の緑ではない
           if [ "$head" != "$HEAD_SHA" ]; then
@@ -77,21 +80,29 @@ jobs:
             exit 0
           fi
 
-          # 版は本文から読む。Dependabot は依存ごとに 1 行ずつ、単独なら
-          # 「Bumps <名前> from <旧> to <新>」、group なら「Updates ...」を書く。
-          # 🔴 本文全体を見てはいけない：取り込んだ変更履歴の引用にも
-          # 「bump postcss from 8.5.15 to 8.5.18」のような行が現れる（PR #18 で実測）。
-          # 行頭が Bumps / Updates の要約行だけを対象にする。
+          # 版は本文から読む。Dependabot は依存ごとに 1 行ずつ要約を書く。
           verdict=$(python3 - <<'PY'
-          import pathlib, re
+          import pathlib
+          import re
 
           body = pathlib.Path("pr-body.txt").read_text(encoding="utf-8", errors="replace")
-          pairs = re.findall(
-              r"^(?:Bumps|Updates) .*?\bfrom v?(\d+(?:\.\d+)*) to v?(\d+(?:\.\d+)*)",
-              body,
-              re.MULTILINE,
-          )
-          if not pairs:
+
+          # 🔴 本文全体を見てはいけない：取り込んだ変更履歴の引用にも
+          # 「bump postcss from 8.5.15 to 8.5.18」のような行が現れる（PR #18 で実測）。
+          claims = [l for l in body.splitlines() if re.match(r"^(?:Bumps|Updates) ", l)]
+          # group PR の見出し（「Bumps the actions group with 6 updates:」）は版を持たない
+          claims = [l for l in claims
+                    if not re.match(r"^Bumps the .+ group with \d+ update", l)]
+
+          pairs = []
+          for line in claims:
+              m = re.search(r"\bfrom v?(\d+(?:\.\d+)*) to v?(\d+(?:\.\d+)*)", line)
+              if m:
+                  pairs.append(m.groups())
+
+          # 🔴 旧版を書かない要約行が実在する（「Updates `stylelint` to 17.15.0」）。
+          # 拾えた組の数が要約行の数に足りなければ、読めていない依存がある。
+          if not pairs or len(pairs) != len(claims):
               print("unreadable")
           elif all(a.split(".")[0] == b.split(".")[0] for a, b in pairs):
               print("ok %d" % len(pairs))
@@ -103,8 +114,15 @@ jobs:
 
           case "$verdict" in
             ok\ *)
-              gh pr merge "$number" --repo "$REPO" --squash --delete-branch
+              # --match-head-commit は GitHub 側で先端を照合させる。判定してから
+              # merge するまでの間に rebase が入っても、未検証のコミットは入らない。
+              gh pr merge "$number" --repo "$REPO" --squash --delete-branch \
+                --match-head-commit "$HEAD_SHA"
               echo "PR #$number を取り込んだ"
+              # 取り込み後の main は誰も見ていない（GITHUB_TOKEN の push は CI を
+              # 起こさない）。複数 PR が同じ base で緑になった合成結果を確かめる。
+              gh workflow run ci.yml --repo "$REPO" --ref main \
+                -f memo="Dependabot #$number 取り込み後の main を確かめる"
               ;;
             major)
               echo "メジャー更新を含むので自動では入れない。PR #$number は開いたままにする"
