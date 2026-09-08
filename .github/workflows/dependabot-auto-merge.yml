@@ -86,13 +86,12 @@ jobs:
           import re
 
           body = pathlib.Path("pr-body.txt").read_text(encoding="utf-8", errors="replace")
+          lines = body.splitlines()
 
-          # 🔴 本文全体を見てはいけない：取り込んだ変更履歴の引用にも
+          # Dependabot 自身の要約行だけを見る。取り込んだ変更履歴の引用にも
           # 「bump postcss from 8.5.15 to 8.5.18」のような行が現れる（PR #18 で実測）。
-          claims = [l for l in body.splitlines() if re.match(r"^(?:Bumps|Updates) ", l)]
-          # group PR の見出し（「Bumps the actions group with 6 updates:」）は版を持たない
-          claims = [l for l in claims
-                    if not re.match(r"^Bumps the .+ group with \d+ update", l)]
+          heads = [l for l in lines if re.match(r"^Bumps the .+ group with \d+ update", l)]
+          claims = [l for l in lines if re.match(r"^(?:Bumps|Updates) ", l) and l not in heads]
 
           pairs = []
           for line in claims:
@@ -100,9 +99,46 @@ jobs:
               if m:
                   pairs.append(m.groups())
 
+
+          def named_in(head):
+              """group の見出しが コロンの後ろに 並べている 依存の名前。"""
+              if ": " not in head:
+                  return []
+              tail = head.split(": ", 1)[1].strip().rstrip(".")
+              out = []
+              for part in re.split(r",\s+|\s+and\s+", tail):
+                  part = part.strip()
+                  m = re.match(r"^\[(.+?)\]\(.*\)$", part)
+                  out.append(m.group(1) if m else part)
+              return [p for p in out if p]
+
+
+          if heads:
+              # 見出しは、コロンの後ろに 並べる形と、コロンで終わって 下の行に 並べる形が ある。
+              # 名前が 取れるなら 名前で、取れないなら 宣言された 件数で 見る。
+              declared = set()
+              least = 0
+              for h in heads:
+                  names = named_in(h)
+                  if names:
+                      declared.update(names)
+                  else:
+                      least = max(least, int(re.search(r"with (\d+) update", h).group(1)))
+              read = set(re.findall(r"^Updates `([^`]+)` from v?\d", body, re.M))
+              # 🔴 本文は 65,536 文字で 切り詰められる＝group の 後ろのほうの 依存の 版行が
+              # まるごと 落ちることが ある（icrc167-android #6 で実測。ちょうど 65,536 バイトで
+              # androidx.browser の 版行が 無かった）。見出しは 先頭に あるので 残る。
+              structure_ok = (
+                  bool(declared or least)
+                  and declared <= read
+                  and len(read) >= least
+                  and len(pairs) == len(claims)
+              )
+          else:
+              structure_ok = bool(claims) and len(pairs) == len(claims)
+
           # 🔴 旧版を書かない要約行が実在する（「Updates `stylelint` to 17.15.0」）。
-          # 拾えた組の数が要約行の数に足りなければ、読めていない依存がある。
-          if not pairs or len(pairs) != len(claims):
+          if not pairs or not structure_ok:
               print("unreadable")
           elif all(a.split(".")[0] == b.split(".")[0] for a, b in pairs):
               print("ok %d" % len(pairs))
