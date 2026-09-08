@@ -378,7 +378,9 @@ function startTimeAttack() {
     unit: { id: "time-" + grade, name: t("dr_timeUnit", grade), kind: "num" },
     variant: undefined,
     time: true,
-    endsAt: Date.now() + 60000,
+    // 60 びょう。E2E が 60 秒 待たずに「時間で おわる」経路を 通せるよう、
+    // 締め切りだけ 外から 短くできる（本番では window.__timeAttackMs は 無い）。
+    endsAt: Date.now() + (Number(window.__timeAttackMs) || 60000),
     list: [],
     at: 0,
     right: 0,
