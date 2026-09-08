@@ -245,7 +245,7 @@ node e2e/e2e.mjs http://$(dfx canister id todo_app_frontend).localhost:4943/
 リンクを 貼った ときの 画像（絶対 URL・大きさ・実物が 配られて いること）まで、
 あそびの 6 つ（出て くる／さわると 進む／外しても とがめない／1 本道／なぞって ゴール）まで、
 読み上げに 渡して いる 中身（下の 節）まで、
-**230 項目**を 実ブラウザで 確かめます。
+**236 項目**を 実ブラウザで 確かめます。
 
 画面が なくても できる 検算（node）は **197 項目 ＋ ことばの そろい**です。
 しょうぎの きまり 25／あいて 11／終わりかた 39、そらの 計算 29／星の 名前 93、
@@ -255,6 +255,8 @@ node e2e/e2e.mjs http://$(dfx canister id todo_app_frontend).localhost:4943/
 
 push と PR のたびに 上を すべて実行します（鍵は 使いません）。
 **反映は CI からは行いません**（配備鍵を GitHub に置かないため。`scripts/deploy.sh` を 人が実行します）。
+
+依存の 更新は 毎週 月曜に Dependabot が 取りに 行きます。**パッチと マイナーは CI が 緑に なった ものだけ 自動で 入り、メジャーは 開いた まま 残ります**（`.github/dependabot.yml` と `.github/workflows/dependabot-auto-merge.yml`）。
 
 ## デプロイ
 
