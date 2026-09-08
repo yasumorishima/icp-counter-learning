@@ -38,7 +38,13 @@ updates:
       timezone: Asia/Tokyo
     open-pull-requests-limit: 5
     groups:
+      # 🔴 update-types を省くと全 SemVer が 1 本に入る。Actions はメジャーが
+      # 頻繁に上がる（実物 lukelowry.github.io#3 は checkout 4→7 を含む 6 件が 1 PR）ので、
+      # 省くとメジャー 1 件でパッチまで道連れに手動へ落ちる。
       actions:
         patterns: ["*"]
+        update-types:
+          - minor
+          - patch
     commit-message:
       prefix: "chore(ci)"
