@@ -449,11 +449,12 @@ await drill.page.click("#time-card");
 await drill.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
 check("the timer is counting", /のこり \d+びょう/.test((await drill.page.locator("#quiz-timer").textContent()).trim()));
 
-// 3 問 つづけて 正解して コンボを出す
+// 3 問 つづけて 答える。コンボは 3 問 続けて 正解したときだけ 出るので、
+// 出たかどうかは こちらが 何問 正解したかと 突き合わせる。
+const answered = [];
 for (let i = 0; i < 3; i += 1) {
   const isChoice = (await drill.page.locator(".quiz-choices:not(.is-hidden) .choice").count()) > 0;
   if (isChoice) {
-    const answer = await drill.page.evaluate(() => window.__answer || null);
     await drill.page.locator(".quiz-choices .choice").first().click();
   } else {
     const parts = (await drill.page.locator("#quiz-text").textContent()).trim().split(" ");
@@ -466,21 +467,37 @@ for (let i = 0; i < 3; i += 1) {
     else for (const digit of value.split("")) await drill.page.locator(`.pad[data-pad="${digit}"]`).click();
     await drill.page.locator('.pad[data-pad="ok"]').click();
   }
-  await drill.page.waitForTimeout(400);
+  // 採点の 印が 出るまで 待って、正解だったかを 画面から 読む
+  await drill.page.waitForSelector("#quiz-feedback.is-ok, #quiz-feedback.is-ng", { timeout: 10000 });
+  answered.push(await drill.page.locator("#quiz-feedback").evaluate(el => el.classList.contains("is-ok")));
+  // 🔴 次の問題が 出るまで 待つ。アプリの 待ち時間は 正解 260ms・不正解 700ms で、
+  // 固定の 400ms で 進むと 前の問題の 画面のまま 分岐してしまい、次が 選択問題だと
+  // 消えている 数字パッドの「こたえる」を 押しに行って 30 秒 待たされる（2026-09-08 実測）。
+  await drill.page.waitForFunction(
+    () => document.getElementById("quiz-feedback").textContent === "",
+    null,
+    { timeout: 10000 },
+  );
 }
 const comboSeen = await drill.page.evaluate(() => !document.getElementById("quiz-combo").classList.contains("is-hidden"));
-check("a combo shows after three in a row", typeof comboSeen === "boolean");
+check("a combo shows exactly when three in a row are right", comboSeen === answered.every(Boolean),
+  "answered=" + answered.join(",") + " combo=" + comboSeen);
 
-// 時間で 自動的に おわる（時計を進めて 確かめる）
-await drill.page.evaluate(() => { window.__endEarly = true; });
-await drill.page.evaluate(() => {
-  const el = document.getElementById("quiz-timer");
-  return el ? el.textContent : "";
-});
 await drill.page.click("#quiz-quit");
 await drill.page.waitForSelector("#view-drill:not(.is-hidden)", { timeout: 20000 });
 check("leaving the time attack stops the clock", await drill.page.locator("#quiz-timer").isHidden());
 check("leaving the time attack returns to the drill top", await drill.page.locator("#drill-main").isVisible());
+
+// 時間で 自動的に おわる。60 秒 待たずに 締め切りだけ 短くして、誰も 操作しなくても
+// 結果の 画面へ 移ることを 見る（それまで ここは window.__endEarly を 立てるだけで、
+// 読む側が どこにも 無く 空回りしていた）。
+await drill.page.evaluate(() => { window.__timeAttackMs = 1200; });
+await drill.page.click("#time-card");
+await drill.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
+await drill.page.waitForSelector("#view-result:not(.is-hidden)", { timeout: 15000 });
+check("the time attack ends by itself when the clock runs out",
+  await drill.page.locator("#view-result").isVisible());
+await drill.page.evaluate(() => { delete window.__timeAttackMs; });
 
 // おとは 切れる
 await openDrill(drill.page);
