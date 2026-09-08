@@ -17,6 +17,13 @@ updates:
       timezone: Asia/Tokyo
     open-pull-requests-limit: 5
     groups:
+      # 🔴 @dfinity/* は互いに peer dependency で縛り合っている。1 つだけ上げると
+      # `npm ci` が ERESOLVE で落ちる（2026-09-08 実測＝candid だけ 1.4.0→3.4.3 にした
+      # PR #28 は agent@1.4.0 の peer `candid@^1.4.0` と衝突）。メジャーも含めて
+      # 家族ごと動かす。上から順に当たるので npm の総称より前に置く。
+      dfinity:
+        patterns: ["@dfinity/*"]
+
       # 1 件 1 PR にすると CI（ビルド＋検算＋E2E）が件数ぶん回る。
       # パッチとマイナーは 1 本にまとめ、メジャーはまとめずに個別で立てさせる
       # ＝自動取り込みの対象から外れて目に残る。
