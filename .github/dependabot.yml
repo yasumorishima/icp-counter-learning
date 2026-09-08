@@ -1,0 +1,50 @@
+# 依存の更新を待たずに毎週こちらから取りに行くための設定。
+#
+# 脆弱性が見つかったときの自動 PR（Dependabot security updates）はリポジトリ側の
+# 設定で既に有効になっている。ここで宣言するのは「脆弱性が出る前に古くしておかない」
+# ための定期更新のほうで、両方あって初めて警告メールが届く前に片が付く。
+#
+# 取り込みは .github/workflows/dependabot-auto-merge.yml が CI の緑を見て行う。
+# メジャー更新だけは自動で入らない（同ファイルの判定を参照）。
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "04:00"
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 5
+    groups:
+      # 1 件 1 PR にすると CI（ビルド＋検算＋E2E）が件数ぶん回る。
+      # パッチとマイナーは 1 本にまとめ、メジャーはまとめずに個別で立てさせる
+      # ＝自動取り込みの対象から外れて目に残る。
+      npm:
+        patterns: ["*"]
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "04:00"
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 5
+    groups:
+      # 🔴 update-types を省くと全 SemVer が 1 本に入る。Actions はメジャーが
+      # 頻繁に上がる（実物 lukelowry.github.io#3 は checkout 4→7 を含む 6 件が 1 PR）ので、
+      # 省くとメジャー 1 件でパッチまで道連れに手動へ落ちる。
+      actions:
+        patterns: ["*"]
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: "chore(ci)"
