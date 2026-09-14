@@ -326,6 +326,64 @@ function stopSpeech() {
   }
 }
 
+// 声の 一覧を 待つ 長さ。Chrome は 開いた 直後は 空で、あとから voiceschanged で 届く
+const VOICE_WAIT_MS = 1500;
+
+/**
+ * この 端末に その ことばの 声が あるか 見て、report(true / false) で 知らせる。
+ * すぐ 見つからなくても VOICE_WAIT_MS までは 待つ。待った あとに 届いたら report(true) を
+ * もう 一度 呼ぶ（遅れて 届く 端末で 一行を 出しっぱなしに しない）。かえり値で 見るのを やめる。
+ */
+function watchVoice(lang, report) {
+  const want = lang.slice(0, 2).toLowerCase();
+  let synth = null;
+  try {
+    synth = window.speechSynthesis || null;
+  } catch (error) {
+    synth = null;
+  }
+  if (!synth || typeof synth.getVoices !== "function") {
+    report(false);
+    return () => {};
+  }
+  const has = () => {
+    try {
+      return synth.getVoices().some(voice =>
+        String(voice.lang || "").toLowerCase().replace("_", "-").startsWith(want));
+    } catch (error) {
+      return false;
+    }
+  };
+  if (has()) {
+    report(true);
+    return () => {};
+  }
+  let stopped = false;
+  let timer = 0;
+  const onChange = () => {
+    if (stopped || !has()) return;
+    window.clearTimeout(timer);
+    report(true);
+  };
+  try {
+    synth.addEventListener("voiceschanged", onChange);
+  } catch (error) {
+    /* 知らせを 受けられない 端末は 待つ だけ */
+  }
+  timer = window.setTimeout(() => {
+    if (!stopped && !has()) report(false);
+  }, VOICE_WAIT_MS);
+  return () => {
+    stopped = true;
+    window.clearTimeout(timer);
+    try {
+      synth.removeEventListener("voiceschanged", onChange);
+    } catch (error) {
+      /* 外せなくても stopped で 止まる */
+    }
+  };
+}
+
 function wordText(word) {
   return currentLang() === "ja" ? word.ja : word.en;
 }
@@ -335,6 +393,16 @@ function playKotoba() {
   const frame = makeFrame("as_kotobaTitle", TARGET);
   const yard = el("div", "as-words");
   frame.stage.append(yard);
+
+  // 声を 持たない 端末では 読み上げが だまって 何も 言わない（say は 失敗を 握りつぶす）。
+  // 絵と 文字と 音では あそべるが、声が 出ないと 分かる ように 一行 出す
+  const voiceNote = el("p", "as-voice-note", t("as_kotobaNoVoice"));
+  voiceNote.setAttribute("role", "status");
+  voiceNote.classList.add("is-hidden");
+  frame.stage.before(voiceNote);
+  const stopWatching = watchVoice(currentLang() === "ja" ? "ja" : "en", ok => {
+    voiceNote.classList.toggle("is-hidden", ok);
+  });
 
   let bag = shuffle(WORDS);
   let at = 0;
@@ -383,6 +451,7 @@ function playKotoba() {
 
   onLeave(() => {
     done = true;
+    stopWatching();
     stopSpeech();
   });
 }
