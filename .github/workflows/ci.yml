@@ -114,6 +114,22 @@ jobs:
           grep -q 'ifoqp-6iaaa-aaaaj-qnnrq-cai' dist/todo_app_frontend/index.js || { echo "backend canister id が無い" >&2; exit 1; }
           echo "OK: script タグ 1 個 / ic0.app / backend canister id"
 
+      # いまの画面は .ts を 1 本も持たないので、上の本番ビルドでは ts-loader の規則が一度も走らない。
+      # そのため TypeScript のメジャー更新で ts-loader の経路が壊れても配布物は変わらず緑になる
+      # （2026-09-14 実測＝TS 7.0.2 は JS API が無く ts-loader が TypeError、TS 6.0.3 は
+      # tsconfig の moduleResolution=node が TS5107 で止まる）。小さな .ts を通して確かめる。
+      - name: ts-loader が .ts を通せるか
+        run: |
+          probe="$RUNNER_TEMP/tsprobe"
+          mkdir -p "$probe"
+          printf 'const n: number = 41 + 1;\nexport const probe = `probe-${n}`;\nconsole.log(probe);\n' > probe-ts-loader.ts
+          DFX_NETWORK=ic CANISTER_ID_TODO_APP_BACKEND=ifoqp-6iaaa-aaaaj-qnnrq-cai \
+            npx webpack --mode production --no-color --entry-reset --entry ./probe-ts-loader.ts --output-path "$probe" > "$probe/build.log" 2>&1 \
+            || { cat "$probe/build.log" >&2; rm -f probe-ts-loader.ts; echo "ts-loader で .ts をビルドできない" >&2; exit 1; }
+          rm -f probe-ts-loader.ts
+          grep -q 'probe-42' "$probe/index.js" || { cat "$probe/build.log" >&2; echo "出力に型を外した結果（probe-42）が無い" >&2; exit 1; }
+          echo "OK: typescript $(node -p 'require("typescript").version') で .ts を通せた"
+
       - name: ローカル replica 向けにビルドして配置
         run: |
           rm -rf dist
