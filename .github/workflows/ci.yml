@@ -72,6 +72,35 @@ jobs:
           dfx deploy todo_app_backend
           dfx generate todo_app_backend
 
+      # npm start（webpack serve）は本番のビルドと別の設定（devServer）を読むので、
+      # 本番ビルドが緑でも壊れていることがある。実際に proxy の書き方が dev-server 5 で
+      # 通らなくなったまま 3 か月 起動しなかった。起動させ、ページと /api の中継を叩く。
+      # 中継は「dev-server 経由」と「replica 直」の中身が同じかで見る（中継が無いと
+      # dev-server 自身の 404 ページが返り、中身が一致しない）。
+      - name: 開発サーバーが起動して replica へ中継できるか
+        run: |
+          npx webpack serve --mode development --env development --port 18080 > serve.log 2>&1 &
+          pid=$!
+          up=0
+          for i in $(seq 1 60); do
+            if grep -qE "compiled (successfully|with)" serve.log; then up=1; break; fi
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 2
+          done
+          fail() { echo "$1" >&2; cat serve.log >&2; kill "$pid" 2>/dev/null || true; exit 1; }
+          test "$up" = 1 || fail "開発サーバーが起動しなかった"
+          ! grep -qE "compiled with [0-9]+ errors?" serve.log || fail "開発サーバーのビルドにエラーがある"
+          page=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 http://127.0.0.1:18080/)
+          via=$( (curl -s --max-time 20 http://127.0.0.1:18080/api/v2/status || true) | sha256sum | cut -c1-16)
+          viacode=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 http://127.0.0.1:18080/api/v2/status)
+          direct=$( (curl -s --max-time 20 http://127.0.0.1:4943/api/v2/status || true) | sha256sum | cut -c1-16)
+          directcode=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 http://127.0.0.1:4943/api/v2/status)
+          kill "$pid" 2>/dev/null || true
+          echo "GET / -> $page / /api/v2/status: dev-server $viacode $via / replica $directcode $direct"
+          test "$page" = 200 || fail "ページが 200 でない"
+          test "$directcode" = 200 || fail "replica 直の /api/v2/status が 200 でない（検査の前提が崩れている）"
+          test "$viacode" = 200 && test "$via" = "$direct" || fail "dev-server が /api を replica へ中継していない"
+
       # 本番と同じ条件（最小化あり・network=ic）で作った成果物を検証する。
       # HTML 圧縮が type="text" を削るなど、本番ビルドでしか出ない不具合をここで捕まえる。
       - name: 本番向けビルドを検証
