@@ -77,19 +77,21 @@ jobs:
       # 通らなくなったまま 3 か月 起動しなかった。起動させ、ページと /api の中継を叩く。
       # 中継は「dev-server 経由」と「replica 直」の中身が同じかで見る（中継が無いと
       # dev-server 自身の 404 ページが返り、中身が一致しない）。
+      # CI では出力が色つきになり「compiled <色>successfully」と割れるので、色を消してから読む。
       - name: 開発サーバーが起動して replica へ中継できるか
         run: |
-          npx webpack serve --mode development --env development --port 18080 > serve.log 2>&1 &
+          npx webpack serve --mode development --env development --port 18080 --no-color > serve.log 2>&1 &
           pid=$!
+          plain() { sed -E 's/\x1b\[[0-9;]*m//g' serve.log; }
           up=0
           for i in $(seq 1 60); do
-            if grep -qE "compiled (successfully|with)" serve.log; then up=1; break; fi
+            if plain | grep -qE "compiled (successfully|with)"; then up=1; break; fi
             kill -0 "$pid" 2>/dev/null || break
             sleep 2
           done
-          fail() { echo "$1" >&2; cat serve.log >&2; kill "$pid" 2>/dev/null || true; exit 1; }
+          fail() { echo "$1" >&2; plain >&2; kill "$pid" 2>/dev/null || true; exit 1; }
           test "$up" = 1 || fail "開発サーバーが起動しなかった"
-          ! grep -qE "compiled with [0-9]+ errors?" serve.log || fail "開発サーバーのビルドにエラーがある"
+          ! plain | grep -qE "compiled with [0-9]+ errors?" || fail "開発サーバーのビルドにエラーがある"
           page=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 http://127.0.0.1:18080/)
           via=$( (curl -s --max-time 20 http://127.0.0.1:18080/api/v2/status || true) | sha256sum | cut -c1-16)
           viacode=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 http://127.0.0.1:18080/api/v2/status)
