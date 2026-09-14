@@ -36,11 +36,11 @@
     "util": "^0.12.5",
     "webpack": "^5.110.3",
     "webpack-cli": "^7.2.3",
-    "webpack-dev-server": "^5.2.6"
+    "webpack-dev-server": "^6.0.0"
   },
   "engines": {
-    "node": "^16 || ^18 || ^20",
-    "npm": "^7.17 || ^8 || ^9 || ^10"
+    "node": ">=22.15.0",
+    "npm": ">=10"
   },
   "browserslist": [
     "last 2 chrome version",
@@ -50,7 +50,6 @@
   ],
   "overrides": {
     "serialize-javascript": "^7.0.5",
-    "http-proxy-middleware": "^2.0.10",
     "on-headers": "^1.1.0",
     "qs": "^6.14.1",
     "picomatch": "^2.3.2",
