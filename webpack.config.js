@@ -96,13 +96,14 @@ module.exports = (env, argv) => {
       }),
     ],
     devServer: {
-      proxy: {
-        "/api": {
+      // webpack-dev-server 5 から proxy は配列でしか受け付けない（オブジェクトだと起動しない）
+      proxy: [
+        {
+          context: ["/api"],
           target: "http://127.0.0.1:4943",
           changeOrigin: true,
-          pathRewrite: { "^/api": "/api" },
         },
-      },
+      ],
       static: path.resolve(__dirname, "src", "todo_app_frontend", "dist"), // dev server の参照先 (不要かも)
       hot: true,
       watchFiles: [path.resolve(__dirname, "src", "todo_app_frontend")],

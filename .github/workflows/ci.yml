@@ -72,6 +72,36 @@ jobs:
           dfx deploy todo_app_backend
           dfx generate todo_app_backend
 
+      # npm start（webpack serve）は本番のビルドと別の設定（devServer）を読むので、
+      # 本番ビルドが緑でも壊れていることがある。実際に proxy の書き方が dev-server 5 で
+      # 通らなくなったまま 3 か月 起動しなかった。起動させ、ページと /api の中継を叩く。
+      # 中継は「dev-server 経由」と「replica 直」で状態コードと Content-Type が同じかで見る
+      # （replica は application/cbor。中継が無いと dev-server 自身の 404 が text/html で返る）。
+      # 中身のハッシュは比べない。CI の dfx は版を固定しておらず、応答に高さなどが入ると揺れる。
+      # CI では出力が色つきになり「compiled <色>successfully」と割れるので、色を消してから読む。
+      - name: 開発サーバーが起動して replica へ中継できるか
+        run: |
+          npx webpack serve --mode development --env development --port 18080 --no-color > serve.log 2>&1 &
+          pid=$!
+          plain() { sed -E 's/\x1b\[[0-9;]*m//g' serve.log; }
+          up=0
+          for i in $(seq 1 60); do
+            if plain | grep -qE "compiled (successfully|with)"; then up=1; break; fi
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 2
+          done
+          fail() { echo "$1" >&2; plain >&2; kill "$pid" 2>/dev/null || true; exit 1; }
+          test "$up" = 1 || fail "開発サーバーが起動しなかった"
+          ! plain | grep -qE "compiled with [0-9]+ errors?" || fail "開発サーバーのビルドにエラーがある"
+          page=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 http://127.0.0.1:18080/ || true)
+          via=$(curl -s -o /dev/null -w '%{http_code} %{content_type}' --max-time 20 http://127.0.0.1:18080/api/v2/status || true)
+          direct=$(curl -s -o /dev/null -w '%{http_code} %{content_type}' --max-time 20 http://127.0.0.1:4943/api/v2/status || true)
+          kill "$pid" 2>/dev/null || true
+          echo "GET / -> $page / /api/v2/status: dev-server [$via] / replica [$direct]"
+          test "$page" = 200 || fail "ページが 200 でない"
+          case "$direct" in "200 application/cbor"*) ;; *) fail "replica 直の /api/v2/status が 200 の CBOR でない（検査の前提が崩れている）";; esac
+          test "$via" = "$direct" || fail "dev-server が /api を replica へ中継していない"
+
       # 本番と同じ条件（最小化あり・network=ic）で作った成果物を検証する。
       # HTML 圧縮が type="text" を削るなど、本番ビルドでしか出ない不具合をここで捕まえる。
       - name: 本番向けビルドを検証
