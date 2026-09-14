@@ -808,10 +808,17 @@ check("a piece in hand lights up where it may be dropped",
   (await nari.page.locator(".sq.is-go").count()) > 20);
 // まえの 対局の 考えごとが 新しい 対局に 混ざらないか。ヒントは 目に 見えるので これで 見る
 // （あいての 手を えらぶ ところも 同じ しくみで まもっている）
-await nari.page.click("#shogi-hint");
-await nari.page.waitForFunction(() => document.getElementById("shogi-status").textContent.includes("かんがえて"),
-  null, { timeout: 20000 });
-await nari.page.click("#shogi-quit");
+// ヒントの 強さ（2）は 5% の 確率で 読まずに すぐ 手を かえす（blunder）。その 回は「かんがえて」が
+// 1 フレームも 描かれずに 消えるので、表示を 待ってから やめる 形だと 20 秒 待って 落ちていた。
+// 押す・見る・やめるを 1 つの 同期処理で 行えば、手の 続きは await の 先で 動くので
+// どちらの 経路でも かならず 考えごとの 途中で やめる ことに なる
+const statusWhenQuit = await nari.page.evaluate(() => {
+  document.getElementById("shogi-hint").click();
+  const text = document.getElementById("shogi-status").textContent;
+  document.getElementById("shogi-quit").click();
+  return text;
+});
+check("the hint is still thinking when the game is abandoned", statusWhenQuit.includes("かんがえて"), statusWhenQuit);
 await nari.page.waitForSelector("#shogi-setup:not(.is-hidden)", { timeout: 20000 });
 await nari.page.click('[data-side="0"]');
 await nari.page.click("#shogi-start");
