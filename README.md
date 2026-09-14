@@ -220,6 +220,8 @@ HTML・JavaScript・データの すべてが Internet Computer 上の キャニ
 
 ## 開発
 
+Node **22.15 以上**が 要ります（`package.json` の `engines`。CI も Node 22）。
+
 ```bash
 npm ci
 dfx start --clean --background
@@ -228,6 +230,8 @@ dfx generate todo_app_backend
 npx webpack --mode development
 dfx deploy todo_app_frontend
 ```
+
+書きながら 見る ときは `npm start`（webpack-dev-server。`/api` は 4943 番の replica へ 中継します）。
 
 ### 動作確認（実ブラウザ）
 
@@ -245,7 +249,7 @@ node e2e/e2e.mjs http://$(dfx canister id todo_app_frontend).localhost:4943/
 リンクを 貼った ときの 画像（絶対 URL・大きさ・実物が 配られて いること）まで、
 あそびの 6 つ（出て くる／さわると 進む／外しても とがめない／1 本道／なぞって ゴール）まで、
 読み上げに 渡して いる 中身（下の 節）まで、
-**236 項目**を 実ブラウザで 確かめます。
+**237 項目**を 実ブラウザで 確かめます。
 
 画面が なくても できる 検算（node）は **197 項目 ＋ ことばの そろい**です。
 しょうぎの きまり 25／あいて 11／終わりかた 39、そらの 計算 29／星の 名前 93、
@@ -254,9 +258,15 @@ node e2e/e2e.mjs http://$(dfx canister id todo_app_frontend).localhost:4943/
 ### CI
 
 push と PR のたびに 上を すべて実行します（鍵は 使いません）。
+あわせて、本番の ビルドでは 走らない 2 つの 経路も 確かめます。
+**開発サーバーが 起動して replica へ 中継できるか**（`npm start` は 本番と 別の 設定を 読むので、
+本番が 緑でも 壊れて いられる）と、**ts-loader が .ts を 通せて 型の 誤りでは 落ちるか**
+（画面に .ts が まだ 無いので、TypeScript の 更新で 壊れても 配布物は 変わらない）。
 **反映は CI からは行いません**（配備鍵を GitHub に置かないため。`scripts/deploy.sh` を 人が実行します）。
 
 依存の 更新は 毎週 月曜に Dependabot が 取りに 行きます。**パッチと マイナーは CI が 緑に なった ものだけ 自動で 入り、メジャーは 開いた まま 残ります**（`.github/dependabot.yml` と `.github/workflows/dependabot-auto-merge.yml`）。
+メジャーは **配布物が 1 バイトも 変わらないか**（ビルド時刻だけ 伏せて 比べる）と、上の 2 つの 経路で 1 本ずつ 決めます。
+TypeScript 7 は ts-loader が まだ 使えない（コンパイラの JS API が 無い）ので、Dependabot で 止めて います。
 
 ## デプロイ
 
