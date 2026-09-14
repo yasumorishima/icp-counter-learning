@@ -118,17 +118,24 @@ jobs:
       # そのため TypeScript のメジャー更新で ts-loader の経路が壊れても配布物は変わらず緑になる
       # （2026-09-14 実測＝TS 7.0.2 は JS API が無く ts-loader が TypeError、TS 6.0.3 は
       # tsconfig の moduleResolution=node が TS5107 で止まる）。小さな .ts を通して確かめる。
+      # 通るだけでは「型検査が黙って止まった」（transpileOnly など）と区別できないので、
+      # 型の誤りを入れた .ts が TS2322 で落ちることも見る。
       - name: ts-loader が .ts を通せるか
         run: |
           probe="$RUNNER_TEMP/tsprobe"
-          mkdir -p "$probe"
+          mkdir -p "$probe/good" "$probe/bad"
+          build() {
+            DFX_NETWORK=ic CANISTER_ID_TODO_APP_BACKEND=ifoqp-6iaaa-aaaaj-qnnrq-cai \
+              npx webpack --mode production --no-color --entry-reset --entry ./probe-ts-loader.ts --output-path "$1" > "$1/build.log" 2>&1
+          }
+          trap 'rm -f probe-ts-loader.ts' EXIT
           printf 'const n: number = 41 + 1;\nexport const probe = `probe-${n}`;\nconsole.log(probe);\n' > probe-ts-loader.ts
-          DFX_NETWORK=ic CANISTER_ID_TODO_APP_BACKEND=ifoqp-6iaaa-aaaaj-qnnrq-cai \
-            npx webpack --mode production --no-color --entry-reset --entry ./probe-ts-loader.ts --output-path "$probe" > "$probe/build.log" 2>&1 \
-            || { cat "$probe/build.log" >&2; rm -f probe-ts-loader.ts; echo "ts-loader で .ts をビルドできない" >&2; exit 1; }
-          rm -f probe-ts-loader.ts
-          grep -q 'probe-42' "$probe/index.js" || { cat "$probe/build.log" >&2; echo "出力に型を外した結果（probe-42）が無い" >&2; exit 1; }
-          echo "OK: typescript $(node -p 'require("typescript").version') で .ts を通せた"
+          build "$probe/good" || { cat "$probe/good/build.log" >&2; echo "ts-loader で .ts をビルドできない" >&2; exit 1; }
+          grep -q 'probe-42' "$probe/good/index.js" || { cat "$probe/good/build.log" >&2; echo "出力に型を外した結果（probe-42）が無い" >&2; exit 1; }
+          printf 'const n: number = "41";\nexport const probe = `probe-${n}`;\nconsole.log(probe);\n' > probe-ts-loader.ts
+          if build "$probe/bad"; then cat "$probe/bad/build.log" >&2; echo "型の誤りがあるのにビルドが通った（型検査が効いていない）" >&2; exit 1; fi
+          grep -q 'TS2322' "$probe/bad/build.log" || { cat "$probe/bad/build.log" >&2; echo "型の誤りで落ちたが TS2322 ではない" >&2; exit 1; }
+          echo "OK: typescript $(node -p 'require("typescript").version') で .ts を通せて、型の誤りは TS2322 で落ちる"
 
       - name: ローカル replica 向けにビルドして配置
         run: |
