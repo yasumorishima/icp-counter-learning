@@ -32,6 +32,17 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      # 🔴 TypeScript 7 は入口（package.json の "."）が lib/version.cjs だけで、コンパイラの
+      # JS API を持たない。ts-loader はその API を呼ぶので、.ts を 1 つでも通すと
+      # 「Cannot read properties of undefined (reading 'fileExists')」で落ちる
+      # （2026-09-14 実測・TS 5.8 では同じ probe.ts が通る。PR #35 を閉じた理由）。
+      # いまは .ts が 0 本で配布物は変わらないが、ts-loader の経路を黙って壊すので止める。
+      # ts-loader が TypeScript 7 に対応したら外す。
+      # ⚠️ ignore はセキュリティ更新にも効く（GitHub の docs）。typescript は開発時だけの
+      # 依存で配布物に入らないので受け入れる。7 系でしか直らない脆弱性が出たら見直す。
+      - dependency-name: typescript
+        versions: [">=7"]
     commit-message:
       prefix: "chore(deps)"
       prefix-development: "chore(deps-dev)"
