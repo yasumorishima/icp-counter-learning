@@ -1365,6 +1365,155 @@ for (const [file, want, ends] of [
     els => els.map(el => el.getBoundingClientRect().height).filter(h => h < 44).length);
   check("the keys are big enough to hit", keyTall === 0, String(keyTall));
 
+  // ---- 音そのもの。スピーカーの 代わりに OfflineAudioContext へ 出させ、サイトが 組んだ 音を 数える ----
+  // 2026-09-02 まで 音を 見て いる 検査は 0 件だった。許容は 2026-09-14 に 実測して 決めた
+  //（6 音 522.7〜879.7 Hz・0.2382〜0.2387 秒・ピーク 0.1775〜0.1793、ことばの 音 0.1493 秒・0.1564）
+  const AUDIO_TAP = `
+    window.__ctxs = [];
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    function Offline() {
+      const c = new OAC(1, 44100 * 2, 44100);
+      c.resume = () => Promise.resolve();
+      window.__ctxs.push(c);
+      return c;
+    }
+    window.AudioContext = Offline;
+    window.webkitAudioContext = Offline;
+  `;
+  // 読み上げの 代わり。どの 声を 持つか・いつ 届くかを きめ、speak に 渡された 中身を 残す
+  const fakeSpeech = ({ voices, arriveAfter, none }) => {
+    if (none) {
+      Object.defineProperty(window, "speechSynthesis", { value: undefined, configurable: true });
+      return;
+    }
+    const heard = new Set();
+    let list = arriveAfter ? [] : voices.map(lang => ({ lang, name: lang }));
+    window.__spoken = [];
+    Object.defineProperty(window, "speechSynthesis", {
+      configurable: true,
+      value: {
+        getVoices: () => list,
+        addEventListener: (type, fn) => { if (type === "voiceschanged") heard.add(fn); },
+        removeEventListener: (type, fn) => { heard.delete(fn); },
+        cancel: () => {},
+        speak: line => { window.__spoken.push({ text: line.text, lang: line.lang, rate: line.rate }); },
+      },
+    });
+    if (arriveAfter) {
+      setTimeout(() => {
+        list = voices.map(lang => ({ lang, name: lang }));
+        heard.forEach(fn => fn(new Event("voiceschanged")));
+      }, arriveAfter);
+    }
+  };
+  const openWith = async (hash, { lang = "ja", audio = false, speech = null, soundOff = false } = {}) => {
+    const one = await newPage(390, 860, { lang, timezoneId: "Asia/Tokyo" });
+    if (soundOff) await one.context.addInitScript(() => localStorage.setItem("drill.sound", "off"));
+    if (audio) await one.context.addInitScript(AUDIO_TAP);
+    if (speech) await one.context.addInitScript(fakeSpeech, speech);
+    await one.page.goto(BASE + hash, { waitUntil: "domcontentloaded" });
+    await one.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+    return one;
+  };
+  const rendered = page => page.evaluate(async () => {
+    const c = window.__ctxs[0];
+    if (!c) return { made: false };
+    const d = (await c.startRendering()).getChannelData(0);
+    let peak = 0;
+    let first = -1;
+    let last = -1;
+    for (let i = 0; i < d.length; i++) {
+      const v = Math.abs(d[i]);
+      if (v > peak) peak = v;
+      if (v > 0.005) {
+        if (first < 0) first = i;
+        last = i;
+      }
+    }
+    let cross = 0;
+    for (let i = Math.max(first, 0) + 1; i <= last; i++) if ((d[i - 1] < 0) !== (d[i] < 0)) cross++;
+    const seconds = (last - first) / c.sampleRate;
+    return { made: true, peak, seconds, hz: seconds > 0.02 ? cross / 2 / seconds : 0 };
+  });
+
+  // おとの 6 枚。1 枚ごとに 開き直す（オフラインの 時計は 進まず、続けて 押すと 音が 重なる）
+  const SCALE_HZ = [523.25, 587.33, 659.25, 698.46, 783.99, 880];
+  const keySounds = [];
+  for (let i = 0; i < SCALE_HZ.length; i++) {
+    const one = await openWith("#/asobi/oto", { audio: true });
+    await one.page.waitForSelector(".as-key", { timeout: 20000 });
+    await one.page.locator(".as-key").nth(i).evaluate(el => el.click());
+    keySounds.push(await rendered(one.page));
+    await one.context.close();
+  }
+  const keyText = keySounds.map(s => s.made ? `${s.hz.toFixed(1)}Hz ${s.seconds.toFixed(3)}s ${s.peak.toFixed(3)}` : "silent").join(" / ");
+  check("each key plays its own note of the scale",
+    keySounds.every((s, i) => s.made && Math.abs(s.hz - SCALE_HZ[i]) / SCALE_HZ[i] < 0.01), keyText);
+  check("each note lasts about a quarter of a second",
+    keySounds.every(s => s.made && s.seconds > 0.22 && s.seconds < 0.26), keyText);
+  check("each note is played at the same gentle volume",
+    keySounds.every(s => s.made && s.peak > 0.16 && s.peak < 0.2), keyText);
+
+  // ことば: さわると 音が 鳴り、読み上げには その 絵の ことばを その 国の 声で ゆっくり 頼む
+  for (const [lang, voiceLang] of [["ja", "ja-JP"], ["en", "en-US"]]) {
+    const one = await openWith("#/asobi/kotoba", { lang, audio: true, speech: { voices: ["ja-JP", "en-US"] } });
+    await one.page.waitForSelector(".as-word", { timeout: 20000 });
+    const word = (await one.page.locator(".as-word-name").first().textContent()).trim();
+    await one.page.locator(".as-word").first().evaluate(el => el.click());
+    const sound = await rendered(one.page);
+    const spoken = await one.page.evaluate(() => window.__spoken);
+    check(`a word makes its sound (${lang})`,
+      sound.made && sound.seconds > 0.13 && sound.seconds < 0.17 && sound.peak > 0.14 && sound.peak < 0.17,
+      sound.made ? `${sound.seconds.toFixed(3)}s ${sound.peak.toFixed(3)}` : "silent");
+    check(`a word asks the voice to read that word slowly (${lang})`,
+      spoken.length === 1 && spoken[0].text === word && spoken[0].lang === voiceLang && Math.abs(spoken[0].rate - 0.8) < 0.01,
+      `${word} -> ${JSON.stringify(spoken)}`);
+    await one.context.close();
+  }
+
+  // 音を 切ったら 音の 部品すら 作らない
+  {
+    const one = await openWith("#/asobi/oto", { audio: true, soundOff: true });
+    await one.page.waitForSelector(".as-key", { timeout: 20000 });
+    await one.page.locator(".as-key").first().evaluate(el => el.click());
+    check("turning sound off keeps the keys silent", !(await rendered(one.page)).made);
+    await one.context.close();
+  }
+
+  // 声を 持たない 端末では、ことばの 画面に「声が ない」と 一行 出す。声が あれば 出さない。
+  // 声の 一覧は あとから 届く 端末が あるので 1.5 秒 待ってから きめ、遅れて 届いたら 消す
+  const noteState = page => page.evaluate(() => {
+    const n = document.querySelector(".as-voice-note");
+    if (!n) return "missing";
+    return n.classList.contains("is-hidden") ? "hidden" : "shown";
+  });
+  const VOICE_CASES = [
+    ["no voices on the device", { speech: { voices: [] } }, "shown", "shown"],
+    ["no speech at all", { speech: { none: true } }, "shown", "shown"],
+    ["only a voice for another language", { speech: { voices: ["en-US"] } }, "shown", "shown"],
+    ["a Japanese voice", { speech: { voices: ["ja-JP"] } }, "hidden", "hidden"],
+    ["a Japanese voice written ja_JP", { speech: { voices: ["ja_JP"] } }, "hidden", "hidden"],
+    ["a Japanese voice that arrives after 0.5 s", { speech: { voices: ["ja-JP"], arriveAfter: 500 } }, "hidden", "hidden"],
+    ["a Japanese voice that arrives after 3 s", { speech: { voices: ["ja-JP"], arriveAfter: 3000 } }, "shown", "hidden"],
+    ["English screen with only a Japanese voice", { lang: "en", speech: { voices: ["ja-JP"] } }, "shown", "shown"],
+    ["English screen with an English voice", { lang: "en", speech: { voices: ["en-GB"] } }, "hidden", "hidden"],
+  ];
+  for (const [label, opts, at2, at4] of VOICE_CASES) {
+    const one = await openWith("#/asobi/kotoba", opts);
+    await one.page.waitForSelector(".as-word", { timeout: 20000 });
+    await one.page.waitForTimeout(2200);
+    const first = await noteState(one.page);
+    await one.page.waitForTimeout(1600);
+    const second = await noteState(one.page);
+    const words = (await one.page.locator(".as-voice-note").textContent()).trim();
+    const role = await one.page.locator(".as-voice-note").getAttribute("role");
+    const wantText = (opts.lang || "ja") === "en" ? /no English voice/ : /日本語の 声が ない/;
+    check(`the no-voice line: ${label}`,
+      first === at2 && second === at4 && role === "status" && wantText.test(words),
+      `2.2s ${first} / 3.8s ${second} / ${role} / ${words.slice(0, 24)}`);
+    await one.context.close();
+  }
+
   // 小さい 画面でも はみ出さない・押す ところは 指の 大きさ
   await kp.setViewportSize({ width: 320, height: 760 });
   for (const hash of ["#/asobi", "#/asobi/mogura", "#/asobi/kotoba", "#/asobi/oekaki", "#/asobi/oto"]) {
