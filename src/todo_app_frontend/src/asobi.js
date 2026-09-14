@@ -331,8 +331,10 @@ const VOICE_WAIT_MS = 1500;
 
 /**
  * この 端末に その ことばの 声が あるか 見て、report(true / false) で 知らせる。
- * すぐ 見つからなくても VOICE_WAIT_MS までは 待つ。待った あとに 届いたら report(true) を
- * もう 一度 呼ぶ（遅れて 届く 端末で 一行を 出しっぱなしに しない）。かえり値で 見るのを やめる。
+ * すぐ 見つからなくても VOICE_WAIT_MS までは 待つ。待った あとに 声が 届いたら
+ * report(true) を もう 一度 呼ぶ（遅れて 届く 端末で 一行を 出しっぱなしに しない）。
+ * かえり値の stop で 見るのを やめ、recheck で 見直す（声の 一覧が 変わっても
+ * 知らせを 出さない 端末＝Safari 15 以前 などの ために、さわった ときに 呼ぶ）。
  */
 function watchVoice(lang, report) {
   const want = lang.slice(0, 2).toLowerCase();
@@ -344,7 +346,7 @@ function watchVoice(lang, report) {
   }
   if (!synth || typeof synth.getVoices !== "function") {
     report(false);
-    return () => {};
+    return { stop() {}, recheck() {} };
   }
   const has = () => {
     try {
@@ -354,33 +356,43 @@ function watchVoice(lang, report) {
       return false;
     }
   };
-  if (has()) {
-    report(true);
-    return () => {};
-  }
   let stopped = false;
+  let decided = false;
   let timer = 0;
+  const decide = ok => {
+    decided = true;
+    report(ok);
+  };
   const onChange = () => {
     if (stopped || !has()) return;
     window.clearTimeout(timer);
-    report(true);
+    decide(true);
   };
-  try {
-    synth.addEventListener("voiceschanged", onChange);
-  } catch (error) {
-    /* 知らせを 受けられない 端末は 待つ だけ */
-  }
-  timer = window.setTimeout(() => {
-    if (!stopped && !has()) report(false);
-  }, VOICE_WAIT_MS);
-  return () => {
-    stopped = true;
-    window.clearTimeout(timer);
+  if (has()) {
+    decide(true);
+  } else {
     try {
-      synth.removeEventListener("voiceschanged", onChange);
+      synth.addEventListener("voiceschanged", onChange);
     } catch (error) {
-      /* 外せなくても stopped で 止まる */
+      /* 知らせを 受けられない 端末は 待つ だけ（さわった ときに recheck で 見直す） */
     }
+    timer = window.setTimeout(() => {
+      if (!stopped) decide(has());
+    }, VOICE_WAIT_MS);
+  }
+  return {
+    stop() {
+      stopped = true;
+      window.clearTimeout(timer);
+      try {
+        synth.removeEventListener("voiceschanged", onChange);
+      } catch (error) {
+        /* 外せなくても stopped で 止まる */
+      }
+    },
+    recheck() {
+      if (!stopped && decided) report(has());
+    },
   };
 }
 
@@ -395,13 +407,14 @@ function playKotoba() {
   frame.stage.append(yard);
 
   // 声を 持たない 端末では 読み上げが だまって 何も 言わない（say は 失敗を 握りつぶす）。
-  // 絵と 文字と 音では あそべるが、声が 出ないと 分かる ように 一行 出す
-  const voiceNote = el("p", "as-voice-note", t("as_kotobaNoVoice"));
+  // 絵と 文字と 音では あそべるが、声が 出ないと 分かる ように 一行 出す。
+  // 読み上げは 中身が 変わった ときに 読むので、空の まま 置いて おき、決まったら 文字を 入れる
+  const voiceNote = el("p", "as-voice-note");
   voiceNote.setAttribute("role", "status");
-  voiceNote.classList.add("is-hidden");
   frame.stage.before(voiceNote);
-  const stopWatching = watchVoice(currentLang() === "ja" ? "ja" : "en", ok => {
-    voiceNote.classList.toggle("is-hidden", ok);
+  const voice = watchVoice(currentLang() === "ja" ? "ja" : "en", ok => {
+    const text = ok ? "" : t("as_kotobaNoVoice");
+    if (voiceNote.textContent !== text) voiceNote.textContent = text;
   });
 
   let bag = shuffle(WORDS);
@@ -430,6 +443,7 @@ function playKotoba() {
     // 同じ 絵を 続けて 押しても 二重に 数えない
     if (done || card.dataset.used === "1") return;
     card.dataset.used = "1";
+    voice.recheck();
     card.classList.add("is-said");
     sounds.right();
     say(wordText(word));
@@ -451,7 +465,7 @@ function playKotoba() {
 
   onLeave(() => {
     done = true;
-    stopWatching();
+    voice.stop();
     stopSpeech();
   });
 }

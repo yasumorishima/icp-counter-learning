@@ -1380,14 +1380,17 @@ for (const [file, want, ends] of [
     window.AudioContext = Offline;
     window.webkitAudioContext = Offline;
   `;
-  // 読み上げの 代わり。どの 声を 持つか・いつ 届くかを きめ、speak に 渡された 中身を 残す
-  const fakeSpeech = ({ voices, arriveAfter, none }) => {
+  // 読み上げの 代わり。どの 声を 持つかを きめ、speak に 渡された 中身を 残す。
+  // later: 声は 検査が window.__deliverVoices() を 呼ぶ まで 届かない（時計に たよらない）
+  // quiet: 届いても voiceschanged を 出さない（Safari 15 以前と 同じ）
+  const fakeSpeech = ({ voices, arriveAfter, later, quiet, none }) => {
     if (none) {
       Object.defineProperty(window, "speechSynthesis", { value: undefined, configurable: true });
       return;
     }
     const heard = new Set();
-    let list = arriveAfter ? [] : voices.map(lang => ({ lang, name: lang }));
+    const waiting = Boolean(arriveAfter || later);
+    let list = waiting ? [] : voices.map(lang => ({ lang, name: lang }));
     window.__spoken = [];
     Object.defineProperty(window, "speechSynthesis", {
       configurable: true,
@@ -1399,15 +1402,14 @@ for (const [file, want, ends] of [
         speak: line => { window.__spoken.push({ text: line.text, lang: line.lang, rate: line.rate }); },
       },
     });
-    if (arriveAfter) {
-      setTimeout(() => {
-        list = voices.map(lang => ({ lang, name: lang }));
-        heard.forEach(fn => fn(new Event("voiceschanged")));
-      }, arriveAfter);
-    }
+    window.__deliverVoices = () => {
+      list = voices.map(lang => ({ lang, name: lang }));
+      if (!quiet) heard.forEach(fn => fn(new Event("voiceschanged")));
+    };
+    if (arriveAfter) setTimeout(window.__deliverVoices, arriveAfter);
   };
-  const openWith = async (hash, { lang = "ja", audio = false, speech = null, soundOff = false } = {}) => {
-    const one = await newPage(390, 860, { lang, timezoneId: "Asia/Tokyo" });
+  const openWith = async (hash, { lang = "ja", audio = false, speech = null, soundOff = false, width = 390 } = {}) => {
+    const one = await newPage(width, 860, { lang, timezoneId: "Asia/Tokyo" });
     if (soundOff) await one.context.addInitScript(() => localStorage.setItem("drill.sound", "off"));
     if (audio) await one.context.addInitScript(AUDIO_TAP);
     if (speech) await one.context.addInitScript(fakeSpeech, speech);
@@ -1449,7 +1451,8 @@ for (const [file, want, ends] of [
   const keyText = keySounds.map(s => s.made ? `${s.hz.toFixed(1)}Hz ${s.seconds.toFixed(3)}s ${s.peak.toFixed(3)}` : "silent").join(" / ");
   check("each key plays its own note of the scale",
     keySounds.every((s, i) => s.made && Math.abs(s.hz - SCALE_HZ[i]) / SCALE_HZ[i] < 0.01), keyText);
-  check("each note lasts about a quarter of a second",
+  // 音は 0.5 秒 かけて 消えて いくので、聞こえる 大きさ（0.005 超）で いる のは 約 0.24 秒
+  check("each note stays audible for about a quarter of a second",
     keySounds.every(s => s.made && s.seconds > 0.22 && s.seconds < 0.26), keyText);
   check("each note is played at the same gentle volume",
     keySounds.every(s => s.made && s.peak > 0.16 && s.peak < 0.2), keyText);
@@ -1481,36 +1484,85 @@ for (const [file, want, ends] of [
   }
 
   // 声を 持たない 端末では、ことばの 画面に「声が ない」と 一行 出す。声が あれば 出さない。
-  // 声の 一覧は あとから 届く 端末が あるので 1.5 秒 待ってから きめ、遅れて 届いたら 消す
+  // 声の 一覧は あとから 届く 端末が あるので 1.5 秒 待ってから きめ、遅れて 届いたら 消す。
+  // 「出て いる」は クラスでは なく、文字が 入って いて 実際に 描かれて いるかで 見る
   const noteState = page => page.evaluate(() => {
     const n = document.querySelector(".as-voice-note");
     if (!n) return "missing";
-    return n.classList.contains("is-hidden") ? "hidden" : "shown";
+    const box = n.getBoundingClientRect();
+    const drawn = getComputedStyle(n).display !== "none" && box.height > 0;
+    return n.textContent.trim().length > 0 && drawn ? "shown" : "hidden";
   });
+  const noteIs = (page, want, timeout) => page.waitForFunction(w => {
+    const n = document.querySelector(".as-voice-note");
+    if (!n) return false;
+    const shown = n.textContent.trim().length > 0 && getComputedStyle(n).display !== "none"
+      && n.getBoundingClientRect().height > 0;
+    return (w === "shown") === shown;
+  }, want, { timeout }).then(() => true, () => false);
   const VOICE_CASES = [
-    ["no voices on the device", { speech: { voices: [] } }, "shown", "shown"],
-    ["no speech at all", { speech: { none: true } }, "shown", "shown"],
-    ["only a voice for another language", { speech: { voices: ["en-US"] } }, "shown", "shown"],
-    ["a Japanese voice", { speech: { voices: ["ja-JP"] } }, "hidden", "hidden"],
-    ["a Japanese voice written ja_JP", { speech: { voices: ["ja_JP"] } }, "hidden", "hidden"],
-    ["a Japanese voice that arrives after 0.5 s", { speech: { voices: ["ja-JP"], arriveAfter: 500 } }, "hidden", "hidden"],
-    ["a Japanese voice that arrives after 3 s", { speech: { voices: ["ja-JP"], arriveAfter: 3000 } }, "shown", "hidden"],
-    ["English screen with only a Japanese voice", { lang: "en", speech: { voices: ["ja-JP"] } }, "shown", "shown"],
-    ["English screen with an English voice", { lang: "en", speech: { voices: ["en-GB"] } }, "hidden", "hidden"],
+    ["no voices on the device", { speech: { voices: [] } }, "shown"],
+    ["no speech at all", { speech: { none: true } }, "shown"],
+    ["only a voice for another language", { speech: { voices: ["en-US"] } }, "shown"],
+    ["a Japanese voice", { speech: { voices: ["ja-JP"] } }, "hidden"],
+    ["a Japanese voice written ja_JP", { speech: { voices: ["ja_JP"] } }, "hidden"],
+    ["a Japanese voice that arrives before the wait ends", { speech: { voices: ["ja-JP"], arriveAfter: 500 } }, "hidden"],
+    ["English screen with only a Japanese voice", { lang: "en", speech: { voices: ["ja-JP"] } }, "shown"],
+    ["English screen with an English voice", { lang: "en", speech: { voices: ["en-GB"] } }, "hidden"],
   ];
-  for (const [label, opts, at2, at4] of VOICE_CASES) {
+  for (const [label, opts, want] of VOICE_CASES) {
     const one = await openWith("#/asobi/kotoba", opts);
     await one.page.waitForSelector(".as-word", { timeout: 20000 });
     await one.page.waitForTimeout(2200);
-    const first = await noteState(one.page);
-    await one.page.waitForTimeout(1600);
-    const second = await noteState(one.page);
+    const state = await noteState(one.page);
     const words = (await one.page.locator(".as-voice-note").textContent()).trim();
     const role = await one.page.locator(".as-voice-note").getAttribute("role");
-    const wantText = (opts.lang || "ja") === "en" ? /no English voice/ : /日本語の 声が ない/;
+    const wantText = want === "hidden" ? /^$/ : (opts.lang || "ja") === "en" ? /no English voice/ : /日本語の 声が ない/;
     check(`the no-voice line: ${label}`,
-      first === at2 && second === at4 && role === "status" && wantText.test(words),
-      `2.2s ${first} / 3.8s ${second} / ${role} / ${words.slice(0, 24)}`);
+      state === want && role === "status" && wantText.test(words),
+      `${state} / ${role} / ${words.slice(0, 24)}`);
+    await one.context.close();
+  }
+
+  // 待った あとに 声が 届いたら 消える（届ける 時刻は 検査が きめる＝読み込みの 速さに よらない）
+  {
+    const one = await openWith("#/asobi/kotoba", { speech: { voices: ["ja-JP"], later: true } });
+    await one.page.waitForSelector(".as-word", { timeout: 20000 });
+    const shownFirst = await noteIs(one.page, "shown", 8000);
+    await one.page.evaluate(() => window.__deliverVoices());
+    const goneAfter = await noteIs(one.page, "hidden", 3000);
+    check("the no-voice line goes away when a voice arrives late", shownFirst && goneAfter,
+      `shown first ${shownFirst} / gone after ${goneAfter}`);
+    await one.context.close();
+  }
+  // 声が 届いても 知らせが 来ない 端末（Safari 15 以前）でも、絵を さわれば 見直して 消える
+  {
+    const one = await openWith("#/asobi/kotoba", { speech: { voices: ["ja-JP"], later: true, quiet: true } });
+    await one.page.waitForSelector(".as-word", { timeout: 20000 });
+    const shownFirst = await noteIs(one.page, "shown", 8000);
+    await one.page.evaluate(() => window.__deliverVoices());
+    await one.page.waitForTimeout(400);
+    const stillShown = (await noteState(one.page)) === "shown";
+    await one.page.locator(".as-word").first().evaluate(el => el.click());
+    const goneAfterTap = await noteIs(one.page, "hidden", 3000);
+    check("without a voiceschanged event, tapping a word re-checks the voice",
+      shownFirst && stillShown && goneAfterTap,
+      `shown first ${shownFirst} / still shown before tap ${stillShown} / gone after tap ${goneAfterTap}`);
+    await one.context.close();
+  }
+  // 出て いる 一行も 明暗 どちらでも 読める 色で、せまい 画面で はみ出さない
+  {
+    const one = await openWith("#/asobi/kotoba", { lang: "en", width: 320, speech: { voices: [] } });
+    await one.page.waitForSelector(".as-word", { timeout: 20000 });
+    const shown = await noteIs(one.page, "shown", 8000);
+    const light = (await contrastSweep(one.page)).filter(item => item.startsWith("as-voice-note"));
+    await one.page.click("#theme-toggle");
+    await one.page.waitForTimeout(200);
+    const dark = (await contrastSweep(one.page)).filter(item => item.startsWith("as-voice-note"));
+    const over = await one.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    check("the no-voice line is readable in both themes and fits a 320px screen",
+      shown && light.length === 0 && dark.length === 0 && over <= 0,
+      `shown ${shown} / light ${light.join(",") || "ok"} / dark ${dark.join(",") || "ok"} / over ${over}px`);
     await one.context.close();
   }
 
