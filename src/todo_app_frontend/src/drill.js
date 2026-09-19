@@ -157,8 +157,9 @@ export function initDrill(options) {
     const act = event.target.closest("[data-challenge]");
     if (!act) return;
     if (act.dataset.challenge === "summer") {
-      const year = new Date().getFullYear();
-      records.startChallenge("dr_challengeSummer", year + "-07-21", year + "-08-31");
+      const summer = summerSpan();
+      if (!summer.open) return;
+      records.startChallenge("dr_challengeSummer", summer.from, summer.to);
     } else if (act.dataset.challenge === "month") {
       const now = new Date();
       const from = todayKey(now);
@@ -355,6 +356,27 @@ function renderWhoPanel() {
   });
 }
 
+/**
+ * なつやすみ チャレンジの 期間と、誘いを 出して いい ころ。
+ *
+ * 9 月に なって から 始めても、その 日に もう「おわりました」に なるだけで
+ * 何も できない（user 指摘 2026-09-20「夏休み過ぎたら、夏休み いらないよね」）。
+ * なので **終わる 日を 過ぎたら 誘いを 出さない**。はじまる 1 か月前からは 出す
+ *（先に 申しこんで おける ように）。
+ *
+ * 期間は ここだけに 書く。画面と 押した ときで 日付が ずれると、
+ * 出て いないのに 始められる／始められないのに 出る が 起きる。
+ */
+function summerSpan(now) {
+  const base = now || new Date();
+  const year = base.getFullYear();
+  const from = year + "-07-21";
+  const to = year + "-08-31";
+  const openFrom = year + "-06-21";
+  const today = todayKey(base);
+  return { from, to, open: today >= openFrom && today <= to };
+}
+
 /** きょうの 日付。端末の時計で決める */
 function todayKey(now) {
   const d = now || new Date();
@@ -372,7 +394,9 @@ function renderChallenge() {
       '<p class="challenge-title">' + t("dr_challengeTitle") + "</p>" +
       '<p class="challenge-line">' + t("dr_challengeLede") + "</p>" +
       '<div class="challenge-actions">' +
-      '<button type="button" class="btn-ghost" data-challenge="summer">' + t("dr_challengeSummerBtn") + "</button>" +
+      (summerSpan().open
+        ? '<button type="button" class="btn-ghost" data-challenge="summer">' + t("dr_challengeSummerBtn") + "</button>"
+        : "") +
       '<button type="button" class="btn-ghost" data-challenge="month">' + t("dr_challengeMonth") + "</button>" +
       "</div>";
     return;

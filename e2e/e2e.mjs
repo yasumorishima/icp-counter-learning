@@ -513,7 +513,7 @@ await drill.page.click("#sound-toggle");
 
 // チャレンジ（期間を決めて 毎日 1まい）
 await openDrill(drill.page);
-check("a challenge is offered", (await drill.page.locator('[data-challenge="summer"]').count()) === 1);
+check("a challenge is offered", (await drill.page.locator('[data-challenge="month"]').count()) === 1);
 await drill.page.locator('[data-challenge="month"]').click();
 await drill.page.waitForSelector(".challenge-fill", { timeout: 30000 });
 const challengeLine = (await drill.page.locator(".challenge-line").textContent()).trim();
@@ -726,6 +726,30 @@ check("the sky can still be zoomed, because the stars are small",
   zoomSky.flag === "free" && !zoomSky.viewport.includes("user-scalable=no"), JSON.stringify(zoomSky));
 check("the sky does not turn the pinch gesture down", zoomSky.gesture === false, String(zoomSky.gesture));
 check("the sky leaves two fingers alone", zoomSky.pinch === false, String(zoomSky.pinch));
+
+
+// ---- 10d. なつやすみの 誘いは 期間が 過ぎたら 出さない ----------------------
+
+// 9 月に 7/21〜8/31 を 始めても、その 日に もう「おわりました」に なるだけ。
+// 端末の 時計を 8 月と 9 月に 置いて、出る / 出ないの 両方を 見る
+//（日付の 計算を 検査側で 書き直すと、同じ 思いちがいを 2 回 書くことに なる）。
+for (const [when, want] of [["2026-08-01T09:00:00", true], ["2026-09-20T09:00:00", false]]) {
+  const fake = await newPage(420, 900, { timezoneId: "Asia/Tokyo" });
+  await fake.context.clock.setFixedTime(new Date(when));
+  await openDrill(fake.page);
+  await fake.page.fill("#who-input", "なつ");
+  await fake.page.click("#who-add");
+  await fake.page.waitForSelector("#drill-main:not(.is-hidden)", { timeout: 30000 });
+  const summerShown = (await fake.page.locator('[data-challenge="summer"]').count()) === 1;
+  check(
+    want ? "the summer challenge is offered while it can still be done" : "the summer challenge is gone once summer is over",
+    summerShown === want,
+    when,
+  );
+  check("the 30-day challenge is offered whatever the date is",
+    (await fake.page.locator('[data-challenge="month"]').count()) === 1, when);
+  await fake.context.close();
+}
 
 // 電波が無くても ドリルが開けるか
 await drill.page.goto(`${BASE}#/drill`, { waitUntil: "networkidle" });
