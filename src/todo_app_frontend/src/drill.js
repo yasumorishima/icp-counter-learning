@@ -287,7 +287,7 @@ export function renderHome() {
   ).join("");
 
   $("cat-tabs").innerHTML = CATS.map(
-    c => '<button type="button" class="grade-tab cat-tab' + (c.id === cat ? " is-on" : "") + '" data-cat="' + c.id + '" aria-pressed="' + (c.id === cat) + '">' + c.name + "</button>"
+    c => '<button type="button" class="cat-tab' + (c.id === cat ? " is-on" : "") + '" data-cat="' + c.id + '" aria-pressed="' + (c.id === cat) + '">' + c.name + "</button>"
   ).join("");
 
   $("unit-grid").innerHTML = unitsOf(grade, cat)
