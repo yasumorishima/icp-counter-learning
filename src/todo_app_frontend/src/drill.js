@@ -2,17 +2,20 @@
  * ドリルの画面。問題は端末の中で作り、記録も端末の中だけに置く。
  * 文言は i18n-drill.js にある。
  */
-import { GRADES, unitsOf, unitById, isCorrect, makeSet, makeDaily } from "./drill-data";
+import { GRADES, CATS, unitsOf, unitById, isCorrect, makeSet, makeDaily } from "./drill-data";
 import * as records from "./records";
 import { sounds, confetti, soundOn, toggleSound } from "./effects";
 import { t } from "./i18n";
 
 const $ = id => document.getElementById(id);
 const FACES = ["🐻", "🐰", "🐱", "🐶", "🦊", "🐼", "🐸", "🐧"];
+const CAT_KEY = "drill.cat";
 const QUESTIONS = 10;
 
 let show = () => {};
 let grade = 1;
+// 計算（けいさん）か 文章題（ぶんしょうだい）か。えらんだ ものは 端末に のこす
+let cat = "calc";
 let session = null;
 let typed = "";
 let panelMode = "";
@@ -85,6 +88,18 @@ export function initDrill(options) {
       panelMode = "";
       renderWhoPanel();
     }
+  });
+
+  $("cat-tabs").addEventListener("click", event => {
+    const button = event.target.closest(".cat-tab");
+    if (!button) return;
+    cat = button.dataset.cat;
+    try {
+      localStorage.setItem(CAT_KEY, cat);
+    } catch (error) {
+      /* のこせない 端末でも その場の 切りかえは 効く */
+    }
+    renderHome();
   });
 
   $("grade-tabs").addEventListener("click", event => {
@@ -222,6 +237,13 @@ export function initDrill(options) {
     else if (event.key === "Enter") press("ok");
   });
 
+  try {
+    const saved = localStorage.getItem(CAT_KEY);
+    if (CATS.some(c => c.id === saved)) cat = saved;
+  } catch (error) {
+    /* 読めない 端末では 計算から はじめる */
+  }
+
   const profile = records.currentProfile();
   if (profile) grade = profile.grade;
 }
@@ -264,7 +286,11 @@ export function renderHome() {
     g => '<button type="button" class="grade-tab' + (g === grade ? " is-on" : "") + '" data-grade="' + g + '">' + t("dr_gradeTab", g) + "</button>"
   ).join("");
 
-  $("unit-grid").innerHTML = unitsOf(grade)
+  $("cat-tabs").innerHTML = CATS.map(
+    c => '<button type="button" class="grade-tab cat-tab' + (c.id === cat ? " is-on" : "") + '" data-cat="' + c.id + '" aria-pressed="' + (c.id === cat) + '">' + c.name + "</button>"
+  ).join("");
+
+  $("unit-grid").innerHTML = unitsOf(grade, cat)
     .map(unit => {
       const stat = records.unitStat(unit.id);
       const badge = stat
@@ -490,6 +516,8 @@ function renderQuestion() {
   const unit = { ...session.unit, kind: q.kind || session.unit.kind };
   $("quiz-unit").textContent = q.unitName || unit.name;
   $("quiz-text").textContent = q.text;
+  // 文章題は 式 より ずっと 長い。読む ための 大きさと そろえ方に 切りかえる
+  $("quiz-text").classList.toggle("is-word", Boolean(q.word));
   $("quiz-hint").textContent = q.hint || "";
   $("quiz-feedback").textContent = "";
   $("quiz-feedback").className = "quiz-feedback";

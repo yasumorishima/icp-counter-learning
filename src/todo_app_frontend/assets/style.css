@@ -15,7 +15,8 @@
   --bg: #fff8f3;
   --card: #ffffff;
   --ink: #38344f;
-  --muted: #6f6a8d;
+  --muted: #6c6789;
+  /* --dim は 線と 絵の ぬり 専用。白地で 3.5:1 しか ないので 文字には つかわない */
   --dim: #8b86a6;
   --line: #f0e7f6;
   --line-strong: #e2d6ef;
@@ -259,7 +260,7 @@ body {
   background: var(--req-bg); color: var(--req-fg);
   font-size: 0.64rem; font-weight: 800; letter-spacing: 0.08em;
 }
-.field-hint { display: block; margin-top: 6px; font-size: 0.88rem; color: var(--dim); }
+.field-hint { display: block; margin-top: 6px; font-size: 0.88rem; color: var(--muted); }
 
 /* type 属性に頼らない。本番ビルドの HTML 圧縮は type="text" を既定値として削るため */
 input:not([type="checkbox"]):not([type="radio"]),
@@ -276,7 +277,7 @@ textarea {
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 textarea { resize: vertical; line-height: 1.75; }
-input::placeholder, textarea::placeholder { color: var(--dim); opacity: 0.8; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.8; }
 input:focus, textarea:focus {
   outline: none;
   border-color: var(--grape);
@@ -295,7 +296,7 @@ input[readonly] { color: var(--muted); }
   flex: none;
   width: 52px; min-height: 52px;
   border: 2px solid var(--line-strong); border-radius: 16px;
-  background: var(--card); color: var(--dim);
+  background: var(--card); color: var(--muted);
   font-size: 1.15rem; line-height: 1; cursor: pointer;
   transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
 }
@@ -369,8 +370,8 @@ input[readonly] { color: var(--muted); }
 .poll-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .pill { padding: 3px 12px; border-radius: 999px; font-size: 0.72rem; font-weight: 800; }
 .pill-open { background: var(--ok-bg); color: var(--ok-fg); }
-.pill-closed { background: var(--chip); color: var(--dim); }
-.meta-item { color: var(--dim); font-size: 0.88rem; }
+.pill-closed { background: var(--chip); color: var(--muted); }
+.meta-item { color: var(--muted); font-size: 0.88rem; }
 
 .table-scroll { overflow-x: auto; margin: 0 -4px; padding: 0 4px 4px; }
 
@@ -397,18 +398,18 @@ input[readonly] { color: var(--muted); }
 .tally .mark { font-size: 1.2rem; font-weight: 800; }
 .mark-yes { color: var(--ok-fg); }
 .mark-maybe { color: var(--warn-fg); }
-.mark-no { color: var(--dim); }
+.mark-no { color: var(--muted); }
 .tally .is-best { background: var(--ok-bg); }
 .tally thead .is-best { border-radius: 14px 14px 0 0; }
 .tally tfoot td, .tally tfoot th { border-bottom: 0; color: var(--muted); }
 .tally tfoot b { color: var(--ok-fg); font-size: 1.1rem; }
-.tally tfoot small { color: var(--dim); font-size: 0.74rem; }
+.tally tfoot small { color: var(--muted); font-size: 0.74rem; }
 .revision {
   display: inline-block; margin-left: 6px; padding: 0 8px;
   border-radius: 999px; background: var(--chip);
-  color: var(--dim); font-size: 0.66rem; font-weight: 800;
+  color: var(--muted); font-size: 0.66rem; font-weight: 800;
 }
-.tally-empty { margin: 14px 0 0; color: var(--dim); font-size: 0.9rem; text-align: center; }
+.tally-empty { margin: 14px 0 0; color: var(--muted); font-size: 0.9rem; text-align: center; }
 
 /* 自分が書いた行を取り消すボタン。1 回目で赤くなり、2 回目で消える */
 .withdraw {
@@ -420,7 +421,7 @@ input[readonly] { color: var(--muted); }
 .withdraw:hover { color: var(--ink); border-color: var(--dim); }
 .withdraw.is-armed { background: var(--bad-bg); border-color: var(--bad-fg); color: var(--bad-fg); }
 .withdraw:disabled { opacity: 0.6; cursor: default; }
-.footer-sep { margin: 0 8px; color: var(--dim); }
+.footer-sep { margin: 0 8px; color: var(--muted); }
 
 /* --- 回答フォーム -------------------------------------------------------- */
 
@@ -435,7 +436,7 @@ input[readonly] { color: var(--muted); }
 .seg {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 10px 16px; border-radius: 999px;
-  color: var(--dim); font-size: 0.95rem; font-weight: 800; cursor: pointer;
+  color: var(--muted); font-size: 0.95rem; font-weight: 800; cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.3, 1.5, 0.5, 1);
 }
 .seg input { position: absolute; opacity: 0; width: 0; height: 0; }
@@ -473,10 +474,10 @@ input[readonly] { color: var(--muted); }
 .history summary:focus-visible { outline: 3px solid var(--grape); outline-offset: 4px; }
 .history-list { margin: 16px 0 0; padding: 0 0 0 18px; color: var(--muted); font-size: 0.94rem; }
 .history-list li { margin-bottom: 8px; }
-.history-list time { margin-right: 8px; color: var(--dim); font-family: var(--mono); font-size: 0.76rem; }
+.history-list time { margin-right: 8px; color: var(--muted); font-family: var(--mono); font-size: 0.76rem; }
 .history-marks { margin-left: 8px; }
 .history-marks i { margin-right: 3px; font-style: normal; font-weight: 800; }
-.history-comment { margin-left: 8px; color: var(--dim); }
+.history-comment { margin-left: 8px; color: var(--muted); }
 
 /* --- 特徴カード ---------------------------------------------------------- */
 
@@ -550,7 +551,7 @@ input[readonly] { color: var(--muted); }
 .device-tag {
   display: inline-block; padding: 0 8px;
   border-radius: 999px; background: var(--chip);
-  color: var(--dim); font-family: var(--mono); font-size: 0.72rem;
+  color: var(--muted); font-family: var(--mono); font-size: 0.72rem;
 }
 .revision-alert { background: var(--warn-bg); color: var(--warn-fg); cursor: help; }
 
@@ -570,7 +571,7 @@ input[readonly] { color: var(--muted); }
   background: linear-gradient(180deg, var(--soft), var(--card) 72%);
   border: 1px solid var(--line);
 }
-.metric-label { display: block; color: var(--dim); font-size: 0.88rem; font-weight: 700; }
+.metric-label { display: block; color: var(--muted); font-size: 0.88rem; font-weight: 700; }
 .metric-value {
   display: block; margin-top: 4px;
   font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums;
@@ -586,7 +587,7 @@ input[readonly] { color: var(--muted); }
 
 /* --- フッター ------------------------------------------------------------ */
 
-.site-footer { margin-top: 40px; color: var(--dim); font-size: 0.9rem; text-align: center; line-height: 1.9; }
+.site-footer { margin-top: 40px; color: var(--muted); font-size: 0.9rem; text-align: center; line-height: 1.9; }
 .site-footer a { color: var(--muted); text-decoration-color: var(--line-strong); }
 .site-footer a:hover { color: var(--grape); }
 
@@ -595,7 +596,7 @@ input[readonly] { color: var(--muted); }
   display: inline-flex; align-items: center; gap: 6px;
   padding: 5px 14px;
   border: 2px solid transparent; border-radius: 999px;
-  background: transparent; color: var(--dim);
+  background: transparent; color: var(--muted);
   font: inherit; font-size: 0.76rem; font-weight: 700; font-variant-numeric: tabular-nums;
   cursor: pointer; transition: color 0.3s ease, border-color 0.3s ease, background 0.3s ease, transform 0.3s cubic-bezier(0.3, 1.5, 0.5, 1);
 }
@@ -611,7 +612,7 @@ input[readonly] { color: var(--muted); }
 
 /* --- 支援ページ：キャニスター ID と入手先 -------------------------------- */
 
-.id-label { margin: 16px 0 6px; color: var(--dim); font-size: 0.88rem; font-weight: 800; }
+.id-label { margin: 16px 0 6px; color: var(--muted); font-size: 0.88rem; font-weight: 800; }
 
 .support-note {
   margin: 20px 0 4px; padding: 14px 16px;
@@ -674,7 +675,7 @@ input[readonly] { color: var(--muted); }
   display: inline-flex; align-items: center; justify-content: center;
 }
 .who-text b { display: block; font-size: 1.1rem; }
-.who-streak { color: var(--dim); font-size: 0.85rem; font-weight: 700; }
+.who-streak { color: var(--muted); font-size: 0.85rem; font-weight: 700; }
 .who-right { display: flex; align-items: center; gap: 10px; }
 .star-chip {
   display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; min-height: 44px;
@@ -689,6 +690,11 @@ input[readonly] { color: var(--muted); }
   display: inline-flex; align-items: center; justify-content: center;
 }
 .face.is-on { border-color: var(--grape); background: var(--chip); }
+
+/* けいさん と ぶんしょうだい の 切りかえ。見た目は 学年の タブと そろえる
+   （色も 大きさも 同じ ものを 使うので、読みやすさは 一度 測れば 足りる） */
+.cat-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.cat-tab { font-size: 1.05rem; }
 
 .grade-tabs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-bottom: 14px; }
 .grade-tab {
@@ -706,7 +712,7 @@ input[readonly] { color: var(--muted); }
 .unit-card:hover { border-color: var(--grape); transform: translateY(-2px); }
 .unit-name { font-size: 1.05rem; font-weight: 800; color: var(--ink); }
 .unit-score { font-size: 0.8rem; font-weight: 800; color: var(--ok-fg); background: var(--ok-bg); border-radius: 999px; padding: 4px 10px; }
-.unit-score.is-new { color: var(--dim); background: var(--chip); }
+.unit-score.is-new { color: var(--muted); background: var(--chip); }
 
 .quiz-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
 .quiz-dots { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
@@ -714,7 +720,7 @@ input[readonly] { color: var(--muted); }
 .dot.is-ok { background: var(--ok-fg); border-color: var(--ok-fg); }
 .dot.is-ng { background: var(--bad-fg); border-color: var(--bad-fg); }
 .dot.is-now { outline: 3px solid var(--grape); outline-offset: 2px; }
-.quiz-count { font-weight: 800; color: var(--dim); }
+.quiz-count { font-weight: 800; color: var(--muted); }
 
 .quiz-card {
   background: var(--card); border: 4px solid var(--line-strong); border-radius: 26px;
@@ -722,12 +728,19 @@ input[readonly] { color: var(--muted); }
 }
 .quiz-unit { display: inline-block; background: var(--chip); color: var(--muted); font-weight: 800; font-size: 0.85rem; border-radius: 999px; padding: 5px 14px; }
 .quiz-text { font-size: clamp(1.6rem, 7vw, 2.6rem); font-weight: 900; margin: 16px 0 10px; line-height: 1.35; }
+/* 文章題は 読ませる 文。式と 同じ 大きさに すると 1 画面に 入らず、
+   まん中ぞろえだと 行の 頭が そろわなくて 読み返せない */
+.quiz-text.is-word {
+  font-size: clamp(1.05rem, 4.2vw, 1.35rem); font-weight: 800; line-height: 1.9;
+  text-align: left; max-width: 34em; margin-inline: auto;
+  word-break: keep-all; text-wrap: pretty;
+}
 .quiz-answer {
   min-height: 72px; border: 4px dashed var(--grape); border-radius: 20px; background: var(--field);
   font-size: clamp(1.8rem, 8vw, 2.8rem); font-weight: 900; color: var(--ink);
   display: flex; align-items: center; justify-content: center; padding: 6px 16px;
 }
-.quiz-hint { color: var(--dim); font-weight: 700; margin: 8px 0 0; min-height: 1.2em; }
+.quiz-hint { color: var(--muted); font-weight: 700; margin: 8px 0 0; min-height: 1.2em; }
 .quiz-feedback { font-weight: 900; font-size: 1.1rem; margin: 10px 0 0; min-height: 1.4em; }
 .quiz-feedback.is-ok { color: var(--ok-fg); }
 .quiz-feedback.is-ng { color: var(--bad-fg); }
@@ -822,7 +835,7 @@ input[readonly] { color: var(--muted); }
 }
 .fuel-label { font-weight: 800; color: var(--muted); }
 .fuel-main { font-size: 2rem; font-weight: 900; color: var(--ink); line-height: 1.2; }
-.fuel-detail { font-size: 0.9rem; color: var(--dim); font-weight: 700; }
+.fuel-detail { font-size: 0.9rem; color: var(--muted); font-weight: 700; }
 .fuel-bar { width: 100%; height: 14px; border-radius: 999px; background: var(--chip); overflow: hidden; margin-top: 4px; }
 .fuel-fill { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--mint), var(--sky)); }
 
@@ -857,6 +870,12 @@ summary:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+
+/* 拡大を 止めて いる 画面（そら と ささえる 以外）では、指 2 本の 拡大も
+   二度たたきの 拡大も 受けない。たて・よこの スクロールは そのまま 残す。
+   絵を 描く ところ（.as-canvas）や そら（.sky-canvas）は 自分で touch-action を
+   持って いるので、この 行では 変わらない */
+html[data-zoom="lock"] body { touch-action: pan-x pan-y; }
 
 /* 押しやすさ: 小さくなりがちな所を 底上げする */
 .btn-ghost, .icon-btn { min-height: 48px; }
