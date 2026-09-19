@@ -728,14 +728,20 @@ check("the sky does not turn the pinch gesture down", zoomSky.gesture === false,
 check("the sky leaves two fingers alone", zoomSky.pinch === false, String(zoomSky.pinch));
 
 
-// ---- 10d. なつやすみの 誘い（期間・3 日前・ことばごとの 学校の 休み）--------
+// ---- 10d. なつやすみの 誘い（期間・3 日前・住んで いる ところ）--------------
 
-// 端末の 時計を 動かして 見る。日付の 計算を 検査側で 書き直すと 同じ 思いちがいを
-// 2 回 書くことに なるので、**ボタンの 文字に 書いて ある 月日**を 読み取り、
-// その 前後の 日に 出る / 出ないを 確かめる（文字と 中身が ずれても 落ちる）。
-async function challengeOn(when, lang) {
-  const fake = await newPage(420, 900, { timezoneId: "Asia/Tokyo", lang });
-  await fake.context.clock.setFixedTime(new Date(when));
+// 端末の 時計と 時間帯を 動かして 見る。日付の 計算を 検査側で 書き直すと 同じ
+// 思いちがいを 2 回 書くことに なるので、**ボタンの 文字に 出て いる 月日**を 読み取り、
+// その 前後の 日に 出る / 出ないを 確かめる。
+//
+// 時刻は UTC で 決める（`Z` つき）。走らせる 機械が JST でも UTC でも、
+// 見て いる 端末の 時間帯で 同じ 日付に なる ように 正午あたりを えらぶ。
+const NOON_UTC = { "Asia/Tokyo": "03", "America/New_York": "16" };
+
+async function challengeOn(dateKey, lang, zone) {
+  const timezoneId = zone || "Asia/Tokyo";
+  const fake = await newPage(420, 900, { timezoneId, lang });
+  await fake.context.clock.setFixedTime(new Date(`${dateKey}T${NOON_UTC[timezoneId]}:00:00Z`));
   await openDrill(fake.page);
   await fake.page.fill("#who-input", "なつ");
   await fake.page.click("#who-add");
@@ -748,15 +754,14 @@ async function challengeOn(when, lang) {
   return { shown, label, month };
 }
 
-// 9 時に そろえるのは、runner が UTC でも JST でも 同じ 日付に なる ため
 const pad = value => String(value).padStart(2, "0");
 const dayAround = (month, day, back) => {
-  const when = new Date(`2026-${pad(month)}-${pad(day)}T09:00:00`);
-  when.setDate(when.getDate() - back);
-  return `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}T09:00:00`;
+  const when = new Date(`2026-${pad(month)}-${pad(day)}T12:00:00Z`);
+  when.setUTCDate(when.getUTCDate() - back);
+  return when.toISOString().slice(0, 10);
 };
 
-const inSummer = await challengeOn("2026-08-01T09:00:00", "ja");
+const inSummer = await challengeOn("2026-08-01", "ja", "Asia/Tokyo");
 check("the summer challenge is offered while it can still be done", inSummer.shown, inSummer.label);
 check("the 30-day challenge is offered whatever the date is", inSummer.month);
 const span = (inSummer.label.match(/\d+/g) || []).map(Number);
@@ -764,22 +769,26 @@ check("the button says which days it covers", span.length === 4, inSummer.label)
 
 if (span.length === 4) {
   const [fromMonth, fromDay, toMonth, toDay] = span;
-  const threeBefore = await challengeOn(dayAround(fromMonth, fromDay, 3), "ja");
+  const threeBefore = await challengeOn(dayAround(fromMonth, fromDay, 3), "ja", "Asia/Tokyo");
   check("the invitation turns up three days before it starts", threeBefore.shown, dayAround(fromMonth, fromDay, 3));
-  const fourBefore = await challengeOn(dayAround(fromMonth, fromDay, 4), "ja");
+  const fourBefore = await challengeOn(dayAround(fromMonth, fromDay, 4), "ja", "Asia/Tokyo");
   check("it does not turn up any earlier than that", !fourBefore.shown, dayAround(fromMonth, fromDay, 4));
-  const lastDay = await challengeOn(dayAround(toMonth, toDay, 0), "ja");
+  const lastDay = await challengeOn(dayAround(toMonth, toDay, 0), "ja", "Asia/Tokyo");
   check("it is still there on the last day of the holiday", lastDay.shown, dayAround(toMonth, toDay, 0));
-  const dayAfter = await challengeOn(dayAround(toMonth, toDay, -1), "ja");
+  const dayAfter = await challengeOn(dayAround(toMonth, toDay, -1), "ja", "Asia/Tokyo");
   check("it is gone the day after the holiday ends", !dayAfter.shown, dayAround(toMonth, toDay, -1));
 }
 
-// 学校の 休みは 国で ちがう。英語の 画面は アメリカの 学校に 合わせて ある ので、
-// 日本の 画面が まだ 学校の 日でも 英語では もう なつやすみに なって いる
-const juneEn = await challengeOn("2026-06-12T09:00:00", "en");
-const juneJa = await challengeOn("2026-06-12T09:00:00", "ja");
-check("the English side follows the American school year, the Japanese side the Japanese one",
-  juneEn.shown && !juneJa.shown, "en=" + (juneEn.label || "none") + " / ja=" + (juneJa.label || "none"));
+// 学校の 休みは 住んで いる ところで 決まる。**ことばでは 決めない**＝
+// 日本語の 画面の まま アメリカに 居る 人には、アメリカの 休みが 出る
+const juneUs = await challengeOn("2026-06-12", "ja", "America/New_York");
+const juneJp = await challengeOn("2026-06-12", "ja", "Asia/Tokyo");
+check("a Japanese screen in America gets the American holiday",
+  juneUs.shown && !juneJp.shown, "America=" + (juneUs.label || "none") + " / Japan=" + (juneJp.label || "none"));
+check("and the button shows the American days, in Japanese",
+  juneUs.label.includes("6") && juneUs.label.includes("10") && juneUs.label.includes("なつやすみ"), juneUs.label);
+const augustUs = await challengeOn("2026-08-28", "ja", "America/New_York");
+check("the American holiday is over before the Japanese one ends", !augustUs.shown, "2026-08-28");
 
 // 電波が無くても ドリルが開けるか
 await drill.page.goto(`${BASE}#/drill`, { waitUntil: "networkidle" });

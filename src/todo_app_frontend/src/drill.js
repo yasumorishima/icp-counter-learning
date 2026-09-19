@@ -5,7 +5,7 @@
 import { GRADES, CATS, unitsOf, unitById, isCorrect, makeSet, makeDaily } from "./drill-data";
 import * as records from "./records";
 import { sounds, confetti, soundOn, toggleSound } from "./effects";
-import { t } from "./i18n";
+import { t, currentLang } from "./i18n";
 
 const $ = id => document.getElementById(id);
 const FACES = ["🐻", "🐰", "🐱", "🐶", "🦊", "🐼", "🐸", "🐧"];
@@ -360,6 +360,34 @@ function renderWhoPanel() {
 const SUMMER_LEAD_DAYS = 3;
 
 /**
+ * 学校の なつやすみ。国（というより 通って いる 学校）で ちがう。
+ * アメリカの 学区は ばらつくので、よく ある ところ（6 月なかば〜8 月おわり）に 置く。
+ */
+const SUMMER_WINDOWS = {
+  jp: { from: "07-21", to: "08-31" },
+  us: { from: "06-10", to: "08-25" },
+};
+
+/**
+ * どちらの なつやすみを つかうか。
+ *
+ * 🔴 **ことばでは 決めない**＝日本語の 画面で つかって いても、学校が アメリカなら
+ * アメリカの 休みが 正しい（user 指示 2026-09-20）。**住んで いる ところ**で 決まる ものなので、
+ * 端末の 時間帯を 見る。分からない ときだけ ことばに たよる。
+ */
+function summerRegion() {
+  let zone = "";
+  try {
+    zone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  } catch (error) {
+    /* 古い 端末では 時間帯が 分からない＝ことばに たよる */
+  }
+  if (zone === "Asia/Tokyo" || zone === "Japan") return "jp";
+  if (/^(America|US|Canada|Mexico)\//.test(zone) || zone === "EST5EDT" || zone === "CST6CDT") return "us";
+  return currentLang() === "ja" ? "jp" : "us";
+}
+
+/**
  * なつやすみ チャレンジの 期間と、誘いを 出して いい ころ。
  *
  * 9 月に なって から 始めても、その 日に もう「おわりました」に なるだけで
@@ -367,21 +395,26 @@ const SUMMER_LEAD_DAYS = 3;
  * なので **終わる 日を 過ぎたら 誘いを 出さない**。前もって 出すのは 3 日前から
  *（user 指示「事前はいらない、3日前くらいで」）。
  *
- * **学校の 休みは 国で ちがう**ので、月日は ことばの 辞書から 引く
- *（日本語＝7/21〜8/31・英語＝アメリカの 学校に 合わせて 6/10〜8/25）。
- *
- * 期間は ここだけで 組み立てる。画面と 押した ときで 日付が ずれると、
- * 出て いないのに 始められる／始められないのに 出る が 起きる。
+ * 期間は ここだけで 組み立て、**ボタンの 文字も ここから 作る**
+ *（別々に 書くと、文字は 7/21 なのに 中身は 6/10 が 起きる）。
  */
 function summerSpan(now) {
   const base = now || new Date();
   const year = base.getFullYear();
-  const from = year + "-" + t("dr_summerFrom");
-  const to = year + "-" + t("dr_summerTo");
+  const window = SUMMER_WINDOWS[summerRegion()] || SUMMER_WINDOWS.jp;
+  const from = year + "-" + window.from;
+  const to = year + "-" + window.to;
   const start = new Date(from + "T00:00:00");
   const openFrom = todayKey(new Date(start.getTime() - SUMMER_LEAD_DAYS * 24 * 60 * 60 * 1000));
   const today = todayKey(base);
-  return { from, to, open: today >= openFrom && today <= to };
+  const month = key => String(Number(key.slice(0, 2)));
+  const day = key => String(Number(key.slice(3, 5)));
+  return {
+    from,
+    to,
+    open: today >= openFrom && today <= to,
+    label: t("dr_summerRange", month(window.from), day(window.from), month(window.to), day(window.to)),
+  };
 }
 
 /** きょうの 日付。端末の時計で決める */
@@ -402,7 +435,7 @@ function renderChallenge() {
       '<p class="challenge-line">' + t("dr_challengeLede") + "</p>" +
       '<div class="challenge-actions">' +
       (summerSpan().open
-        ? '<button type="button" class="btn-ghost" data-challenge="summer">' + t("dr_challengeSummerBtn") + "</button>"
+        ? '<button type="button" class="btn-ghost" data-challenge="summer">' + t("dr_challengeSummerBtn", summerSpan().label) + "</button>"
         : "") +
       '<button type="button" class="btn-ghost" data-challenge="month">' + t("dr_challengeMonth") + "</button>" +
       "</div>";
