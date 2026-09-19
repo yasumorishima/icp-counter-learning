@@ -728,28 +728,58 @@ check("the sky does not turn the pinch gesture down", zoomSky.gesture === false,
 check("the sky leaves two fingers alone", zoomSky.pinch === false, String(zoomSky.pinch));
 
 
-// ---- 10d. なつやすみの 誘いは 期間が 過ぎたら 出さない ----------------------
+// ---- 10d. なつやすみの 誘い（期間・3 日前・ことばごとの 学校の 休み）--------
 
-// 9 月に 7/21〜8/31 を 始めても、その 日に もう「おわりました」に なるだけ。
-// 端末の 時計を 8 月と 9 月に 置いて、出る / 出ないの 両方を 見る
-//（日付の 計算を 検査側で 書き直すと、同じ 思いちがいを 2 回 書くことに なる）。
-for (const [when, want] of [["2026-08-01T09:00:00", true], ["2026-09-20T09:00:00", false]]) {
-  const fake = await newPage(420, 900, { timezoneId: "Asia/Tokyo" });
+// 端末の 時計を 動かして 見る。日付の 計算を 検査側で 書き直すと 同じ 思いちがいを
+// 2 回 書くことに なるので、**ボタンの 文字に 書いて ある 月日**を 読み取り、
+// その 前後の 日に 出る / 出ないを 確かめる（文字と 中身が ずれても 落ちる）。
+async function challengeOn(when, lang) {
+  const fake = await newPage(420, 900, { timezoneId: "Asia/Tokyo", lang });
   await fake.context.clock.setFixedTime(new Date(when));
   await openDrill(fake.page);
   await fake.page.fill("#who-input", "なつ");
   await fake.page.click("#who-add");
   await fake.page.waitForSelector("#drill-main:not(.is-hidden)", { timeout: 30000 });
-  const summerShown = (await fake.page.locator('[data-challenge="summer"]').count()) === 1;
-  check(
-    want ? "the summer challenge is offered while it can still be done" : "the summer challenge is gone once summer is over",
-    summerShown === want,
-    when,
-  );
-  check("the 30-day challenge is offered whatever the date is",
-    (await fake.page.locator('[data-challenge="month"]').count()) === 1, when);
+  const summer = fake.page.locator('[data-challenge="summer"]');
+  const shown = (await summer.count()) === 1;
+  const label = shown ? (await summer.textContent()).trim() : "";
+  const month = (await fake.page.locator('[data-challenge="month"]').count()) === 1;
   await fake.context.close();
+  return { shown, label, month };
 }
+
+// 9 時に そろえるのは、runner が UTC でも JST でも 同じ 日付に なる ため
+const pad = value => String(value).padStart(2, "0");
+const dayAround = (month, day, back) => {
+  const when = new Date(`2026-${pad(month)}-${pad(day)}T09:00:00`);
+  when.setDate(when.getDate() - back);
+  return `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}T09:00:00`;
+};
+
+const inSummer = await challengeOn("2026-08-01T09:00:00", "ja");
+check("the summer challenge is offered while it can still be done", inSummer.shown, inSummer.label);
+check("the 30-day challenge is offered whatever the date is", inSummer.month);
+const span = (inSummer.label.match(/\d+/g) || []).map(Number);
+check("the button says which days it covers", span.length === 4, inSummer.label);
+
+if (span.length === 4) {
+  const [fromMonth, fromDay, toMonth, toDay] = span;
+  const threeBefore = await challengeOn(dayAround(fromMonth, fromDay, 3), "ja");
+  check("the invitation turns up three days before it starts", threeBefore.shown, dayAround(fromMonth, fromDay, 3));
+  const fourBefore = await challengeOn(dayAround(fromMonth, fromDay, 4), "ja");
+  check("it does not turn up any earlier than that", !fourBefore.shown, dayAround(fromMonth, fromDay, 4));
+  const lastDay = await challengeOn(dayAround(toMonth, toDay, 0), "ja");
+  check("it is still there on the last day of the holiday", lastDay.shown, dayAround(toMonth, toDay, 0));
+  const dayAfter = await challengeOn(dayAround(toMonth, toDay, -1), "ja");
+  check("it is gone the day after the holiday ends", !dayAfter.shown, dayAround(toMonth, toDay, -1));
+}
+
+// 学校の 休みは 国で ちがう。英語の 画面は アメリカの 学校に 合わせて ある ので、
+// 日本の 画面が まだ 学校の 日でも 英語では もう なつやすみに なって いる
+const juneEn = await challengeOn("2026-06-12T09:00:00", "en");
+const juneJa = await challengeOn("2026-06-12T09:00:00", "ja");
+check("the English side follows the American school year, the Japanese side the Japanese one",
+  juneEn.shown && !juneJa.shown, "en=" + (juneEn.label || "none") + " / ja=" + (juneJa.label || "none"));
 
 // 電波が無くても ドリルが開けるか
 await drill.page.goto(`${BASE}#/drill`, { waitUntil: "networkidle" });

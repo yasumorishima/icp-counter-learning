@@ -356,23 +356,30 @@ function renderWhoPanel() {
   });
 }
 
+/** なつやすみの 誘いを 出しはじめる 日。始まる 3 日前から（user 指示 2026-09-20） */
+const SUMMER_LEAD_DAYS = 3;
+
 /**
  * なつやすみ チャレンジの 期間と、誘いを 出して いい ころ。
  *
  * 9 月に なって から 始めても、その 日に もう「おわりました」に なるだけで
  * 何も できない（user 指摘 2026-09-20「夏休み過ぎたら、夏休み いらないよね」）。
- * なので **終わる 日を 過ぎたら 誘いを 出さない**。はじまる 1 か月前からは 出す
- *（先に 申しこんで おける ように）。
+ * なので **終わる 日を 過ぎたら 誘いを 出さない**。前もって 出すのは 3 日前から
+ *（user 指示「事前はいらない、3日前くらいで」）。
  *
- * 期間は ここだけに 書く。画面と 押した ときで 日付が ずれると、
+ * **学校の 休みは 国で ちがう**ので、月日は ことばの 辞書から 引く
+ *（日本語＝7/21〜8/31・英語＝アメリカの 学校に 合わせて 6/10〜8/25）。
+ *
+ * 期間は ここだけで 組み立てる。画面と 押した ときで 日付が ずれると、
  * 出て いないのに 始められる／始められないのに 出る が 起きる。
  */
 function summerSpan(now) {
   const base = now || new Date();
   const year = base.getFullYear();
-  const from = year + "-07-21";
-  const to = year + "-08-31";
-  const openFrom = year + "-06-21";
+  const from = year + "-" + t("dr_summerFrom");
+  const to = year + "-" + t("dr_summerTo");
+  const start = new Date(from + "T00:00:00");
+  const openFrom = todayKey(new Date(start.getTime() - SUMMER_LEAD_DAYS * 24 * 60 * 60 * 1000));
   const today = todayKey(base);
   return { from, to, open: today >= openFrom && today <= to };
 }

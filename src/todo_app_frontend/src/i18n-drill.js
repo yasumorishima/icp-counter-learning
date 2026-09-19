@@ -116,7 +116,11 @@ export const drillEn = {
   // --- チャレンジ -----------------------------------------------------------
   dr_challengeTitle: "Keep-going challenge",
   dr_challengeLede: "Do one sheet a day and get a certificate at the end.",
-  dr_challengeSummerBtn: "Summer holiday (7/21-8/31)",
+  // なつやすみの 期間。学校の 休みは 国で ちがうので ことばごとに 持つ。
+  // ⚠️ 下の ボタンの 文字と 日づけを そろえる（E2E が 突き合わせて いる）
+  dr_summerFrom: "06-10",
+  dr_summerTo: "08-25",
+  dr_challengeSummerBtn: "Summer holiday (6/10-8/25)",
   dr_challengeSummer: "Summer holiday challenge",
   dr_challengeMonth: "30-day challenge",
   dr_challengeAllDone: "All done! Get your certificate",
@@ -298,6 +302,8 @@ export const drillJa = {
   // --- チャレンジ -----------------------------------------------------------
   dr_challengeTitle: "つづける チャレンジ",
   dr_challengeLede: "まいにち 1まい やって、さいごに しょうじょうを もらおう。",
+  dr_summerFrom: "07-21",
+  dr_summerTo: "08-31",
   dr_challengeSummerBtn: "なつやすみ（7/21〜8/31）",
   dr_challengeSummer: "なつやすみ チャレンジ",
   dr_challengeMonth: "30日 チャレンジ",
