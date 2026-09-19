@@ -10,6 +10,7 @@
  * 追いつくように getter にしてある（読み出したときに 引く）。
  */
 import { t } from "./i18n";
+import { WORD_UNITS } from "./drill-word";
 
 const ri = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
 const pick = list => list[Math.floor(Math.random() * list.length)];
@@ -193,8 +194,27 @@ UNITS.push(
     } },
 );
 
-export function unitsOf(grade) {
-  return UNITS.filter(u => u.grade === grade);
+/**
+ * 2 つの カテゴリー。計算（式を そのまま とく）と 文章題（文を 読んで 式を 立てる）。
+ * cat を 持たない 単元は これまで どおり 計算 あつかいに する。
+ */
+export const CATS = [
+  { id: "calc", get name() { return t("dr_catCalc"); } },
+  { id: "word", get name() { return t("dr_catWord"); } },
+];
+
+UNITS.forEach(unit => {
+  if (!unit.cat) unit.cat = "calc";
+});
+UNITS.push(...WORD_UNITS);
+
+/**
+ * その学年の 単元。カテゴリーを 書かなければ 計算だけ を 返す
+ *（きょうの 1まい・タイムアタック は 計算の 単元から 出す）。
+ */
+export function unitsOf(grade, cat) {
+  const want = cat || "calc";
+  return UNITS.filter(u => u.grade === grade && (u.cat || "calc") === want);
 }
 
 export function unitById(id) {

@@ -101,6 +101,8 @@ export const drillEn = {
   dr_firstTime: "New",
   dr_whichRow: "Which table?",
   dr_gradeTab: "Grade {0}",
+  dr_catCalc: "Sums",
+  dr_catWord: "Word problems",
 
   // --- つかう人 -------------------------------------------------------------
   dr_whoTitle: "Who is using this",
@@ -281,6 +283,8 @@ export const drillJa = {
   dr_firstTime: "はじめて",
   dr_whichRow: "どの だん？",
   dr_gradeTab: "{0}年",
+  dr_catCalc: "けいさん",
+  dr_catWord: "ぶんしょうだい",
 
   // --- つかう人 -------------------------------------------------------------
   dr_whoTitle: "つかう人",

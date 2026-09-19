@@ -1,6 +1,6 @@
 /**
  * ローカル replica に載せた本物のサイトを、本物のブラウザで通しで動かす。
- * さんすう（採点・きろく・きょうの1まい・タイムアタック・チャレンジ）→ しょうぎ（つみ・千日手・入玉）
+ * さんすう（採点・きろく・きょうの1まい・タイムアタック・チャレンジ・ぶんしょうだい・拡大の とめかた）→ しょうぎ（つみ・千日手・入玉）
  * → そら（見まわし・星の名前・出すものの切り替え・時間送り）→ 支援ページ → カウンター。
  *
  *   node e2e.mjs <frontend-url>
@@ -575,6 +575,157 @@ await drill.page.waitForSelector("#view-result:not(.is-hidden)", { timeout: 3000
 await openDrill(drill.page);
 check("a weak unit is offered again", await drill.page.locator("#weak-row").isVisible());
 check("the weak card points at the unit just failed", (await drill.page.locator('.weak-card[data-unit="g1-sub"]').count()) === 1);
+
+// ---- 10b. ぶんしょうだい（計算の となりの もう 1 つの カテゴリー）-----------
+
+await openDrill(drill.page);
+check("the drill offers two categories", (await drill.page.locator(".cat-tab").count()) === 2);
+check("sums are the category shown first", await drill.page.locator('.cat-tab[data-cat="calc"].is-on').isVisible());
+
+// 6 学年ぶん 文章題が あるか（どの 学年も 空に しない）
+await drill.page.locator('.cat-tab[data-cat="word"]').click();
+const perGradeWord = [];
+for (let g = 1; g <= 6; g += 1) {
+  await drill.page.locator(`.grade-tab[data-grade="${g}"]`).click();
+  perGradeWord.push(await drill.page.locator(".unit-card").count());
+}
+check("every grade has word problems", perGradeWord.every(n => n >= 5), perGradeWord.join("/"));
+
+// 計算の 単元は 文章題の 一覧に 出ない（入れちがいが 起きていないか）
+await drill.page.locator('.grade-tab[data-grade="1"]').click();
+check("the two categories do not mix", (await drill.page.locator('.unit-card[data-unit="g1-add"]').count()) === 0);
+
+await openDrill(drill.page);
+check("the chosen category survives a reload", await drill.page.locator('.cat-tab[data-cat="word"].is-on').isVisible());
+
+// ドリルの トップも 明暗を 測る（カテゴリーの タブを ここに 足したため）
+const topLight = await contrastSweep(drill.page);
+check("every text on the drill top is readable in the light theme", topLight.length === 0, topLight.slice(0, 6).join(" "));
+await drill.page.click("#theme-toggle");
+const topDark = await contrastSweep(drill.page);
+check("every text on the drill top is readable in the dark theme", topDark.length === 0, topDark.slice(0, 6).join(" "));
+await drill.page.click("#theme-toggle");
+
+// きまりを みつける 問題（アメリカの 2年生の プリントと 同じ かたち）。
+// 答えは 画面の 文から こちらで 解き直す＝生成器の 答えを 写さない
+await drill.page.locator('.grade-tab[data-grade="2"]').click();
+await drill.page.locator('.unit-card[data-unit="g2w-pattern"]').click();
+await drill.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
+const wordText = (await drill.page.locator("#quiz-text").textContent()).trim();
+check("a word problem is a sentence, not a sum", wordText.length > 30 && wordText.includes("。"), wordText.slice(0, 44));
+check("the sentence is laid out for reading", await drill.page.locator("#quiz-text.is-word").isVisible());
+const wordStyle = await drill.page.evaluate(() => {
+  const style = getComputedStyle(document.getElementById("quiz-text"));
+  return { size: parseFloat(style.fontSize), align: style.textAlign };
+});
+check("the sentence is small enough to fit a phone", wordStyle.size <= 22, wordStyle.size + "px");
+check("the sentence starts at the left edge, like a book", wordStyle.align === "left", wordStyle.align);
+check("the pattern question is answered by choosing one of four", (await drill.page.locator(".choice").count()) === 4);
+
+// 新しい 見た目を 足したら、その 画面で 明暗を 測る
+//（測って いない 画面は「合格」では なく「未測定」）
+const wordLight = await contrastSweep(drill.page);
+check("every text on a word problem is readable in the light theme", wordLight.length === 0, wordLight.slice(0, 6).join(" "));
+await drill.page.click("#theme-toggle");
+const wordDark = await contrastSweep(drill.page);
+check("every text on a word problem is readable in the dark theme", wordDark.length === 0, wordDark.slice(0, 6).join(" "));
+await drill.page.click("#theme-toggle");
+
+for (let i = 0; i < 10; i += 1) {
+  const text = (await drill.page.locator("#quiz-text").textContent()).trim();
+  const shown = (text.match(/\d+/g) || []).map(Number);
+  const want = String(shown[2] + (shown[1] - shown[0]));
+  const offered = await drill.page.locator(".choice").allTextContents();
+  if (!offered.includes(want)) {
+    check("the answer that the rule gives is among the choices", false, want + " not in " + offered.join("/") + "  — " + text);
+    break;
+  }
+  await drill.page.locator(`.choice[data-value="${want}"]`).click();
+  if (i < 9) await drill.page.waitForFunction(n => document.getElementById("quiz-count").textContent.startsWith(String(n)), i + 2, { timeout: 30000 });
+}
+await drill.page.waitForSelector("#view-result:not(.is-hidden)", { timeout: 30000 });
+check("following the rule scores every pattern question",
+  (await drill.page.locator("#result-score").textContent()).includes("10もん せいかい"));
+
+// 数を 入れる 文章題（おかね）。ここも 文から 読んで 解く
+await openDrill(drill.page);
+await drill.page.locator('.grade-tab[data-grade="2"]').click();
+await drill.page.locator('.unit-card[data-unit="g2w-money"]').click();
+await drill.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
+check("a money problem is typed on the keypad", await drill.page.locator("#quiz-keypad").isVisible());
+for (let i = 0; i < 10; i += 1) {
+  const text = (await drill.page.locator("#quiz-text").textContent()).trim();
+  const shown = (text.match(/\d+/g) || []).map(Number);
+  const value = String(shown[0] - shown[1]);
+  for (const digit of value.split("")) await drill.page.locator(`.pad[data-pad="${digit}"]`).click();
+  await drill.page.locator('.pad[data-pad="ok"]').click();
+  if (i < 9) await drill.page.waitForFunction(n => document.getElementById("quiz-count").textContent.startsWith(String(n)), i + 2, { timeout: 30000 });
+}
+await drill.page.waitForSelector("#view-result:not(.is-hidden)", { timeout: 30000 });
+check("working out the change scores every money question",
+  (await drill.page.locator("#result-score").textContent()).includes("10もん せいかい"));
+
+// 文章題も 記録に のこる（計算と 同じ しくみに 乗って いるか）
+await openDrill(drill.page);
+check("a word unit keeps its score",
+  (await drill.page.locator('.unit-card[data-unit="g2w-money"]').textContent()).includes("100点"));
+await drill.page.goto(`${BASE}#/kiroku`, { waitUntil: "domcontentloaded" });
+await drill.page.waitForSelector("#view-kiroku:not(.is-hidden)", { timeout: 30000 });
+check("the record page names the word unit",
+  (await drill.page.locator(".kiroku-table").textContent()).includes("おかねの おはなし"));
+
+// 計算に もどす（ここから 先の 検査は 計算の 単元を 押す）
+await openDrill(drill.page);
+await drill.page.locator('.cat-tab[data-cat="calc"]').click();
+await drill.page.locator('.grade-tab[data-grade="1"]').click();
+check("switching back brings the sums back", (await drill.page.locator('.unit-card[data-unit="g1-add"]').count()) === 1);
+
+// ---- 10c. 指 2 本で 拡大しない（そら 以外）----------------------------------
+
+// 拡大の 止め方は 3 つ かさねて ある。1 つでも 抜けると ある 端末だけ 拡大するので、
+// meta・touch-action・gesture/touchmove の うちけし を それぞれ 別に 見る。
+const zoomOf = async page => page.evaluate(() => {
+  const fire = (name, touches) => {
+    const event = touches
+      ? new TouchEvent(name, { cancelable: true, bubbles: true, touches })
+      : new Event(name, { cancelable: true, bubbles: true });
+    document.body.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+  const finger = (id, at) => new Touch({ identifier: id, target: document.body, clientX: at, clientY: at });
+  const canTouch = typeof Touch === "function" && typeof TouchEvent === "function";
+  return {
+    flag: document.documentElement.dataset.zoom,
+    viewport: document.querySelector('meta[name="viewport"]').getAttribute("content"),
+    touch: getComputedStyle(document.body).touchAction,
+    gesture: fire("gesturestart"),
+    pinch: canTouch ? fire("touchmove", [finger(1, 10), finger(2, 90)]) : "no touch events",
+    oneFinger: canTouch ? fire("touchmove", [finger(3, 20)]) : "no touch events",
+  };
+});
+
+await openDrill(drill.page);
+const zoomDrill = await zoomOf(drill.page);
+check("the drill screen is held at one size", zoomDrill.flag === "lock", JSON.stringify(zoomDrill));
+check("the drill page says it cannot be scaled", zoomDrill.viewport.includes("user-scalable=no"), zoomDrill.viewport);
+check("pinching and double tapping cannot zoom the drill", zoomDrill.touch === "pan-x pan-y", zoomDrill.touch);
+check("the Safari pinch gesture is turned down on the drill", zoomDrill.gesture === true);
+check("two fingers moving is turned down on the drill", zoomDrill.pinch === true, String(zoomDrill.pinch));
+check("one finger is left alone, so the page still scrolls", zoomDrill.oneFinger === false, String(zoomDrill.oneFinger));
+
+await drill.page.goto(`${BASE}#/asobi/mogura`, { waitUntil: "domcontentloaded" });
+await drill.page.waitForSelector("#view-asobi:not(.is-hidden)", { timeout: 30000 });
+const zoomAsobi = await zoomOf(drill.page);
+check("the play screens are held at one size too",
+  zoomAsobi.flag === "lock" && zoomAsobi.gesture === true && zoomAsobi.touch === "pan-x pan-y", JSON.stringify(zoomAsobi));
+
+await drill.page.goto(`${BASE}#/sky`, { waitUntil: "domcontentloaded" });
+await drill.page.waitForSelector("#view-sky:not(.is-hidden)", { timeout: 30000 });
+const zoomSky = await zoomOf(drill.page);
+check("the sky can still be zoomed, because the stars are small",
+  zoomSky.flag === "free" && !zoomSky.viewport.includes("user-scalable=no"), JSON.stringify(zoomSky));
+check("the sky does not turn the pinch gesture down", zoomSky.gesture === false, String(zoomSky.gesture));
+check("the sky leaves two fingers alone", zoomSky.pinch === false, String(zoomSky.pinch));
 
 // 電波が無くても ドリルが開けるか
 await drill.page.goto(`${BASE}#/drill`, { waitUntil: "networkidle" });

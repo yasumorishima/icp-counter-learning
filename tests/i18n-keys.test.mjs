@@ -11,6 +11,7 @@
  */
 import { coreEn, coreJa } from "../src/todo_app_frontend/src/i18n-core.js";
 import { drillEn, drillJa } from "../src/todo_app_frontend/src/i18n-drill.js";
+import { drillWordEn, drillWordJa } from "../src/todo_app_frontend/src/i18n-drill-word.js";
 import { shogiEn, shogiJa } from "../src/todo_app_frontend/src/i18n-shogi.js";
 import { skyEn, skyJa } from "../src/todo_app_frontend/src/i18n-sky.js";
 import { asobiEn, asobiJa } from "../src/todo_app_frontend/src/i18n-asobi.js";
@@ -18,6 +19,7 @@ import { asobiEn, asobiJa } from "../src/todo_app_frontend/src/i18n-asobi.js";
 const PARTS = [
   ["core", coreEn, coreJa],
   ["drill", drillEn, drillJa],
+  ["drill-word", drillWordEn, drillWordJa],
   ["shogi", shogiEn, shogiJa],
   ["sky", skyEn, skyJa],
   ["asobi", asobiEn, asobiJa],

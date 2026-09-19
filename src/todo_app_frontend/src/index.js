@@ -248,7 +248,52 @@ const VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view-kiro
 const KIDS_VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view-kiroku", "view-award",
   "view-shogi", "view-sky", "view-asobi"];
 
+// --- 拡大の とめかた ---------------------------------------------------------
+
+/**
+ * 画面を 使うのは こどもで、遊んで いる さいちゅうに 指が 2 本 当たると
+ * 気づかないまま 拡大され、そこから 元に もどせなく なる（user 指示 2026-09-20）。
+ * 目は 良いので 拡大は 要らない。
+ *
+ * のこすのは 2 つだけ:
+ *   そら  = 星が 1 つぶ ずつ 小さいので 近づいて 見たい
+ *   ささえる = おとなが 読む ページ（キャニスターの 番号など 細かい 字が ある）
+ *
+ * 止め方は 3 つ かさねる。1 つでは どの 端末でも 止まらないため:
+ *   1. meta viewport の user-scalable=no   … Android の Chrome に 効く
+ *   2. touch-action（style.css）            … 指 2 本と 二度たたきの 拡大
+ *   3. gesture* の うちけし                 … iOS の Safari は 1 を 見ない
+ * ブラウザの メニューや Ctrl+ホイール からの 拡大は そのまま（おとなの 手は のこす）。
+ */
+const ZOOM_FREE_VIEWS = ["view-sky", "view-support"];
+const VIEWPORT_FREE = "width=device-width, initial-scale=1.0";
+const VIEWPORT_LOCKED = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
+
+let zoomLocked = false;
+
+function setZoomLock(on) {
+  zoomLocked = on;
+  document.documentElement.dataset.zoom = on ? "lock" : "free";
+  const meta = document.querySelector('meta[name="viewport"]');
+  if (meta) meta.setAttribute("content", on ? VIEWPORT_LOCKED : VIEWPORT_FREE);
+}
+
+function setupZoomLock() {
+  // iOS の Safari は user-scalable=no を 見ないので、つまむ 動きを ここで ことわる
+  ["gesturestart", "gesturechange", "gestureend"].forEach(name => {
+    document.addEventListener(name, event => {
+      if (zoomLocked && event.cancelable) event.preventDefault();
+    }, { passive: false });
+  });
+  // 指が 2 本 乗った ときの 動きも ことわる（touch-action と 二重に かける）。
+  // 1 本の ときは 何も しない＝画面は これまで どおり スクロールできる
+  document.addEventListener("touchmove", event => {
+    if (zoomLocked && event.touches.length > 1 && event.cancelable) event.preventDefault();
+  }, { passive: false });
+}
+
 function showView(id) {
+  setZoomLock(ZOOM_FREE_VIEWS.indexOf(id) < 0);
   // そらは 出て いない あいだ 描き つづけない（電池の ため）
   if (id !== "view-sky") stopSky();
   // あそびも 同じ。もぐらの タイマーや ふうせんの 描画を 置き去りに しない
@@ -321,6 +366,7 @@ function setupSameHashLinks() {
 }
 
 async function init() {
+  setupZoomLock();
   setupTheme();
   setupTextSize();
   setupLangSelect();
