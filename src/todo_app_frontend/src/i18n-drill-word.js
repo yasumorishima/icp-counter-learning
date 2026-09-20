@@ -57,7 +57,7 @@ export const drillWordEn = {
   dr_w2Add: "{0} had {1} {2}. Then {0} got {3} more. How many {2} does {0} have now?",
   dr_w2Sub: "There were {1} {2} in the box. {0} took {3} of them out. How many {2} are still in the box?",
   dr_w2Mul: "There are {1} bags. Each bag holds {2} {3}. How many {3} are there in all?",
-  dr_w2Money: "{0} has {1} yen. A {2} costs {3} yen. How many yen will be left?",
+  dr_w2Money: "{0} has {1} yen. The {2} costs {3} yen. How many yen will be left?",
   dr_w2Len: "The blue tape is {0} cm long. The red tape is {1} cm shorter than the blue one. How many cm long is the red tape?",
 
   // --- 3年 -------------------------------------------------------------------
@@ -71,7 +71,7 @@ export const drillWordEn = {
   dr_w3Rem: "There are {0} {1}. Each box holds {2}. How many {1} are left over when the boxes are full?",
   dr_w3Box: "There are {0} {1}. One box holds {2}. How many boxes are needed to hold them all?",
   dr_w3Mul: "One box holds {1} {2}. How many {2} are in {0} boxes?",
-  dr_w3Change: "{0} pays {1} yen for a {2} that costs {3} yen. How many yen of change does {0} get back?",
+  dr_w3Change: "{0} pays {1} yen for the {2}, which costs {3} yen. How many yen of change does {0} get back?",
   dr_w3Pattern: "Find the rule, then work out the number in the box.   {0}",
 
   // --- 4年 -------------------------------------------------------------------
@@ -112,7 +112,7 @@ export const drillWordEn = {
   dr_w6SpeedDist: "A car travels {0} km in one hour. How many km does it travel in {1} hours?",
   dr_w6Ratio: "Juice and water are mixed in the ratio {0} : {1}. There is {2} mL of juice. How many mL of water is there?",
   dr_w6Frac: "A ribbon is {0} m long. {1} m of it is used. How many m are left? Write the answer as a fraction.",
-  dr_w6Discount: "A {0} costs {1} yen. Today it is {2}％ off. How many yen does it cost today?",
+  dr_w6Discount: "The {0} costs {1} yen. Today it is {2}％ off. How many yen does it cost today?",
   dr_w6Cases: "{0} has {1} shirts and {2} hats. How many different ways can {0} wear one shirt and one hat?",
 };
 
