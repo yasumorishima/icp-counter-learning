@@ -1630,3 +1630,180 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
   line-height: 1.8;
 }
 .pick-help-list li { margin: 6px 0; }
+
+/* ==========================================================================
+   きせつ（2026-09-20）
+
+   user 指示「背景をシーズンごとに変える／もっとテンション上がるように／
+   アニメーション加えるとか、子供が喜ぶつくりに」。
+
+   決めるのは <html data-season>（season.js が 端末の 時計の 月から 付ける）。
+   ここでは 色トークンの 差し替えと、舞うもの・景色の 動きだけを 書く。
+
+   ⚠️ 明暗（data-theme）と 組み合わせる ので、暗い ほうは
+   :root[data-theme="dark"][data-season="…"] と 2 つ 重ねて 指定する
+   （片方だけだと 同じ 強さに なって あとがち に なる）。
+   ========================================================================== */
+
+:root { --sn-size: 26px; --sn-day: block; --sn-night: none; }
+:root[data-theme="dark"] { --sn-day: none; --sn-night: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --sn-day: none; --sn-night: block; }
+}
+.sn-day { display: var(--sn-day); }
+.sn-night { display: var(--sn-night); }
+
+:root[data-season="spring"] {
+  --sn-size: 26px;
+  --bg: #fff6fa;
+  --blob-1: #ffd8ea; --blob-2: #e6d9ff; --blob-3: #d9f6e4;
+  --dots: rgba(244, 114, 182, 0.16);
+}
+:root[data-season="summer"] {
+  --sn-size: 30px;
+  --bg: #f1fbff;
+  --blob-1: #bfe9ff; --blob-2: #d7f7e6; --blob-3: #fff0c2;
+  --dots: rgba(56, 189, 248, 0.18);
+}
+:root[data-season="autumn"] {
+  --sn-size: 32px;
+  --bg: #fff7ec;
+  --blob-1: #ffdcc0; --blob-2: #ffe9b8; --blob-3: #ffd2cc;
+  --dots: rgba(234, 140, 60, 0.17);
+}
+:root[data-season="winter"] {
+  --sn-size: 24px;
+  --bg: #f3f7ff;
+  --blob-1: #d9e6ff; --blob-2: #e8e2ff; --blob-3: #d6f0ff;
+  --dots: rgba(125, 155, 235, 0.17);
+}
+
+:root[data-theme="dark"][data-season="spring"],
+:root[data-theme="dark"][data-season="summer"],
+:root[data-theme="dark"][data-season="autumn"],
+:root[data-theme="dark"][data-season="winter"] { --blob-opacity: 0.4; }
+
+:root[data-theme="dark"][data-season="spring"] {
+  --bg: #241c33;
+  --blob-1: #5b2a4d; --blob-2: #3a2a66; --blob-3: #23503c;
+}
+:root[data-theme="dark"][data-season="summer"] {
+  --bg: #111d33;
+  --blob-1: #1d4a72; --blob-2: #1e5449; --blob-3: #4a4018;
+}
+:root[data-theme="dark"][data-season="autumn"] {
+  --bg: #2a1d22;
+  --blob-1: #6a3820; --blob-2: #5e4417; --blob-3: #6b2b33;
+}
+:root[data-theme="dark"][data-season="winter"] {
+  --bg: #161d33;
+  --blob-1: #22406e; --blob-2: #3b3568; --blob-3: #1d4a63;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-season="spring"] { --bg: #241c33; --blob-1: #5b2a4d; --blob-2: #3a2a66; --blob-3: #23503c; --blob-opacity: 0.4; }
+  :root:not([data-theme="light"])[data-season="summer"] { --bg: #111d33; --blob-1: #1d4a72; --blob-2: #1e5449; --blob-3: #4a4018; --blob-opacity: 0.4; }
+  :root:not([data-theme="light"])[data-season="autumn"] { --bg: #2a1d22; --blob-1: #6a3820; --blob-2: #5e4417; --blob-3: #6b2b33; --blob-opacity: 0.4; }
+  :root:not([data-theme="light"])[data-season="winter"] { --bg: #161d33; --blob-1: #22406e; --blob-2: #3b3568; --blob-3: #1d4a63; --blob-opacity: 0.4; }
+}
+
+/* --- 舞うもの ------------------------------------------------------------ */
+
+.season-float {
+  position: fixed; inset: 0; z-index: -1;
+  pointer-events: none; overflow: hidden;
+  opacity: 0.85;
+}
+:root[data-theme="dark"] .season-float { opacity: 0.7; }
+
+.sn-bit {
+  position: absolute; top: -14vh;
+  animation: sn-fall var(--t) linear var(--d) infinite;
+  will-change: transform;
+}
+.season-float[data-rise="1"] .sn-bit {
+  top: auto; bottom: -14vh;
+  animation-name: sn-rise;
+}
+.sn-art {
+  display: block;
+  animation: sn-sway calc(var(--t) / 3.5) ease-in-out var(--d) infinite alternate;
+}
+.sn-art svg { display: block; width: calc(var(--sn-size) * var(--s)); height: calc(var(--sn-size) * var(--s)); }
+
+/* しゃぼん玉は くるくる 回らない（ふわりと 上がるだけ） */
+:root[data-season="summer"] .sn-art { animation-name: sn-drift; }
+
+@keyframes sn-fall { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, 128vh, 0); } }
+@keyframes sn-rise { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, -128vh, 0); } }
+@keyframes sn-sway {
+  from { transform: translateX(calc(var(--sw) * -1)) rotate(-30deg); }
+  to   { transform: translateX(var(--sw)) rotate(30deg); }
+}
+@keyframes sn-drift {
+  from { transform: translateX(calc(var(--sw) * -1)) scale(0.94); }
+  to   { transform: translateX(var(--sw)) scale(1.06); }
+}
+
+/* --- きせつの 景色（トップの 上） ---------------------------------------- */
+
+.season-scene-box { margin: 0 auto 4px; max-width: 620px; }
+/* 下ぶちで 地面が すぱっと 切れると 帯に 見えるので、すそを うすくして 背景に とかす */
+.sn-scene {
+  display: block; width: 100%; height: auto;
+  -webkit-mask-image: linear-gradient(to bottom, #000 87%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 87%, transparent 100%);
+}
+
+/* 夜は 景色も 夜の 明るさに する（海や 雲が 昼の ままだと 浮く）。
+   1 行で 4 きせつ ぜんぶに かかる */
+:root[data-theme="dark"] .sn-scene { filter: saturate(0.8) brightness(0.84); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sn-scene { filter: saturate(0.8) brightness(0.84); }
+}
+
+.sn-breathe { animation: sn-breathe 4.6s ease-in-out infinite; transform-origin: center bottom; }
+@keyframes sn-breathe { 50% { transform: translateY(-3px) scale(1.018); } }
+
+.sn-spin { animation: sn-spin 26s linear infinite; }
+@keyframes sn-spin { to { transform: rotate(360deg); } }
+
+.sn-boat { animation: sn-boat 5.2s ease-in-out infinite; transform-origin: 94px 118px; }
+@keyframes sn-boat { 50% { transform: translateY(-3px) rotate(-3deg); } }
+
+.sn-wave { animation: sn-wave 7s ease-in-out infinite; }
+.sn-wave-b { animation-duration: 9s; animation-direction: reverse; }
+@keyframes sn-wave { 50% { transform: translateX(-24px); } }
+
+.sn-fly { animation: sn-fly-a 11s ease-in-out infinite; }
+.sn-fly-b { animation-name: sn-fly-b; animation-duration: 13s; }
+@keyframes sn-fly-a {
+  0%, 100% { transform: translate(452px, 62px); }
+  25% { transform: translate(396px, 34px); }
+  50% { transform: translate(342px, 70px); }
+  75% { transform: translate(404px, 46px); }
+}
+@keyframes sn-fly-b {
+  0%, 100% { transform: translate(150px, 84px); }
+  30% { transform: translate(206px, 50px); }
+  60% { transform: translate(120px, 40px); }
+}
+
+/* --- トップの カードに 手ごたえを つける -------------------------------- */
+
+.pick-face { animation: sn-bob 3.4s ease-in-out infinite; }
+.pick-shogi .pick-face { animation-delay: 0.45s; }
+.pick-sky .pick-face { animation-delay: 0.9s; }
+.pick-asobi .pick-face { animation-delay: 1.35s; }
+@keyframes sn-bob { 50% { transform: translateY(-7px); } }
+
+.pick-card { transition: transform 0.14s ease, box-shadow 0.14s ease; }
+.pick-card:active { transform: scale(0.965); }
+.pick-card:hover .pick-face { animation-play-state: paused; transform: scale(1.1); }
+
+/* 動きを 減らす 設定の 端末では 舞わせない。色だけ きせつの ままに する */
+@media (prefers-reduced-motion: reduce) {
+  .season-float { display: none; }
+  .sn-breathe, .sn-spin, .sn-wave, .sn-fly, .sn-boat, .pick-face { animation: none; }
+  .pick-card:active { transform: none; }
+}

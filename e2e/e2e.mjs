@@ -2085,6 +2085,117 @@ for (const [file, want, ends] of [
   await en.context.close();
 }
 
+// ---- きせつ（2026-09-20） --------------------------------------------------
+//
+// user 指示「背景をシーズンごとに変える／もっとテンション上がるように／
+// アニメーション加えるとか、子供が喜ぶつくりに」。
+//
+// 🔴 きせつは 端末の 時計の 月だけで 決まるので、検査は `clock.setFixedTime` で
+//    4 つの 日に 置いて 見る。見るのは **4 つが たがいに ちがう** ことと
+//    **色と 絵が 入れ替わる** こと（なつやすみの 検査と 同じ 流儀）。
+
+const SEASON_DAYS = [
+  ["2026-04-10", "spring"],
+  ["2026-07-20", "summer"],
+  ["2026-10-15", "autumn"],
+  ["2026-01-20", "winter"],
+];
+
+async function seasonOn(dateKey, theme) {
+  const fake = await newPage(420, 900, { timezoneId: "Asia/Tokyo" });
+  await fake.context.clock.setFixedTime(new Date(`${dateKey}T03:00:00Z`));
+  if (theme === "dark") {
+    await fake.context.addInitScript(() => {
+      try { localStorage.setItem("kimaru.theme", "dark"); } catch (error) { /* 使えない 端末も ある */ }
+    });
+  }
+  await fake.page.goto(BASE, { waitUntil: "domcontentloaded" });
+  await fake.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  const got = await fake.page.evaluate(() => {
+    const root = document.documentElement;
+    const float = document.getElementById("season-float");
+    const scene = document.getElementById("season-scene");
+    const bits = [...float.querySelectorAll(".sn-bit")];
+    const sun = scene.querySelector(".sn-day");
+    const moon = scene.querySelector(".sn-night");
+    return {
+      season: root.dataset.season,
+      bg: getComputedStyle(root).getPropertyValue("--bg").trim(),
+      themeColor: document.querySelector('meta[name="theme-color"]').content.trim(),
+      bits: bits.length,
+      // 並びは 番号から 決まる（乱数を 使わない）ので、開きなおしても 同じに なる
+      layout: bits.map(b => b.getAttribute("style")).join("|"),
+      art: bits.length ? bits[0].innerHTML : "",
+      rise: float.dataset.rise,
+      scene: scene.innerHTML,
+      sceneSvgs: scene.querySelectorAll("svg").length,
+      sunShown: sun ? getComputedStyle(sun).display : "missing",
+      moonShown: moon ? getComputedStyle(moon).display : "missing",
+      floatAria: float.getAttribute("aria-hidden"),
+      sceneAria: scene.getAttribute("aria-hidden"),
+    };
+  });
+  await fake.context.close();
+  return got;
+}
+
+const seasons = [];
+for (const [day, name] of SEASON_DAYS) seasons.push({ name, ...(await seasonOn(day, "light")) });
+
+check("each season the clock lands in gets its own name",
+  new Set(seasons.map(s => s.season)).size === 4, seasons.map(s => s.season).join(" "));
+check("the month decides which season it is",
+  seasons.every(s => s.season === s.name), seasons.map(s => `${s.name}->${s.season}`).join(" "));
+check("the background colour changes with the season",
+  new Set(seasons.map(s => s.bg)).size === 4, seasons.map(s => s.bg).join(" "));
+check("the browser bar is told the same colour the page uses",
+  seasons.every(s => s.themeColor === s.bg), seasons.map(s => `${s.themeColor}/${s.bg}`).join(" "));
+check("something is floating about in every season",
+  seasons.every(s => s.bits >= 10), seasons.map(s => s.bits).join(" "));
+check("what floats about is drawn differently each season",
+  new Set(seasons.map(s => s.art)).size === 4);
+check("the bubbles of summer go up while everything else comes down",
+  seasons.filter(s => s.rise === "1").length === 1 && seasons.find(s => s.season === "summer").rise === "1",
+  seasons.map(s => `${s.season}=${s.rise}`).join(" "));
+check("the top of the page shows a different scene each season",
+  new Set(seasons.map(s => s.scene)).size === 4 && seasons.every(s => s.sceneSvgs === 1));
+check("the seasonal picture is not read out as if it were words",
+  seasons.every(s => s.floatAria === "true" && s.sceneAria === "true"));
+check("by day the sun is out and the moon is away",
+  seasons.every(s => s.sunShown === "block" && s.moonShown === "none"),
+  seasons.map(s => `${s.season}:${s.sunShown}/${s.moonShown}`).join(" "));
+
+const nightSpring = await seasonOn("2026-04-10", "dark");
+check("at night the moon comes out instead of the sun",
+  nightSpring.sunShown === "none" && nightSpring.moonShown === "block",
+  `${nightSpring.sunShown}/${nightSpring.moonShown}`);
+check("the dark screen gets its own seasonal colour",
+  nightSpring.bg !== seasons[0].bg && nightSpring.themeColor === nightSpring.bg,
+  `${seasons[0].bg} -> ${nightSpring.bg}`);
+
+// 同じ きせつを 開きなおしても 並びが 変わらない＝見た目の 検査が ぶれない
+const springAgain = await seasonOn("2026-04-10", "light");
+check("opening the same season again lays it out the same way",
+  springAgain.layout === seasons[0].layout && springAgain.layout.length > 0);
+
+// 動きを 減らす 設定の 端末では 舞わせない（色だけ きせつの まま）
+{
+  const calm = await newPage(420, 900, { reducedMotion: "reduce", timezoneId: "Asia/Tokyo" });
+  await calm.context.clock.setFixedTime(new Date("2026-01-20T03:00:00Z"));
+  await calm.page.goto(BASE, { waitUntil: "domcontentloaded" });
+  await calm.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  const quiet = await calm.page.evaluate(() => ({
+    float: getComputedStyle(document.getElementById("season-float")).display,
+    season: document.documentElement.dataset.season,
+    bg: getComputedStyle(document.documentElement).getPropertyValue("--bg").trim(),
+  }));
+  check("nothing flies about when the device asks for less movement",
+    quiet.float === "none", quiet.float);
+  check("the season still colours the page when movement is off",
+    quiet.season === "winter" && quiet.bg === seasons[3].bg, `${quiet.season} ${quiet.bg}`);
+  await calm.context.close();
+}
+
 await browser.close();
 
 const failed = results.filter(r => !r.ok);
