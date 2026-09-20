@@ -5,6 +5,7 @@ import { initDrill, renderHome as renderDrillHome, renderKiroku, renderAward } f
 import { initShogi, renderShogi } from "./shogi";
 import { initSky, renderSky, stopSky } from "./sky";
 import { renderAsobi, stopAsobi } from "./asobi";
+import { applySeason, syncThemeColor, watchSeason } from "./season";
 
 // --- 接続 -------------------------------------------------------------------
 
@@ -86,8 +87,8 @@ function currentTheme() {
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = theme === "dark" ? "#1c1930" : "#fff8f3";
+  // 端末の 上ぶちの 色は きせつ x 明暗で 変わる。色は CSS の --bg から 読む
+  syncThemeColor();
 }
 
 function setupTheme() {
@@ -366,6 +367,9 @@ function setupSameHashLinks() {
 }
 
 async function init() {
+  // 色の トークンを 決めるので、明暗を あてる 前に きせつを 決める
+  applySeason();
+  watchSeason();
   setupZoomLock();
   setupTheme();
   setupTextSize();
