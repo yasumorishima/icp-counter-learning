@@ -7,9 +7,10 @@ import * as records from "./records";
 import { sounds, confetti, soundOn, toggleSound } from "./effects";
 import { t, currentLang } from "./i18n";
 import { say, stopSpeech, watchVoice } from "./voice";
+import { FACE_IDS, faceSvg, faceKey, markSvg, migrateFace } from "./faces";
 
 const $ = id => document.getElementById(id);
-const FACES = ["🐻", "🐰", "🐱", "🐶", "🦊", "🐼", "🐸", "🐧"];
+const FACES = FACE_IDS;
 const CAT_KEY = "drill.cat";
 
 /**
@@ -46,7 +47,7 @@ export function initDrill(options) {
   show = options.show;
 
   $("face-row").innerHTML = FACES.map(
-    (face, i) => '<button type="button" class="face' + (i === 0 ? " is-on" : "") + '" data-face="' + face + '">' + face + "</button>"
+    (face, i) => '<button type="button" class="face' + (i === 0 ? " is-on" : "") + '" data-face="' + face + '" aria-label="' + escapeText(t(faceKey(face))) + '">' + faceSvg(face) + "</button>"
   ).join("");
   $("face-row").addEventListener("click", event => {
     const button = event.target.closest(".face");
@@ -277,7 +278,7 @@ export function renderHome() {
   $("drill-main").classList.toggle("is-hidden", !profile);
 
   if (profile) {
-    $("who-face").textContent = profile.face;
+    $("who-face").innerHTML = faceSvg(profile.face);
     $("who-name").textContent = profile.name;
     $("who-stars").textContent = profile.stars;
     const days = records.streak();
@@ -346,7 +347,7 @@ function renderWhoPanel() {
       people
         .map(p => {
           const on = current && current.id === p.id ? " is-on" : "";
-          return '<button type="button" class="who-pick' + on + '" data-pick="' + p.id + '">' + p.face + " " + escapeText(p.name) + "</button>";
+          return '<button type="button" class="who-pick' + on + '" data-pick="' + p.id + '">' + '<span class="who-pick-face">' + faceSvg(p.face) + '</span>' + escapeText(p.name) + "</button>";
         })
         .join("") +
       '<div class="who-actions">' +
@@ -359,11 +360,11 @@ function renderWhoPanel() {
 
   const current = records.currentProfile();
   const startName = panelMode === "edit" && current ? current.name : "";
-  const startFace = panelMode === "edit" && current ? current.face : FACES[0];
+  const startFace = migrateFace(panelMode === "edit" && current ? current.face : FACES[0]);
   panel.innerHTML =
     '<h2 class="panel-title">' + (panelMode === "add" ? t("dr_whoNew") : t("dr_whoRename")) + "</h2>" +
     '<div class="face-row">' +
-    FACES.map(f => '<button type="button" class="face' + (f === startFace ? " is-on" : "") + '" data-face="' + f + '">' + f + "</button>").join("") +
+    FACES.map(f => '<button type="button" class="face' + (f === startFace ? " is-on" : "") + '" data-face="' + f + '" aria-label="' + escapeText(t(faceKey(f))) + '">' + faceSvg(f) + "</button>").join("") +
     "</div>" +
     '<input id="who-edit-name" type="text" maxlength="12" placeholder="' + escapeText(t("dr_namePh")) + '" value="' + escapeText(startName) + '">' +
     '<div class="who-actions">' +
@@ -743,7 +744,7 @@ function finish() {
 
   if (session.time) {
     const best = records.recordTime(grade, right);
-    $("result-face").textContent = right >= best && right > 0 ? "🏆" : "⏱";
+    $("result-face").innerHTML = markSvg(right >= best && right > 0 ? "trophy" : "timer");
     $("result-title").textContent = right >= best && right > 0 ? t("dr_newBest") : t("dr_finished");
     $("result-score").textContent = t("dr_timeScore", right);
     $("result-note").textContent = t("dr_bestCount", best);
@@ -770,7 +771,7 @@ function finish() {
 
   const beforeLevel = records.level().rank;
   const perfect = right === total;
-  $("result-face").textContent = perfect ? "🎉" : right >= total * 0.8 ? "😊" : "💪";
+  $("result-face").innerHTML = markSvg(perfect ? "party" : right >= total * 0.8 ? "smile" : "sprout");
   $("result-title").textContent = perfect ? t("dr_allCorrect") : right >= total * 0.8 ? t("dr_wellDone") : t("dr_tryAgain");
   $("result-score").textContent = t("dr_scoreOf", total, right);
   const afterLevel = records.level().rank;

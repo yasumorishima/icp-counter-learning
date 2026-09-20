@@ -11,6 +11,7 @@ import {
 } from "./shogi-referee";
 import { sounds, confetti } from "./effects";
 import { t } from "./i18n";
+import { markSvg } from "./faces";
 
 /** 駒の 名前。文章の 中で 名ざしする ぶんだけ ことばに あわせる（盤の 字は 漢字の まま） */
 const pieceName = type => t("sg_pc" + type);
@@ -462,7 +463,7 @@ function render() {
 function showOver() {
   const box = $("shogi-over");
   const result = game.over.result;
-  $("shogi-over-face").textContent = result === "win" ? "🎉" : result === "lose" ? "🙂" : "🤝";
+  $("shogi-over-face").innerHTML = markSvg(result === "win" ? "party" : result === "lose" ? "sprout" : "draw");
   $("shogi-over-title").textContent =
     result === "win" ? t("sg_overWin") : result === "lose" ? t("sg_overLose") : t("sg_overDraw");
   const stats = readJson(STATS_KEY) || { win: 0, lose: 0, draw: 0 };

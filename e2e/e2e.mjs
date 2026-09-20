@@ -2080,7 +2080,15 @@ for (const [file, want, ends] of [
   // 日本語へ 切り替えると その場で 書き直り、読み込み直しても のこる
   await ep.selectOption("#lang-select", "ja");
   await ep.waitForFunction(() => document.documentElement.lang === "ja", null, { timeout: 5000 });
-  await ep.waitForTimeout(200);
+  // 🔴 ここは「ことばの 印が 変わってから 200ms」で 待って いたので、走る 機械が
+  //   こんで いると 書き直る 前に 読んで しまう（2026-09-20 に CI で 1 度 落ちた。
+  //   手元では 10 回 くりかえしても 再現しなかった＝原因は 掴めて いないが、
+  //   **時間の 見こみを 置くのを やめる**）。
+  //   ⚠️ 待って から 同じ ことを 調べる ので、待ちきれなかった ときも
+  //   例外に せず 先へ 進めて、**実際の 文字を 添えて 落とす**
+  await ep.waitForFunction(
+    () => /[南北東西]/.test((document.getElementById("sky-where") || {}).textContent || ""),
+    null, { timeout: 5000 }).catch(() => {});
   const whereJa = (await ep.locator("#sky-where").textContent()).trim();
   check("switching to Japanese rewrites the screen at once", whereJa.includes("南"), whereJa);
   // ことばを 変えただけで、えらんだ 日時が「いま」へ 戻っては いけない
@@ -2111,6 +2119,84 @@ for (const [file, want, ends] of [
   check("the language box is on every screen", true);
 
   await en.context.close();
+}
+
+// ---- 画面に 絵文字を 出さない（2026-09-20） ------------------------------
+//
+// 🔴 実測＝画面に 出して いた 絵文字 23 文字を この 走行機で 1 文字ずつ 描き、
+//    「形の 無い 文字（U+FFFF）と 同じ 絵に なるか」で 調べたら
+//    **🐻 🐰 🐶 🦊 🐼 🐸 🐧 🏆 🎉 💪 🤝 の 11 文字が 豆腐**だった。
+//    絵文字の フォントを 持たない 端末では なまえの となりの かおが □ に なる。
+//    ⇒ すべて 自前の SVG へ（`src/faces.js`）。
+//    ★ ♪ ✦ ✕ × □ は ふつうの 記号で どこでも 出るので 対象に しない。
+
+{
+  const noEmoji = await newPage(420, 900);
+  await noEmoji.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
+  await noEmoji.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  await noEmoji.page.fill("#who-input", "ゆうた");
+  await noEmoji.page.click("#who-add");
+  await noEmoji.page.waitForSelector("#drill-main:not(.is-hidden)", { timeout: 30000 });
+
+  const seen = [];
+  for (const hash of ["#/", "#/drill", "#/shogi", "#/asobi", "#/kiroku", "#/shoujou"]) {
+    await noEmoji.page.goto(BASE + hash, { waitUntil: "domcontentloaded" });
+    await noEmoji.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+    const found = await noEmoji.page.evaluate(() => {
+      // 絵の 文字（フォントが 要る もの）だけを 見る。★ ♪ ✦ ✕ は この 範囲に 入らない
+      const pict = /[\u{1F300}-\u{1FAFF}\u{1F004}-\u{1F0CF}\u{2694}-\u{2697}]/u;
+      const out = [];
+      const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walk.nextNode())) {
+        const m = node.nodeValue.match(pict);
+        if (!m) continue;
+        const el = node.parentElement;
+        if (!el || !el.getClientRects().length) continue;   // 出て いない ものは 見ない
+        out.push(m[0] + " @" + (el.id || el.className || el.tagName));
+      }
+      return out;
+    });
+    if (found.length) seen.push(hash + ": " + found.slice(0, 3).join(" "));
+  }
+  check("no picture-character is put on the screen where a font might not have it",
+    seen.length === 0, seen.slice(0, 3).join(" | "));
+
+  // かおは SVG で 出て いる（テキストでは ない）
+  await noEmoji.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
+  await noEmoji.page.waitForSelector("#drill-main:not(.is-hidden)", { timeout: 30000 });
+  const drawn = await noEmoji.page.evaluate(() => ({
+    かお: document.querySelectorAll("#who-face svg").length,
+    えらべる: document.querySelectorAll(".face").length,
+  }));
+  check("the face next to the name is drawn, not typed",
+    drawn.かお === 1, `svg ${drawn.かお} 個`);
+  await noEmoji.context.close();
+}
+
+// 絵文字で 保存して あった 古い なまえも そのまま 開ける（読みかえる）
+{
+  const old = await newPage(420, 900);
+  await old.context.addInitScript(() => {
+    try {
+      localStorage.setItem("drill.records.v1", JSON.stringify({
+        profiles: [{ id: "p1", name: "むかし", face: "🐻", grade: 1, stars: 3, days: [], units: {} }],
+        current: "p1",
+      }));
+    } catch (error) { /* 使えない 端末も ある */ }
+  });
+  await old.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
+  await old.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  const got = await old.page.evaluate(() => ({
+    名: (document.getElementById("who-name") || {}).textContent || "",
+    絵: document.querySelectorAll("#who-face svg").length,
+    字: (document.getElementById("who-face") || {}).textContent || "",
+  }));
+  check("a name saved back when the face was a picture-character still opens",
+    got.名.indexOf("むかし") >= 0, got.名);
+  check("and its face is drawn now instead of typed",
+    got.絵 === 1 && got.字.trim() === "", `svg ${got.絵} / 字 "${got.字.trim()}"`);
+  await old.context.close();
 }
 
 // ---- トップが スマホの 1 画面に 入るか（2026-09-20） ----------------------
