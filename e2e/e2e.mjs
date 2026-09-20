@@ -2172,6 +2172,48 @@ check("nothing spills sideways on the smallest phone",
   tiny.あふれ === 0 && phone.あふれ === 0 && wide.あふれ === 0,
   `320=${tiny.あふれ}px 390=${phone.あふれ}px 1280=${wide.あふれ}px`);
 
+// ---- ドリルの トップは 単元が 先（2026-09-20） ---------------------------
+//
+// user「きょうの 1まい / タイムアタック / チャレンジ … これらは、以下より 下の 方が
+// よくない？ メインは 以下なんだから」。
+// 🔴 実測＝この 3 枚が 上に あると 390x844 で **単元の 一覧が 上から 889px**＝
+//    1 画面目に 1 つも 出なかった（3 枚で 381px）。⇒ 単元の あとへ 移した。
+
+{
+  const drillTop = await newPage(390, 844);
+  await drillTop.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
+  await drillTop.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  await drillTop.page.fill("#who-input", "ゆうた");
+  await drillTop.page.click("#who-add");
+  await drillTop.page.waitForSelector("#drill-main:not(.is-hidden)", { timeout: 30000 });
+  // 名前を 足すと 画面が 動く ことが ある。1 画面目を 見たいので 上へ 戻す
+  await drillTop.page.evaluate(() => window.scrollTo(0, 0));
+  const where = await drillTop.page.evaluate(() => {
+    const at = id => {
+      const el = document.getElementById(id);
+      return el ? Math.round(el.getBoundingClientRect().top + window.scrollY) : -1;
+    };
+    const names = [...document.querySelectorAll(".unit-name")];
+    return {
+      単元: at("unit-grid"),
+      きょう: at("daily-card"),
+      タイム: at("time-card"),
+      画面: window.innerHeight,
+      はみ出し: names.filter(n => n.scrollWidth > n.clientWidth + 1).map(n => n.textContent.trim()),
+      横あふれ: document.documentElement.scrollWidth - window.innerWidth,
+    };
+  });
+  check("the list of things to practise comes before the extras",
+    where.単元 < where.きょう && where.単元 < where.タイム,
+    `単元 ${where.単元} / きょう ${where.きょう} / タイム ${where.タイム}`);
+  check("the list of things to practise starts on the first screen",
+    where.単元 < where.画面, `${where.単元}px < ${where.画面}px`);
+  check("no unit name spills out of its card",
+    where.はみ出し.length === 0 && where.横あふれ === 0,
+    where.はみ出し.slice(0, 2).join(" / ") + ` 横 ${where.横あふれ}px`);
+  await drillTop.context.close();
+}
+
 // ---- きせつ（2026-09-20） --------------------------------------------------
 //
 // user 指示「背景をシーズンごとに変える／もっとテンション上がるように／
