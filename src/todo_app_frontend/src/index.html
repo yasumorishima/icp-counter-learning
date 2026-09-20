@@ -244,6 +244,21 @@
                 </div>
 
                 <div id="drill-main">
+                    <div class="level-row">
+                        <span id="level-rank" class="level-rank" data-t="c_levelRank">レベル 1</span>
+                        <span class="level-bar"><span id="level-fill" class="level-fill"></span></span>
+                        <span id="level-need" class="level-need"></span>
+                    </div>
+
+                    <div id="weak-row" class="weak-row is-hidden"></div>
+                    <div class="cat-tabs" id="cat-tabs" role="group" data-t-aria="c_catGroup" aria-label="なにを ならう？"></div>
+                    <div class="grade-tabs" id="grade-tabs"></div>
+                    <div class="unit-grid" id="unit-grid"></div>
+
+                    <!-- 🔴 きょうの 1まい・タイムアタック・チャレンジは **単元の あと**（2026-09-20）。
+                         user「これらは、以下より下の方がよくない？メインは以下なんだから」。
+                         実測で、この 3 枚が 上に あると 390x844 で **単元の 一覧が 上から 889px**＝
+                         1 画面目に 1 つも 出なかった（3 枚で 381px 使って いた）。 -->
                     <button type="button" id="daily-card" class="daily-card">
                         <span class="daily-label" data-t="c_dailyLabel">きょうの 1まい</span>
                         <span id="daily-state" class="daily-state"></span>
@@ -257,17 +272,6 @@
                     </button>
 
                     <div id="challenge-box" class="challenge is-hidden"></div>
-
-                    <div class="level-row">
-                        <span id="level-rank" class="level-rank" data-t="c_levelRank">レベル 1</span>
-                        <span class="level-bar"><span id="level-fill" class="level-fill"></span></span>
-                        <span id="level-need" class="level-need"></span>
-                    </div>
-
-                    <div id="weak-row" class="weak-row is-hidden"></div>
-                    <div class="cat-tabs" id="cat-tabs" role="group" data-t-aria="c_catGroup" aria-label="なにを ならう？"></div>
-                    <div class="grade-tabs" id="grade-tabs"></div>
-                    <div class="unit-grid" id="unit-grid"></div>
                 </div>
             </section>
 

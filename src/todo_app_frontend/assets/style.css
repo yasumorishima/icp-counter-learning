@@ -710,7 +710,13 @@ input[readonly] { color: var(--muted); }
   border: 3px solid var(--line-strong); border-radius: 22px; background: var(--card);
 }
 .unit-card:hover { border-color: var(--grape); transform: translateY(-2px); }
-.unit-name { font-size: 1.05rem; font-weight: 800; color: var(--ink); }
+/* 🔴 ことばの 切れ目で 折り返す（「くり上がりの た / しざん」に なって いた）。
+   ただし 単元名には 空白の ない 長い もの（「とけい（なんじ・なんじはん）」）が あり、
+   keep-all だけだと 横へ あふれる ので、入らない ときだけ 中で 切る 逃げ道を つける */
+.unit-name {
+  font-size: 1.05rem; font-weight: 800; color: var(--ink);
+  word-break: keep-all; line-break: strict; overflow-wrap: break-word;
+}
 .unit-score { font-size: 0.8rem; font-weight: 800; color: var(--ok-strong); background: var(--ok-bg); border-radius: 999px; padding: 4px 10px; }
 .unit-score.is-new { color: var(--muted); background: var(--chip); }
 
@@ -1140,7 +1146,7 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
   padding-top: 10px;
   font-size: 2.1rem;
 }
-.pick-name { font-size: 1.3rem; word-break: keep-all; line-break: strict; }
+.pick-name { font-size: 1.3rem; word-break: keep-all; line-break: strict; overflow-wrap: break-word; }
 /* 🔴 ボタンの 高さが となりの カードと ずれる 大もとは、説明が 1 行の カードと
    2 行の カードが ならぶ こと（2026-09-20 実測＝768px で 18px・1280px で 33px）。
    **2 行ぶんの 場所を いつも 空けて おく**と、まんなか ぞろえの まま そろう */
@@ -1153,6 +1159,7 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
      ことばの 切れ目（空白）でだけ 折り返す */
   word-break: keep-all;
   line-break: strict;
+  overflow-wrap: break-word;
   min-height: 2.7em;
   display: -webkit-box;
   -webkit-box-orient: vertical;
