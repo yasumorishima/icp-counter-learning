@@ -1089,7 +1089,9 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
 
 .pick-lede { text-align: center; margin-bottom: 18px; }
 .pick-title { font-size: 1.5rem; margin: 0 0 6px; }
-.pick-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+/* 🔴 auto-fit だと 広い 画面で 3 列に なり、4 枚目が 1 枚 あぶれる。
+   スマホも タブレットも 2 列なので、どの 幅でも 2 x 2 に そろえる */
+.pick-grid { display: grid; gap: 16px; grid-template-columns: repeat(2, 1fr); }
 
 .pick-card {
   display: flex;
@@ -1117,6 +1119,14 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
   line-height: 1;
   font-weight: 800;
   letter-spacing: -0.04em;
+  /* 🔴 絵の 高さが カードごとに ちがう（王の 駒 78px / ＋− は 文字 約 42px /
+     あそびの たま 56px）ので、まんなか ぞろえだと となりの カードと ボタンの
+     高さが ずれる（2026-09-20 実測＝768px で 18px・1280px で 33px）。
+     **いちばん 高い ものに 枠を そろえて、中で まんなかに 置く** */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 78px;
 }
 .pick-koma {
   display: inline-flex;
@@ -1130,8 +1140,26 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
   padding-top: 10px;
   font-size: 2.1rem;
 }
-.pick-name { font-size: 1.3rem; }
-.pick-note { color: var(--muted); font-size: 0.95rem; }
+.pick-name { font-size: 1.3rem; word-break: keep-all; line-break: strict; }
+/* 🔴 ボタンの 高さが となりの カードと ずれる 大もとは、説明が 1 行の カードと
+   2 行の カードが ならぶ こと（2026-09-20 実測＝768px で 18px・1280px で 33px）。
+   **2 行ぶんの 場所を いつも 空けて おく**と、まんなか ぞろえの まま そろう */
+.pick-note {
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.35;
+  /* 🔴 列が せまく なった ので、既定の まま だと 「ぶんし / ょうだい」 のように
+     小さい かなが 行あたまに 落ちる（2026-09-20 に 実寸で 見て 気づいた）。
+     ことばの 切れ目（空白）でだけ 折り返す */
+  word-break: keep-all;
+  line-break: strict;
+  min-height: 2.7em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
 .pick-go {
   margin-top: 6px;
   padding: 10px 26px;
@@ -1598,8 +1626,16 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
 }
 
 .pick-asobi { background: linear-gradient(160deg, var(--tint-2), var(--card) 70%); }
+/* 🔴 たまご自身に 高さを 持たせると `.pick-face` の 枠（78px）を 上書きして しまい、
+   となりの カードと ボタンの 高さが ずれる（2026-09-20 実測＝768px で 11px）。
+   枠は `.pick-face` に まかせ、たまごは その 中の かざりに する */
 .pick-toy {
-  display: block; width: 46px; height: 56px; border-radius: 50% 50% 46% 46%;
+  /* ⚠️ ここに width/height を 書くと 同じ 詳細度の あと勝ちで
+     `.pick-face` の 枠（78px）を 消して しまう（2026-09-20 に 1 度 踏んだ） */
+  border-radius: 0; background: none;
+}
+.pick-toy::before {
+  content: ""; display: block; width: 46px; height: 56px; border-radius: 50% 50% 46% 46%;
   background: radial-gradient(circle at 34% 28%, #ffffff 0%, #f472b6 74%);
 }
 
@@ -1821,4 +1857,45 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
   .season-float { display: none; }
   .sn-breathe, .sn-spin, .sn-wave, .sn-fly, .sn-boat, .pick-face { animation: none; }
   .pick-card:active { transform: none; }
+}
+
+/* ==========================================================================
+   トップを スマホで 1 画面に 収める（2026-09-20）
+
+   🔴 実測で 見つけた 穴＝**スマホでは「あそび」が どの 機種でも 1 画面目に
+   1 ピクセルも 出て いなかった**（360x640 / 390x844 / 412x915 とも 上から
+   1092〜1106px ＝ 2 回 スクロールしないと 届かない）。
+   このサイトで **文字が 読めない 子が 使えるのは「あそび」だけ**なので、
+   唯一の 入り口が 3 さいには できない 操作の 向こうに あった。
+
+   タブレット（768px）は 元から 2 列に なって いる（`minmax(240px, 1fr)`）ので、
+   **折り返す 幅を 下げて スマホでも 2 列に する**。
+   カードは 小さく なるが、押す ところは 44px の 基準を 大きく 上回る。
+   ========================================================================== */
+
+@media (max-width: 560px) {
+  .pick-grid { gap: 10px; }
+
+  .pick-card {
+    padding: 14px 8px 12px;
+    min-height: 0;
+    gap: 4px;
+    border-radius: 20px;
+  }
+
+  .pick-face { font-size: 2rem; }
+  .pick-face { height: 58px; }
+  .pick-toy::before { width: 36px; height: 44px; }
+  .pick-koma { width: 54px; height: 58px; font-size: 1.5rem; padding-top: 7px; }
+  .pick-star { font-size: 1.9rem; }
+  .pick-name { font-size: 1rem; }
+
+  .pick-note { font-size: 0.74rem; }
+
+  /* 押す ところは 小さく しない（44px は 守る） */
+  .pick-go { padding: 8px 18px; font-size: 0.95rem; }
+
+  .pick-lede { margin-bottom: 10px; }
+  .pick-title { font-size: 1.25rem; }
+  .season-scene-box { margin-bottom: 0; }
 }
