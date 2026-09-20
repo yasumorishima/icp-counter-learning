@@ -6,10 +6,21 @@ import { GRADES, CATS, unitsOf, unitById, isCorrect, makeSet, makeDaily } from "
 import * as records from "./records";
 import { sounds, confetti, soundOn, toggleSound } from "./effects";
 import { t, currentLang } from "./i18n";
+import { say, stopSpeech, watchVoice } from "./voice";
 
 const $ = id => document.getElementById(id);
 const FACES = ["🐻", "🐰", "🐱", "🐶", "🦊", "🐼", "🐸", "🐧"];
 const CAT_KEY = "drill.cat";
+
+/**
+ * 文章題を 声で 読む しかけ。
+ *
+ * 文章題で つまずく 理由は、計算よりも **文が 読めない** ことの ほうが 多い。
+ * 読むのは この サイトでは なく 端末の きのうなので、**声を 持たない 端末が ある**。
+ * その ときは ボタンを 出さない（押しても 何も 起きない ボタンを 見せない）。
+ */
+let voiceReady = false;
+let voiceWatch = null;
 const QUESTIONS = 10;
 
 let show = () => {};
@@ -181,6 +192,7 @@ export function initDrill(options) {
 
   $("quiz-quit").addEventListener("click", () => {
     stopTimer();
+    stopSpeech();
     session = null;
     // すでに #/drill に いる ときは hash を 入れても なにも 起きない（同じ値だと hashchange が 出ない）
     if (location.hash === "#/drill") {
@@ -189,6 +201,16 @@ export function initDrill(options) {
     } else {
       location.hash = "#/drill";
     }
+  });
+
+  $("quiz-read").addEventListener("click", () => {
+    const q = session && session.list[session.at];
+    if (q) say(q.text);
+  });
+
+  voiceWatch = watchVoice(currentLang() === "ja" ? "ja" : "en", ok => {
+    voiceReady = ok;
+    applyReadButton();
   });
 
   $("quiz-keypad").addEventListener("click", event => {
@@ -597,6 +619,7 @@ function renderQuestion() {
     })
     .join("");
 
+  renderReadButton(q);
   drawClock(q.clock);
 
   const choosing = unit.kind === "choice";
@@ -613,6 +636,22 @@ function renderQuestion() {
     $("quiz-answer").textContent = "?";
     $("quiz-keypad").innerHTML = padFor(unit.kind);
   }
+}
+
+/**
+ * 読んで もらう ボタンの 出し入れ。文章題の ときだけ、声を 持つ 端末にだけ 出す。
+ * 声が あとから 届く 端末が ある（Safari 15 以前は 知らせも 出さない）ので、
+ * 文章題を 出す たびに 見直す。
+ */
+function applyReadButton() {
+  const q = session ? session.list[session.at] : null;
+  $("quiz-read").classList.toggle("is-hidden", !(q && q.word && voiceReady));
+}
+
+function renderReadButton(q) {
+  // 🔴 見直しは ここだけ。応え（report）の 中から 呼ぶと 輪に なる
+  if (q && q.word && voiceWatch) voiceWatch.recheck();
+  applyReadButton();
 }
 
 /** 入れ方に合わせたキーだけ出す。小数なら「.」、分数なら「/」 */
@@ -698,6 +737,7 @@ function renderDots() {
 
 function finish() {
   stopTimer();
+  stopSpeech();
   const total = session.list.length;
   const right = session.right;
 
