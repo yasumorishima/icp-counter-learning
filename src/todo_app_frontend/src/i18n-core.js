@@ -22,9 +22,8 @@ export const coreEn = {
 
   // --- トップ（えらぶ） ---
   c_pickTitle: "What shall we do?",
-  c_pickLede: "No ads. Your records stay on this device only.",
   c_pickDrill: "Math drills",
-  c_pickDrillNote: "Grades 1-6 · 36 topics",
+  c_pickDrillNote: "Grades 1-6 · sums and word problems",
   c_pickShogi: "Shogi",
   c_pickShogiNote: "Play against the computer",
   c_pickSky: "Sky",
@@ -190,9 +189,8 @@ export const coreJa = {
 
   // --- トップ（えらぶ） ---
   c_pickTitle: "なにを する？",
-  c_pickLede: "こうこくは ありません。きろくは この たんまつの なかだけに のこります。",
   c_pickDrill: "さんすう ドリル",
-  c_pickDrillNote: "1〜6年　36 の たんげん",
+  c_pickDrillNote: "1〜6年　けいさんと ぶんしょうだい",
   c_pickShogi: "しょうぎ",
   c_pickShogiNote: "ひとりで あいてと たいきょく",
   c_pickSky: "そら",
