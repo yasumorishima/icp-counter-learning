@@ -20,6 +20,15 @@ export const drillWordEn = {
   dr_wGoods: "pencil,eraser,sticker,notebook,candy",
   dr_wBigGoods: "T-shirt,book,ball,cake,bag",
 
+  // --- まちがえた ときに 出す「どう とくか」--------------------------------
+  // 式そのものは コードが 組み立てる（数字と ＋−×÷ は ことばに よらない）。
+  // ここに 置くのは その まわりの ことばだけ。
+  dr_why: "How to work it out:   {0}",
+  dr_whyRule: "The rule is +{0} each time.   {1} + {0}",
+  dr_whyRuleDouble: "The rule is doubling.   {0} × 2",
+  dr_whyRemainder: "{0} ÷ {1} = {2} remainder {3}",
+  dr_whyBoxes: "{0} ÷ {1} = {2} remainder {3}. The ones left over need a box too, so {4}",
+
   // --- 1年 -------------------------------------------------------------------
   dr_wu1Add: "How many altogether",
   dr_wu1Sub: "How many are left",
@@ -113,6 +122,13 @@ export const drillWordJa = {
   dr_wItems: "りんご/こ,シール/まい,ビーだま/こ,クッキー/まい,かいがら/こ,どんぐり/こ",
   dr_wGoods: "えんぴつ,けしゴム,シール,ノート,あめ",
   dr_wBigGoods: "Tシャツ,本,ボール,ケーキ,かばん",
+
+  // --- まちがえた ときに 出す「どう とくか」--------------------------------
+  dr_why: "こう とくよ　　{0}",
+  dr_whyRule: "きまりは {0}ずつ ふえる。　{1} + {0}",
+  dr_whyRuleDouble: "きまりは 2ばいずつ。　{0} × 2",
+  dr_whyRemainder: "{0} ÷ {1} = {2} あまり {3}",
+  dr_whyBoxes: "{0} ÷ {1} = {2} あまり {3}。あまりにも はこが いるので {4}",
 
   // --- 1年 -------------------------------------------------------------------
   dr_wu1Add: "あわせて いくつ",

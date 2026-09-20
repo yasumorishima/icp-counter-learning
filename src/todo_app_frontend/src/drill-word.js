@@ -52,6 +52,19 @@ function someThing() {
 }
 
 const someGoods = () => pick(listOf("dr_wGoods"));
+
+/**
+ * まちがえた ときに 出す「どう とくか」の 1 行。
+ *
+ * 答えの 数字だけを 見せても、次も 同じ ところで まちがえる。
+ * プリントの Math Tips と 同じで、しきの 形を その場で 見せる。
+ * 数と 記号は ことばに よらないので、ここで 組み立てて よい。
+ */
+const how = expr => t("dr_why", expr);
+const sumOf = (a, b) => how(a + " + " + b);
+const diffOf = (a, b) => how(a + " − " + b);
+const mulOf = (a, b) => how(a + " × " + b);
+const divOf = (a, b) => how(a + " ÷ " + b);
 /** ねだんの 大きい しなもの。980円の あめ の ような 話に しない */
 const someBigGoods = () => pick(listOf("dr_wBigGoods"));
 
@@ -90,14 +103,14 @@ const UNITS = [
       const { noun, counter } = someThing();
       const a = ri(2, 9);
       const b = ri(1, 9);
-      return { text: t("dr_w1Add", someName(), noun, a, counter, b), answer: String(a + b) };
+      return { text: t("dr_w1Add", someName(), noun, a, counter, b), answer: String(a + b), why: sumOf(a, b) };
     } },
   { id: "g1w-sub", grade: 1, get name() { return t("dr_wu1Sub"); }, kind: "num",
     make: () => {
       const { noun, counter } = someThing();
       const a = ri(5, 18);
       const b = ri(1, a - 1);
-      return { text: t("dr_w1Sub", someName(), noun, a, counter, b), answer: String(a - b) };
+      return { text: t("dr_w1Sub", someName(), noun, a, counter, b), answer: String(a - b), why: diffOf(a, b) };
     } },
   { id: "g1w-diff", grade: 1, get name() { return t("dr_wu1Diff"); }, kind: "num",
     make: () => {
@@ -105,14 +118,14 @@ const UNITS = [
       const [first, second] = twoNames();
       const big = ri(6, 18);
       const small = ri(1, big - 1);
-      return { text: t("dr_w1Diff", first, big, second, small, counter, noun), answer: String(big - small) };
+      return { text: t("dr_w1Diff", first, big, second, small, counter, noun), answer: String(big - small), why: diffOf(big, small) };
     } },
   { id: "g1w-missing", grade: 1, get name() { return t("dr_wu1Missing"); }, kind: "num",
     make: () => {
       const { noun, counter } = someThing();
       const start = ri(2, 9);
       const more = ri(1, 9);
-      return { text: t("dr_w1Missing", someName(), noun, more, start + more, counter), answer: String(start) };
+      return { text: t("dr_w1Missing", someName(), noun, more, start + more, counter), answer: String(start), why: diffOf(start + more, more) };
     } },
   { id: "g1w-pattern", grade: 1, get name() { return t("dr_wu1Pattern"); }, kind: "num",
     make: () => {
@@ -121,7 +134,7 @@ const UNITS = [
       const step = pick([2, 3, 4, 5, 10]);
       const start = ri(1, 12);
       const shown = [start, start + step, start + 2 * step, start + 3 * step];
-      return { text: t("dr_w1Pattern", lineUp(shown)), answer: String(start + 4 * step) };
+      return { text: t("dr_w1Pattern", lineUp(shown)), answer: String(start + 4 * step), why: t("dr_whyRule", step, start + 3 * step) };
     } },
 
   // ---- 2年 ------------------------------------------------------------------
@@ -134,6 +147,7 @@ const UNITS = [
         text: t(story, someName(), start, start + step, start + 2 * step),
         answer: String(start + 3 * step),
         choices: patternChoices(start, step),
+        why: t("dr_whyRule", step, start + 2 * step),
       };
     } },
   { id: "g2w-add", grade: 2, get name() { return t("dr_wu2Add"); }, kind: "num",
@@ -141,33 +155,33 @@ const UNITS = [
       const { noun, counter } = someThing();
       const a = ri(11, 60);
       const b = ri(11, 99 - a);
-      return { text: t("dr_w2Add", someName(), a, noun, b, counter), answer: String(a + b) };
+      return { text: t("dr_w2Add", someName(), a, noun, b, counter), answer: String(a + b), why: sumOf(a, b) };
     } },
   { id: "g2w-sub", grade: 2, get name() { return t("dr_wu2Sub"); }, kind: "num",
     make: () => {
       const { noun, counter } = someThing();
       const total = ri(30, 99);
       const taken = ri(11, total - 10);
-      return { text: t("dr_w2Sub", someName(), total, noun, taken, counter), answer: String(total - taken) };
+      return { text: t("dr_w2Sub", someName(), total, noun, taken, counter), answer: String(total - taken), why: diffOf(total, taken) };
     } },
   { id: "g2w-mul", grade: 2, get name() { return t("dr_wu2Mul"); }, kind: "num",
     make: () => {
       const { noun, counter } = someThing();
       const bags = ri(2, 9);
       const each = ri(2, 9);
-      return { text: t("dr_w2Mul", "", bags, each, noun, counter), answer: String(bags * each) };
+      return { text: t("dr_w2Mul", "", bags, each, noun, counter), answer: String(bags * each), why: mulOf(bags, each) };
     } },
   { id: "g2w-money", grade: 2, get name() { return t("dr_wu2Money"); }, kind: "num",
     make: () => {
       const have = ri(5, 20) * 10;
       const price = ri(2, have / 10 - 1) * 10;
-      return { text: t("dr_w2Money", someName(), have, someGoods(), price), answer: String(have - price) };
+      return { text: t("dr_w2Money", someName(), have, someGoods(), price), answer: String(have - price), why: diffOf(have, price) };
     } },
   { id: "g2w-len", grade: 2, get name() { return t("dr_wu2Len"); }, kind: "num",
     make: () => {
       const blue = ri(20, 95);
       const shorter = ri(5, blue - 5);
-      return { text: t("dr_w2Len", blue, shorter), answer: String(blue - shorter) };
+      return { text: t("dr_w2Len", blue, shorter), answer: String(blue - shorter), why: diffOf(blue, shorter) };
     } },
 ];
 
@@ -178,7 +192,7 @@ UNITS.push(
       const { noun, counter } = someThing();
       const people = ri(2, 9);
       const each = ri(2, 9);
-      return { text: t("dr_w3Div", "", people * each, noun, people, counter), answer: String(each) };
+      return { text: t("dr_w3Div", "", people * each, noun, people, counter), answer: String(each), why: divOf(people * each, people) };
     } },
   { id: "g3w-rem", grade: 3, get name() { return t("dr_wu3Rem"); }, kind: "num",
     make: () => {
@@ -190,21 +204,21 @@ UNITS.push(
       // あまりを きく 形と、はこが いくつ いるかを きく 形。
       // どちらも 同じ わり算だが、答えは あまり と 切り上げで ちがう
       return ri(0, 1) === 1
-        ? { text: t("dr_w3Rem", total, noun, per, counter), answer: String(left) }
-        : { text: t("dr_w3Box", total, noun, per, counter), answer: String(boxes + 1) };
+        ? { text: t("dr_w3Rem", total, noun, per, counter), answer: String(left), why: t("dr_whyRemainder", total, per, boxes, left) }
+        : { text: t("dr_w3Box", total, noun, per, counter), answer: String(boxes + 1), why: t("dr_whyBoxes", total, per, boxes, left, boxes + 1) };
     } },
   { id: "g3w-mul", grade: 3, get name() { return t("dr_wu3Mul"); }, kind: "num",
     make: () => {
       const { noun, counter } = someThing();
       const boxes = ri(2, 9);
       const each = ri(12, 49);
-      return { text: t("dr_w3Mul", boxes, each, noun, counter), answer: String(boxes * each) };
+      return { text: t("dr_w3Mul", boxes, each, noun, counter), answer: String(boxes * each), why: mulOf(boxes, each) };
     } },
   { id: "g3w-change", grade: 3, get name() { return t("dr_wu3Change"); }, kind: "num",
     make: () => {
       const pay = pick([500, 1000]);
       const price = ri(3, 30) * 10;
-      return { text: t("dr_w3Change", someName(), pay, someGoods(), price), answer: String(pay - price) };
+      return { text: t("dr_w3Change", someName(), pay, someGoods(), price), answer: String(pay - price), why: diffOf(pay, price) };
     } },
   { id: "g3w-pattern", grade: 3, get name() { return t("dr_wu3Pattern"); }, kind: "num",
     make: () => {
@@ -212,12 +226,12 @@ UNITS.push(
         // 2 ばいずつ ふえる ならび
         const start = ri(2, 6);
         const shown = [start, start * 2, start * 4, start * 8];
-        return { text: t("dr_w3Pattern", lineUp(shown)), answer: String(start * 16) };
+        return { text: t("dr_w3Pattern", lineUp(shown)), answer: String(start * 16), why: t("dr_whyRuleDouble", start * 8) };
       }
       const step = ri(6, 25);
       const start = ri(3, 40);
       const shown = [start, start + step, start + 2 * step, start + 3 * step];
-      return { text: t("dr_w3Pattern", lineUp(shown)), answer: String(start + 4 * step) };
+      return { text: t("dr_w3Pattern", lineUp(shown)), answer: String(start + 4 * step), why: t("dr_whyRule", step, start + 3 * step) };
     } },
 
   // ---- 4年 ------------------------------------------------------------------
@@ -225,32 +239,32 @@ UNITS.push(
     make: () => {
       const classes = ri(3, 9);
       const each = ri(15, 60);
-      return { text: t("dr_w4Div", classes * each, classes), answer: String(each) };
+      return { text: t("dr_w4Div", classes * each, classes), answer: String(each), why: divOf(classes * each, classes) };
     } },
   { id: "g4w-times", grade: 4, get name() { return t("dr_wu4Times"); }, kind: "num",
     make: () => {
       const red = ri(4, 20);
       const times = ri(3, 9);
       return ri(0, 1) === 1
-        ? { text: t("dr_w4TimesMul", red, times), answer: String(red * times) }
-        : { text: t("dr_w4TimesDiv", red * times, red), answer: String(times) };
+        ? { text: t("dr_w4TimesMul", red, times), answer: String(red * times), why: mulOf(red, times) }
+        : { text: t("dr_w4TimesDiv", red * times, red), answer: String(times), why: divOf(red * times, red) };
     } },
   { id: "g4w-dec", grade: 4, get name() { return t("dr_wu4Dec"); }, kind: "dec",
     make: () => {
       const a = round2(ri(5, 25) / 10);
       const b = round2(ri(5, 25) / 10);
-      return { text: t("dr_w4Dec", someName(), a, b), answer: String(round2(a + b)) };
+      return { text: t("dr_w4Dec", someName(), a, b), answer: String(round2(a + b)), why: sumOf(a, b) };
     } },
   { id: "g4w-area", grade: 4, get name() { return t("dr_wu4Area"); }, kind: "num",
     make: () => {
       const long = ri(4, 20);
       const wide = ri(3, 15);
-      return { text: t("dr_w4Area", long, wide), answer: String(long * wide) };
+      return { text: t("dr_w4Area", long, wide), answer: String(long * wide), why: mulOf(long, wide) };
     } },
   { id: "g4w-round", grade: 4, get name() { return t("dr_wu4Round"); }, kind: "num",
     make: () => {
       const people = ri(1000, 9999);
-      return { text: t("dr_w4Round", people), answer: String(Math.round(people / 100) * 100), hint: t("dr_hRound") };
+      return { text: t("dr_w4Round", people), answer: String(Math.round(people / 100) * 100), hint: t("dr_hRound"), why: how(t("dr_hRound")) };
     } },
 );
 
@@ -261,32 +275,32 @@ UNITS.push(
       // 答えが 小数に ならない 組み合わせだけを 出す（20 の ばいすうなら 25％ でも 割り切れる）
       const total = ri(3, 40) * 20;
       const percent = pick([10, 20, 25, 50, 75]);
-      return { text: t("dr_w5Percent", total, percent), answer: String((total * percent) / 100) };
+      return { text: t("dr_w5Percent", total, percent), answer: String((total * percent) / 100), why: how(total + " × " + percent + " ÷ 100") };
     } },
   { id: "g5w-average", grade: 5, get name() { return t("dr_wu5Average"); }, kind: "num",
     make: () => {
       const days = ri(3, 6);
       const each = ri(10, 40);
-      return { text: t("dr_w5Average", someName(), days * each, days), answer: String(each) };
+      return { text: t("dr_w5Average", someName(), days * each, days), answer: String(each), why: divOf(days * each, days) };
     } },
   { id: "g5w-rate", grade: 5, get name() { return t("dr_wu5Rate"); }, kind: "num",
     make: () => {
       const count = ri(2, 9);
       const one = ri(20, 90);
-      return { text: t("dr_w5Rate", count, count * one), answer: String(one) };
+      return { text: t("dr_w5Rate", count, count * one), answer: String(one), why: divOf(count * one, count) };
     } },
   { id: "g5w-decmul", grade: 5, get name() { return t("dr_wu5DecMul"); }, kind: "dec",
     make: () => {
       const price = ri(20, 90);
       const metres = round2(ri(12, 45) / 10);
-      return { text: t("dr_w5DecMul", price, metres), answer: String(round2(price * metres)) };
+      return { text: t("dr_w5DecMul", price, metres), answer: String(round2(price * metres)), why: mulOf(price, metres) };
     } },
   { id: "g5w-volume", grade: 5, get name() { return t("dr_wu5Volume"); }, kind: "num",
     make: () => {
       const long = ri(5, 30);
       const wide = ri(5, 20);
       const deep = ri(5, 20);
-      return { text: t("dr_w5Volume", long, wide, deep), answer: String(long * wide * deep) };
+      return { text: t("dr_w5Volume", long, wide, deep), answer: String(long * wide * deep), why: how(long + " × " + wide + " × " + deep) };
     } },
 
   // ---- 6年 ------------------------------------------------------------------
@@ -295,8 +309,8 @@ UNITS.push(
       const perHour = ri(6, 18) * 5;
       const hours = ri(2, 6);
       return ri(0, 1) === 1
-        ? { text: t("dr_w6SpeedRate", perHour * hours, hours), answer: String(perHour) }
-        : { text: t("dr_w6SpeedDist", perHour, hours), answer: String(perHour * hours) };
+        ? { text: t("dr_w6SpeedRate", perHour * hours, hours), answer: String(perHour), why: divOf(perHour * hours, hours) }
+        : { text: t("dr_w6SpeedDist", perHour, hours), answer: String(perHour * hours), why: mulOf(perHour, hours) };
     } },
   { id: "g6w-ratio", grade: 6, get name() { return t("dr_wu6Ratio"); }, kind: "num",
     make: () => {
@@ -305,7 +319,7 @@ UNITS.push(
       let waterPart = ri(2, 6);
       if (waterPart >= juicePart) waterPart += 1;
       const unit = ri(10, 50);
-      return { text: t("dr_w6Ratio", juicePart, waterPart, juicePart * unit), answer: String(waterPart * unit) };
+      return { text: t("dr_w6Ratio", juicePart, waterPart, juicePart * unit), answer: String(waterPart * unit), why: how(juicePart * unit + " ÷ " + juicePart + " × " + waterPart) };
     } },
   { id: "g6w-frac", grade: 6, get name() { return t("dr_wu6Frac"); }, kind: "frac",
     make: () => {
@@ -326,19 +340,19 @@ UNITS.push(
         }
       }
       // 4/8 の ような 書き方は 教科書に 出ないので、文の 中でも 約分して 見せる
-      return { text: t("dr_w6Frac", frac(n1, d1), frac(n2, d2)), answer: frac(n1 * d2 - n2 * d1, d1 * d2) };
+      return { text: t("dr_w6Frac", frac(n1, d1), frac(n2, d2)), answer: frac(n1 * d2 - n2 * d1, d1 * d2), why: how(frac(n1, d1) + " − " + frac(n2, d2)) };
     } },
   { id: "g6w-discount", grade: 6, get name() { return t("dr_wu6Discount"); }, kind: "num",
     make: () => {
       const price = ri(5, 50) * 20;
       const off = pick([10, 20, 25, 50]);
-      return { text: t("dr_w6Discount", someBigGoods(), price, off), answer: String((price * (100 - off)) / 100) };
+      return { text: t("dr_w6Discount", someBigGoods(), price, off), answer: String((price * (100 - off)) / 100), why: how(price + " × " + (100 - off) + " ÷ 100") };
     } },
   { id: "g6w-cases", grade: 6, get name() { return t("dr_wu6Cases"); }, kind: "num",
     make: () => {
       const shirts = ri(2, 6);
       const hats = ri(2, 5);
-      return { text: t("dr_w6Cases", someName(), shirts, hats), answer: String(shirts * hats) };
+      return { text: t("dr_w6Cases", someName(), shirts, hats), answer: String(shirts * hats), why: mulOf(shirts, hats) };
     } },
 );
 

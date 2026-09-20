@@ -674,6 +674,67 @@ await drill.page.waitForSelector("#view-kiroku:not(.is-hidden)", { timeout: 3000
 check("the record page names the word unit",
   (await drill.page.locator(".kiroku-table").textContent()).includes("おかねの おはなし"));
 
+// まちがえた ときに「どう とくか」が 出るか。
+// 期待する しきは **画面の 文に 出て いる 数**から こちらで 組み立てる
+//（生成器の 答えを 写さない）。正解した ときは 出ない ことも 見る。
+await openDrill(drill.page);
+await drill.page.locator('.cat-tab[data-cat="word"]').click();
+await drill.page.locator('.grade-tab[data-grade="2"]').click();
+await drill.page.locator('.unit-card[data-unit="g2w-money"]').click();
+await drill.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
+check("nothing is explained before answering", await drill.page.locator("#quiz-why").isHidden());
+
+const moneyShown = ((await drill.page.locator("#quiz-text").textContent()).match(/\d+/g) || []).map(Number);
+await drill.page.locator('.pad[data-pad="1"]').click();
+await drill.page.locator('.pad[data-pad="ok"]').click();
+await drill.page.waitForSelector("#quiz-feedback.is-ng", { timeout: 20000 });
+const whyText = (await drill.page.locator("#quiz-why").textContent()).trim();
+check("a wrong answer is told how to work it out", await drill.page.locator("#quiz-why").isVisible(), whyText);
+check("the working matches the numbers in the sentence",
+  whyText.includes(moneyShown[0] + " − " + moneyShown[1]), whyText);
+
+const whyLight = await contrastSweep(drill.page);
+check("the working is readable in the light theme", whyLight.length === 0, whyLight.slice(0, 4).join(" "));
+await drill.page.click("#theme-toggle");
+const whyDark = await contrastSweep(drill.page);
+check("the working is readable in the dark theme", whyDark.length === 0, whyDark.slice(0, 4).join(" "));
+await drill.page.click("#theme-toggle");
+
+// 次の 問題を 正しく 答えると、説明は 出ない
+await drill.page.waitForFunction(
+  () => document.getElementById("quiz-feedback").textContent === "", null, { timeout: 20000 });
+const nextShown = ((await drill.page.locator("#quiz-text").textContent()).match(/\d+/g) || []).map(Number);
+for (const digit of String(nextShown[0] - nextShown[1]).split("")) {
+  await drill.page.locator(`.pad[data-pad="${digit}"]`).click();
+}
+await drill.page.locator('.pad[data-pad="ok"]').click();
+await drill.page.waitForSelector("#quiz-feedback.is-ok", { timeout: 20000 });
+check("a right answer is not lectured", await drill.page.locator("#quiz-why").isHidden());
+await drill.page.click("#quiz-quit");
+await drill.page.waitForSelector("#view-drill:not(.is-hidden)", { timeout: 20000 });
+
+// きまりの 問題は しきでは なく「きまり」を 出す（数字を あてずっぽうで 足す まちがい 対策）
+await drill.page.locator('.unit-card[data-unit="g2w-pattern"]').click();
+await drill.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
+const patternShown = ((await drill.page.locator("#quiz-text").textContent()).match(/\d+/g) || []).map(Number);
+// 文に 出る 数は 月・火・水 の 3 つ
+const patternStep = patternShown[1] - patternShown[0];
+const patternRight = String(patternShown[2] + patternStep);
+const wrongChoice = (await drill.page.locator(".choice").allTextContents()).find(value => value !== patternRight);
+await drill.page.locator(`.choice[data-value="${wrongChoice}"]`).click();
+await drill.page.waitForSelector("#quiz-feedback.is-ng", { timeout: 20000 });
+const ruleText = (await drill.page.locator("#quiz-why").textContent()).trim();
+check("the pattern question explains the rule, not just the answer",
+  ruleText.includes(String(patternStep)) && ruleText.includes(String(patternShown[2])), ruleText);
+
+// 説明を 読んで いる 3.2 秒の あいだに「やめる」を 押しても こわれない
+// （まちがえた ときの 間が 長く なった ぶん、ふつうに 起きる）
+await drill.page.click("#quiz-quit");
+await drill.page.waitForSelector("#view-drill:not(.is-hidden)", { timeout: 20000 });
+await drill.page.waitForTimeout(3500);
+check("leaving while the working is on screen does not break anything",
+  await drill.page.locator("#drill-main").isVisible());
+
 // 計算に もどす（ここから 先の 検査は 計算の 単元を 押す）
 await openDrill(drill.page);
 await drill.page.locator('.cat-tab[data-cat="calc"]').click();
