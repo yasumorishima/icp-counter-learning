@@ -2080,7 +2080,15 @@ for (const [file, want, ends] of [
   // 日本語へ 切り替えると その場で 書き直り、読み込み直しても のこる
   await ep.selectOption("#lang-select", "ja");
   await ep.waitForFunction(() => document.documentElement.lang === "ja", null, { timeout: 5000 });
-  await ep.waitForTimeout(200);
+  // 🔴 ここは「ことばの 印が 変わってから 200ms」で 待って いたので、走る 機械が
+  //   こんで いると 書き直る 前に 読んで しまう（2026-09-20 に CI で 1 度 落ちた。
+  //   手元では 10 回 くりかえしても 再現しなかった＝原因は 掴めて いないが、
+  //   **時間の 見こみを 置くのを やめる**）。
+  //   ⚠️ 待って から 同じ ことを 調べる ので、待ちきれなかった ときも
+  //   例外に せず 先へ 進めて、**実際の 文字を 添えて 落とす**
+  await ep.waitForFunction(
+    () => /[南北東西]/.test((document.getElementById("sky-where") || {}).textContent || ""),
+    null, { timeout: 5000 }).catch(() => {});
   const whereJa = (await ep.locator("#sky-where").textContent()).trim();
   check("switching to Japanese rewrites the screen at once", whereJa.includes("南"), whereJa);
   // ことばを 変えただけで、えらんだ 日時が「いま」へ 戻っては いけない

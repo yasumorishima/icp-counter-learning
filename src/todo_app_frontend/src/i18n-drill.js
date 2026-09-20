@@ -193,6 +193,18 @@ export const drillEn = {
   dr_awardTo: "For {0}",
   dr_awardBody:
     "In the {0}<br>you did <b>{2} days</b> out of {1}.<br>You collected ★{3} and reached level {4}.<br>Well done for keeping at it.",
+
+  // --- なまえの となりの かお（読み上げに わたす 名まえ）--------------------
+  // 🔴 絵文字を やめて 自前の SVG に した ぶん、ボタンから 読める 名まえが
+  //    消えた（2026-09-20 に CI が 検知）。ここで 名前を つける
+  dr_faceBear: "Bear",
+  dr_faceRabbit: "Rabbit",
+  dr_faceCat: "Cat",
+  dr_faceDog: "Dog",
+  dr_faceFox: "Fox",
+  dr_facePanda: "Panda",
+  dr_faceFrog: "Frog",
+  dr_facePenguin: "Penguin",
 };
 
 export const drillJa = {
@@ -376,4 +388,14 @@ export const drillJa = {
   dr_awardTo: "{0} どの",
   dr_awardBody:
     "{0} で<br>{1}日 のうち <b>{2}日</b> やりました。<br>★を {3}こ あつめて レベル {4} に なりました。<br>その がんばりを ここに たたえます。",
+
+  // --- なまえの となりの かお（読み上げに わたす 名まえ）--------------------
+  dr_faceBear: "くま",
+  dr_faceRabbit: "うさぎ",
+  dr_faceCat: "ねこ",
+  dr_faceDog: "いぬ",
+  dr_faceFox: "きつね",
+  dr_facePanda: "ぱんだ",
+  dr_faceFrog: "かえる",
+  dr_facePenguin: "ぺんぎん",
 };

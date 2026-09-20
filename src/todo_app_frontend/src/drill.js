@@ -7,7 +7,7 @@ import * as records from "./records";
 import { sounds, confetti, soundOn, toggleSound } from "./effects";
 import { t, currentLang } from "./i18n";
 import { say, stopSpeech, watchVoice } from "./voice";
-import { FACE_IDS, faceSvg, markSvg, migrateFace } from "./faces";
+import { FACE_IDS, faceSvg, faceKey, markSvg, migrateFace } from "./faces";
 
 const $ = id => document.getElementById(id);
 const FACES = FACE_IDS;
@@ -47,7 +47,7 @@ export function initDrill(options) {
   show = options.show;
 
   $("face-row").innerHTML = FACES.map(
-    (face, i) => '<button type="button" class="face' + (i === 0 ? " is-on" : "") + '" data-face="' + face + '">' + faceSvg(face) + "</button>"
+    (face, i) => '<button type="button" class="face' + (i === 0 ? " is-on" : "") + '" data-face="' + face + '" aria-label="' + escapeText(t(faceKey(face))) + '">' + faceSvg(face) + "</button>"
   ).join("");
   $("face-row").addEventListener("click", event => {
     const button = event.target.closest(".face");
@@ -364,7 +364,7 @@ function renderWhoPanel() {
   panel.innerHTML =
     '<h2 class="panel-title">' + (panelMode === "add" ? t("dr_whoNew") : t("dr_whoRename")) + "</h2>" +
     '<div class="face-row">' +
-    FACES.map(f => '<button type="button" class="face' + (f === startFace ? " is-on" : "") + '" data-face="' + f + '">' + faceSvg(f) + "</button>").join("") +
+    FACES.map(f => '<button type="button" class="face' + (f === startFace ? " is-on" : "") + '" data-face="' + f + '" aria-label="' + escapeText(t(faceKey(f))) + '">' + faceSvg(f) + "</button>").join("") +
     "</div>" +
     '<input id="who-edit-name" type="text" maxlength="12" placeholder="' + escapeText(t("dr_namePh")) + '" value="' + escapeText(startName) + '">' +
     '<div class="who-actions">' +

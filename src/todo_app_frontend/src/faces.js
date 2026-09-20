@@ -139,6 +139,17 @@ export function migrateFace(stored) {
   return OLD[stored] || FACE_IDS[0];
 }
 
+/**
+ * かおを 読み上げに わたす ための 辞書の かぎ。
+ * 🔴 絵文字だった ころは 文字 そのものが ボタンの 名まえに なって いたので、
+ * SVG に した とたん **押せるのに 名前の 無い ボタン**が 8 つ できた
+ * （2026-09-20 に CI の 総なめが 検知）。ここで 名前を つけ直す。
+ */
+export function faceKey(id) {
+  const one = migrateFace(id);
+  return "dr_face" + one.charAt(0).toUpperCase() + one.slice(1);
+}
+
 /** かおの 絵。知らない 名まえは 先頭の かおに 落とす（外から 来た 値を 通さない） */
 export function faceSvg(id) {
   return FACE[migrateFace(id)];
