@@ -78,8 +78,36 @@ await darkPage.goto(BASE, { waitUntil: "domcontentloaded" });
 await darkPage.waitForSelector("body[data-ready='1']", { timeout: 30000 });
 check("light mode is the default even when the device prefers dark",
   (await darkPage.evaluate(() => document.documentElement.dataset.theme)) === "light");
+// 🔴 ここに 色を 1 つ 書き写すと、きせつで --bg が 変わった 日に 意味なく 落ちる
+//   （2026-09-20 に 実際 落ちた）。見たいのは「明るい ほうで 塗られて いる」ことなので、
+//   **body の 塗りが --bg そのもので、明るい 側に あり、暗い ほうは 暗い 側に ある**
+//   の 3 つで 見る（[[feedback_derive-invariants-not-memorized-counts]]）。
+const paintedBg = await darkPage.evaluate(() => {
+  const lum = text => {
+    const [r, g, b] = (text.match(/[0-9.]+/g) || [0, 0, 0]).slice(0, 3).map(Number);
+    return [r, g, b]
+      .map(v => v / 255)
+      .map(v => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)))
+      .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+  };
+  const root = document.documentElement;
+  const read = () => getComputedStyle(document.body).backgroundColor;
+  const token = getComputedStyle(root).getPropertyValue("--bg").trim();
+  const light = read();
+  root.dataset.theme = "dark";
+  const dark = read();
+  root.dataset.theme = "light";
+  return { light, dark, token, lightLum: lum(light), darkLum: lum(dark), season: root.dataset.season };
+});
+check("the body is painted with the --bg token, not a colour of its own",
+  paintedBg.light.replace(/\s/g, "") ===
+    (paintedBg.token.length === 7
+      ? "rgb(" + [1, 3, 5].map(i => parseInt(paintedBg.token.slice(i, i + 2), 16)).join(",") + ")"
+      : paintedBg.token.replace(/\s/g, "")),
+  `${paintedBg.light} vs ${paintedBg.token}`);
 check("the default page really is painted light",
-  (await darkPage.evaluate(() => getComputedStyle(document.body).backgroundColor)) === "rgb(255, 248, 243)");
+  paintedBg.lightLum > 0.5 && paintedBg.darkLum < 0.5,
+  `${paintedBg.season}: light ${paintedBg.light} lum=${paintedBg.lightLum.toFixed(3)} / dark ${paintedBg.dark} lum=${paintedBg.darkLum.toFixed(3)}`);
 await darkPreferring.close();
 
 await page.click("#theme-toggle");
