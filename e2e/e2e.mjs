@@ -2113,6 +2113,65 @@ for (const [file, want, ends] of [
   await en.context.close();
 }
 
+// ---- トップが スマホの 1 画面に 入るか（2026-09-20） ----------------------
+//
+// 🔴 実測で 見つけた 穴＝**スマホでは「あそび」が どの 機種でも 1 画面目に
+//    1 ピクセルも 出て いなかった**（360x640 / 390x844 / 412x915 とも
+//    上から 1092〜1106px ＝ 2 回 スクロールしないと 届かない）。
+//    このサイトで **文字が 読めない 子が 使えるのは「あそび」だけ**なので、
+//    唯一の 入り口が 3 さいには できない 操作の 向こうに あった。
+
+async function topOn(width, height) {
+  const one = await newPage(width, height);
+  await one.page.goto(BASE, { waitUntil: "domcontentloaded" });
+  await one.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  const got = await one.page.evaluate(vh => {
+    const cards = [...document.querySelectorAll(".pick-card")];
+    const rows = new Map();
+    cards.forEach(c => {
+      const top = Math.round(c.getBoundingClientRect().top);
+      const go = c.querySelector(".pick-go").getBoundingClientRect();
+      (rows.get(top) || rows.set(top, []).get(top)).push(Math.round(go.top));
+    });
+    return {
+      枚数: cards.length,
+      列: new Set(cards.map(c => Math.round(c.getBoundingClientRect().left))).size,
+      // 1 画面目に どれだけ 見えて いるか（いちばん 下の カードで 見る）
+      見え: cards.map(c => {
+        const r = c.getBoundingClientRect();
+        return Math.round(Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)) / r.height * 100);
+      }),
+      // となりの カードと ボタンの 高さが そろって いるか
+      ずれ: Math.max(...[...rows.values()].map(v => Math.max(...v) - Math.min(...v))),
+      ボタン最小: Math.min(...cards.map(c => Math.round(c.querySelector(".pick-go").getBoundingClientRect().height))),
+      あふれ: document.documentElement.scrollWidth - window.innerWidth,
+    };
+  }, height);
+  await one.context.close();
+  return got;
+}
+
+const phone = await topOn(390, 844);
+check("all four things to do fit on one phone screen",
+  phone.枚数 === 4 && phone.見え.every(v => v === 100), phone.見え.join("/") + "%");
+check("the four cards are laid out two by two",
+  phone.列 === 2, `${phone.列} 列`);
+check("the buttons line up with the one next to them",
+  phone.ずれ === 0, `${phone.ずれ}px`);
+check("even on a phone every button is big enough to tap",
+  phone.ボタン最小 >= 44, `${phone.ボタン最小}px`);
+
+// 広い 画面でも 同じ 並びで、ボタンは そろう
+const wide = await topOn(1280, 900);
+check("the same two-by-two layout is used on a big screen",
+  wide.列 === 2 && wide.ずれ === 0, `${wide.列} 列 / ずれ ${wide.ずれ}px`);
+
+// せまい 端末でも 横へ こぼれない（この サイトが 前から 見て いる 320px）
+const tiny = await topOn(320, 568);
+check("nothing spills sideways on the smallest phone",
+  tiny.あふれ === 0 && phone.あふれ === 0 && wide.あふれ === 0,
+  `320=${tiny.あふれ}px 390=${phone.あふれ}px 1280=${wide.あふれ}px`);
+
 // ---- きせつ（2026-09-20） --------------------------------------------------
 //
 // user 指示「背景をシーズンごとに変える／もっとテンション上がるように／
