@@ -1105,7 +1105,7 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
   color: var(--ink);
   min-height: 200px;
   justify-content: center;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
 }
 .pick-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }
 .pick-card:focus-visible { outline: 3px solid var(--grape); outline-offset: 3px; }
@@ -1683,28 +1683,36 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
 :root[data-theme="dark"][data-season="autumn"],
 :root[data-theme="dark"][data-season="winter"] { --blob-opacity: 0.4; }
 
+/* 夜も 点々は きせつの 色に する。
+   ⚠️ 書かないと **明るい ほうの --dots が 夜でも 勝つ**（どちらも 詳細度 0,2,0 で
+   きせつの ほうが あと に 書いて ある ため）。2026-09-20 に 8 通り 実測して 見つけた。
+   同じ 値を もう 一度 書いて いるのは、偶然 勝って いるのでは なく そう 決めた と 示すため。 */
 :root[data-theme="dark"][data-season="spring"] {
   --bg: #241c33;
+  --dots: rgba(244, 114, 182, 0.16);
   --blob-1: #5b2a4d; --blob-2: #3a2a66; --blob-3: #23503c;
 }
 :root[data-theme="dark"][data-season="summer"] {
   --bg: #111d33;
+  --dots: rgba(56, 189, 248, 0.18);
   --blob-1: #1d4a72; --blob-2: #1e5449; --blob-3: #4a4018;
 }
 :root[data-theme="dark"][data-season="autumn"] {
   --bg: #2a1d22;
+  --dots: rgba(234, 140, 60, 0.17);
   --blob-1: #6a3820; --blob-2: #5e4417; --blob-3: #6b2b33;
 }
 :root[data-theme="dark"][data-season="winter"] {
   --bg: #161d33;
+  --dots: rgba(125, 155, 235, 0.17);
   --blob-1: #22406e; --blob-2: #3b3568; --blob-3: #1d4a63;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"])[data-season="spring"] { --bg: #241c33; --blob-1: #5b2a4d; --blob-2: #3a2a66; --blob-3: #23503c; --blob-opacity: 0.4; }
-  :root:not([data-theme="light"])[data-season="summer"] { --bg: #111d33; --blob-1: #1d4a72; --blob-2: #1e5449; --blob-3: #4a4018; --blob-opacity: 0.4; }
-  :root:not([data-theme="light"])[data-season="autumn"] { --bg: #2a1d22; --blob-1: #6a3820; --blob-2: #5e4417; --blob-3: #6b2b33; --blob-opacity: 0.4; }
-  :root:not([data-theme="light"])[data-season="winter"] { --bg: #161d33; --blob-1: #22406e; --blob-2: #3b3568; --blob-3: #1d4a63; --blob-opacity: 0.4; }
+  :root:not([data-theme="light"])[data-season="spring"] { --bg: #241c33; --blob-1: #5b2a4d; --blob-2: #3a2a66; --blob-3: #23503c; --blob-opacity: 0.4; --dots: rgba(244, 114, 182, 0.16); }
+  :root:not([data-theme="light"])[data-season="summer"] { --bg: #111d33; --blob-1: #1d4a72; --blob-2: #1e5449; --blob-3: #4a4018; --blob-opacity: 0.4; --dots: rgba(56, 189, 248, 0.18); }
+  :root:not([data-theme="light"])[data-season="autumn"] { --bg: #2a1d22; --blob-1: #6a3820; --blob-2: #5e4417; --blob-3: #6b2b33; --blob-opacity: 0.4; --dots: rgba(234, 140, 60, 0.17); }
+  :root:not([data-theme="light"])[data-season="winter"] { --bg: #161d33; --blob-1: #22406e; --blob-2: #3b3568; --blob-3: #1d4a63; --blob-opacity: 0.4; --dots: rgba(125, 155, 235, 0.17); }
 }
 
 /* --- 舞うもの ------------------------------------------------------------ */
@@ -1715,6 +1723,9 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
   opacity: 0.85;
 }
 :root[data-theme="dark"] .season-float { opacity: 0.7; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .season-float { opacity: 0.7; }
+}
 
 .sn-bit {
   position: absolute; top: -14vh;
@@ -1797,9 +1808,13 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
 .pick-asobi .pick-face { animation-delay: 1.35s; }
 @keyframes sn-bob { 50% { transform: translateY(-7px); } }
 
-.pick-card { transition: transform 0.14s ease, box-shadow 0.14s ease; }
 .pick-card:active { transform: scale(0.965); }
-.pick-card:hover .pick-face { animation-play-state: paused; transform: scale(1.1); }
+/* 🔴 `animation-play-state: paused` では 拡大が 一定に ならない。
+   `sn-bob` は 50% しか 書いて いないので 0%/100% は 下地（＝この scale）から
+   作られ、止めた 位相の 補間が そのまま 出る。
+   2026-09-20 に 12 回 測って scale 1.0032〜1.0998（はば 0.0966）＝その時しだい。
+   `animation: none` で 位相ごと 外すと 1.1 に 決まる。 */
+.pick-card:hover .pick-face { animation: none; transform: scale(1.1); }
 
 /* 動きを 減らす 設定の 端末では 舞わせない。色だけ きせつの ままに する */
 @media (prefers-reduced-motion: reduce) {

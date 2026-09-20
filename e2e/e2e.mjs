@@ -2161,6 +2161,36 @@ async function seasonOn(dateKey, theme) {
       moonShown: moon ? getComputedStyle(moon).display : "missing",
       floatAria: float.getAttribute("aria-hidden"),
       sceneAria: scene.getAttribute("aria-hidden"),
+      // 点々の 色は 明暗で 決め直して いる（明るい ほうが 夜でも 勝つ 事故を 防ぐ）
+      dots: getComputedStyle(root).getPropertyValue("--dots").trim(),
+      // 舞うものは かならず 本文の 後ろ
+      floatZ: getComputedStyle(float).zIndex,
+      // 🔴 ページの 横あふれでは 見ない＝`position: fixed` の 層の あふれは
+      //   スクロール量に ならないので、overflow を visible に しても 数字が 動かない
+      //   （2026-09-20 に 変異で 実測＝落ちない assert だった）。
+      //   置き場所の 式が 壊れたら 落ちる 形＝**左ふちが 画面の 中**に あるか で 見る
+      ...(() => {
+        const rects = [...float.querySelectorAll(".sn-art svg")].map(el => el.getBoundingClientRect());
+        return {
+          onScreen: rects.length > 0 && rects.every(r => r.left >= -1 && r.left < window.innerWidth),
+          leftMost: Math.round(Math.min(...rects.map(r => r.left))),
+          rightMost: Math.round(Math.max(...rects.map(r => r.right))),
+        };
+      })(),
+      // 文字が 地に 沈んで いないか（きせつ x 明暗 の 8 通りで 見る）
+      readable: (() => {
+        const lum = text => {
+          const [r, g, b] = (text.match(/[0-9.]+/g) || [0, 0, 0]).slice(0, 3).map(Number);
+          return [r, g, b]
+            .map(v => v / 255)
+            .map(v => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)))
+            .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+        };
+        const body = getComputedStyle(document.body);
+        const a = lum(body.backgroundColor);
+        const b = lum(body.color);
+        return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      })(),
     };
   });
   await fake.context.close();
@@ -2182,29 +2212,96 @@ check("something is floating about in every season",
   seasons.every(s => s.bits >= 10), seasons.map(s => s.bits).join(" "));
 check("what floats about is drawn differently each season",
   new Set(seasons.map(s => s.art)).size === 4);
+const summerOnly = seasons.find(s => s.season === "summer");
 check("the bubbles of summer go up while everything else comes down",
-  seasons.filter(s => s.rise === "1").length === 1 && seasons.find(s => s.season === "summer").rise === "1",
+  seasons.filter(s => s.rise === "1").length === 1 && summerOnly?.rise === "1",
   seasons.map(s => `${s.season}=${s.rise}`).join(" "));
 check("the top of the page shows a different scene each season",
   new Set(seasons.map(s => s.scene)).size === 4 && seasons.every(s => s.sceneSvgs === 1));
 check("the seasonal picture is not read out as if it were words",
   seasons.every(s => s.floatAria === "true" && s.sceneAria === "true"));
+check("what floats about always stays behind the words",
+  seasons.every(s => Number(s.floatZ) < 0), seasons.map(s => `${s.season}=${s.floatZ}`).join(" "));
+check("every floating thing starts somewhere on the screen",
+  seasons.every(s => s.onScreen), seasons.map(s => `${s.season}=${s.leftMost}..${s.rightMost}`).join(" "));
 check("by day the sun is out and the moon is away",
   seasons.every(s => s.sunShown === "block" && s.moonShown === "none"),
   seasons.map(s => `${s.season}:${s.sunShown}/${s.moonShown}`).join(" "));
 
-const nightSpring = await seasonOn("2026-04-10", "dark");
+// 🔴 夜は はる だけ 見て いた（2026-09-20 の 監査で 判明）。
+//   きせつの 色は 明るい ほうと 夜で **同じ 強さ**なので、夜の ぶんを 1 行 落とすと
+//   明るい ほうの 値が 夜に 勝つ（実際 --dots が そう なって いた）。4 つとも 開く。
+const nights = [];
+for (const [day] of SEASON_DAYS) nights.push(await seasonOn(day, "dark"));
+
 check("at night the moon comes out instead of the sun",
-  nightSpring.sunShown === "none" && nightSpring.moonShown === "block",
-  `${nightSpring.sunShown}/${nightSpring.moonShown}`);
-check("the dark screen gets its own seasonal colour",
-  nightSpring.bg !== seasons[0].bg && nightSpring.themeColor === nightSpring.bg,
-  `${seasons[0].bg} -> ${nightSpring.bg}`);
+  nights.every(n => n.sunShown === "none" && n.moonShown === "block"),
+  nights.map(n => `${n.season}:${n.sunShown}/${n.moonShown}`).join(" "));
+check("every season has its own dark colour, not the light one",
+  nights.every((n, i) => n.bg !== seasons[i].bg) && new Set(nights.map(n => n.bg)).size === 4,
+  nights.map((n, i) => `${n.season} ${seasons[i].bg}->${n.bg}`).join(" "));
+check("the browser bar follows the season at night too",
+  nights.every(n => n.themeColor === n.bg), nights.map(n => `${n.themeColor}/${n.bg}`).join(" "));
+// 🔴 値を くらべても 落ちない（夜の 指定を 消すと 明るい ほうが 勝って **同じ 値**に なる）。
+//   見たいのは「決めて 書いて ある」ことなので、CSSOM で 宣言そのものを 読む。
+//   2026-09-20 に この 形に した＝変異（夜の --dots を 1 行 消す）で 赤に なることを 確かめた。
+const darkRules = await (async () => {
+  const one = await newPage(420, 900);
+  await one.page.goto(BASE, { waitUntil: "domcontentloaded" });
+  await one.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  const got = await one.page.evaluate(() => {
+    const seen = [];
+    for (const sheet of document.styleSheets) {
+      let rules;
+      try { rules = sheet.cssRules; } catch (error) { continue; }
+      for (const rule of rules) {
+        const sel = rule.selectorText || "";
+        // 1 つの きせつだけを 指す 夜の 規則（--blob-opacity の 並べ書きは 除く）
+        if (!/^:root\[data-theme="dark"\]\[data-season="\w+"\]$/.test(sel.trim())) continue;
+        if (!rule.style.getPropertyValue("--bg").trim()) continue;
+        seen.push({ sel: sel.trim(), dots: rule.style.getPropertyValue("--dots").trim() });
+      }
+    }
+    return seen;
+  });
+  await one.context.close();
+  return got;
+})();
+check("every dark season decides its own dots instead of inheriting the light ones",
+  darkRules.length === 4 && darkRules.every(r => r.dots.length > 0),
+  darkRules.map(r => `${r.sel.replace(/:root|\[data-theme="dark"\]/g, "")}=${r.dots || "(なし)"}`).join(" "));
+check("the dots differ from season to season",
+  new Set(seasons.map(s => s.dots)).size === 4, seasons.map(s => s.dots).join(" "));
+check("the words stay readable in every season, light and dark",
+  [...seasons, ...nights].every(s => s.readable >= 4.5),
+  [...seasons, ...nights].map(s => s.readable.toFixed(1)).join(" "));
 
 // 同じ きせつを 開きなおしても 並びが 変わらない＝見た目の 検査が ぶれない
 const springAgain = await seasonOn("2026-04-10", "light");
 check("opening the same season again lays it out the same way",
   springAgain.layout === seasons[0].layout && springAgain.layout.length > 0);
+
+// カードに ふれた ときの 拡大。
+// 🔴 1 回 ふれて 大きさを 測る 形では 歯が 無い＝`animation-play-state: paused` でも
+//   位相に よっては 1.10 近くが 出る（2026-09-20 実測 1.0032〜1.0998・12 回）。
+//   ゆらがない 形＝**ふれて いる あいだ 動きが 名前ごと 外れて いる**かで 見る。
+{
+  const hover = await newPage(1280, 900);
+  await hover.page.goto(BASE, { waitUntil: "domcontentloaded" });
+  await hover.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  const idle = await hover.page.locator(".pick-drill .pick-face")
+    .evaluate(el => getComputedStyle(el).animationName);
+  await hover.page.locator(".pick-drill").hover();
+  await hover.page.waitForTimeout(400);
+  const held = await hover.page.locator(".pick-drill .pick-face").evaluate(el => ({
+    name: getComputedStyle(el).animationName,
+    scale: Number((getComputedStyle(el).transform.match(/[-0-9.]+/g) || [0])[0]),
+  }));
+  check("the cards bob on their own", idle === "sn-bob", idle);
+  check("touching a card gives the same nudge every time, not whatever the bobbing was doing",
+    held.name === "none" && Math.abs(held.scale - 1.1) < 0.001, `${held.name} scale=${held.scale}`);
+  await hover.context.close();
+}
 
 // 動きを 減らす 設定の 端末では 舞わせない（色だけ きせつの まま）
 {
@@ -2214,11 +2311,17 @@ check("opening the same season again lays it out the same way",
   await calm.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
   const quiet = await calm.page.evaluate(() => ({
     float: getComputedStyle(document.getElementById("season-float")).display,
+    breathe: getComputedStyle(document.querySelector(".sn-breathe")).animationName,
+    face: getComputedStyle(document.querySelector(".pick-face")).animationName,
     season: document.documentElement.dataset.season,
     bg: getComputedStyle(document.documentElement).getPropertyValue("--bg").trim(),
   }));
   check("nothing flies about when the device asks for less movement",
     quiet.float === "none", quiet.float);
+  // 景色の 中の 動きと カードの 上下は `.season-float` の 外に ある＝
+  // display:none では 止まらない。別に 見る
+  check("the picture and the cards hold still too",
+    quiet.breathe === "none" && quiet.face === "none", `${quiet.breathe} / ${quiet.face}`);
   check("the season still colours the page when movement is off",
     quiet.season === "winter" && quiet.bg === seasons[3].bg, `${quiet.season} ${quiet.bg}`);
   await calm.context.close();
