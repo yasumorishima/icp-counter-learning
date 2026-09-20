@@ -2168,13 +2168,20 @@ async function seasonOn(dateKey, theme) {
       // 🔴 ページの 横あふれでは 見ない＝`position: fixed` の 層の あふれは
       //   スクロール量に ならないので、overflow を visible に しても 数字が 動かない
       //   （2026-09-20 に 変異で 実測＝落ちない assert だった）。
-      //   置き場所の 式が 壊れたら 落ちる 形＝**左ふちが 画面の 中**に あるか で 見る
+      // 🔴🔴 実際の ますぶんを `getBoundingClientRect()` で 測るのも だめ＝
+      //   `.sn-art` は 横に ゆれて いる ので、**測る 瞬間で 値が 変わる**。
+      //   手元では 左ふち −0.1 だったのに CI では −2 に なって 落ちた（2026-09-20）。
+      //   → [[project_kimaru]]「アニメーションを 固定時間で 測る 検査は 書かない」
+      //   ⇒ 見るのは **置き場所そのもの**（`left` の %）。ゆれは その まわりの 演出で、
+      //     置き場所の 式が 壊れたら（画面の 外に 置いたら）これが 落ちる
       ...(() => {
-        const rects = [...float.querySelectorAll(".sn-art svg")].map(el => el.getBoundingClientRect());
+        const at = [...float.querySelectorAll(".sn-bit")]
+          .map(el => parseFloat(el.style.left))
+          .filter(v => Number.isFinite(v));
         return {
-          onScreen: rects.length > 0 && rects.every(r => r.left >= -1 && r.left < window.innerWidth),
-          leftMost: Math.round(Math.min(...rects.map(r => r.left))),
-          rightMost: Math.round(Math.max(...rects.map(r => r.right))),
+          onScreen: at.length > 0 && at.every(v => v >= 0 && v <= 100),
+          leftMost: at.length ? Math.min(...at).toFixed(1) : "-",
+          rightMost: at.length ? Math.max(...at).toFixed(1) : "-",
         };
       })(),
       // 文字が 地に 沈んで いないか（きせつ x 明暗 の 8 通りで 見る）
@@ -2222,8 +2229,8 @@ check("the seasonal picture is not read out as if it were words",
   seasons.every(s => s.floatAria === "true" && s.sceneAria === "true"));
 check("what floats about always stays behind the words",
   seasons.every(s => Number(s.floatZ) < 0), seasons.map(s => `${s.season}=${s.floatZ}`).join(" "));
-check("every floating thing starts somewhere on the screen",
-  seasons.every(s => s.onScreen), seasons.map(s => `${s.season}=${s.leftMost}..${s.rightMost}`).join(" "));
+check("every floating thing is placed somewhere on the screen",
+  seasons.every(s => s.onScreen), seasons.map(s => `${s.season}=${s.leftMost}%..${s.rightMost}%`).join(" "));
 check("by day the sun is out and the moon is away",
   seasons.every(s => s.sunShown === "block" && s.moonShown === "none"),
   seasons.map(s => `${s.season}:${s.sunShown}/${s.moonShown}`).join(" "));
