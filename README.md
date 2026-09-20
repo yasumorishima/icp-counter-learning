@@ -270,7 +270,7 @@ node e2e/e2e.mjs http://$(dfx canister id todo_app_frontend).localhost:4943/
 
 画面が なくても できる 検算（node）は **197 項目 ＋ ことばの そろい**です。
 しょうぎの きまり 25／あいて 11／終わりかた 39、そらの 計算 29／星の 名前 93、
-**英語と 日本語で 同じ キーが そろって いるか**（543 キー・`tests/i18n-keys.test.mjs`）。
+**英語と 日本語で 同じ キーが そろって いるか**（542 キー・`tests/i18n-keys.test.mjs`）。
 
 ### CI
 
