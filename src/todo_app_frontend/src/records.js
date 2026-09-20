@@ -1,3 +1,4 @@
+import { migrateFace } from "./faces";
 /**
  * 学習の記録。**この端末の中だけ**に置く。サーバーには何も送らない。
  *
@@ -33,7 +34,7 @@ function normalize(p) {
   return {
     id: p.id,
     name: typeof p.name === "string" ? p.name.slice(0, MAX_NAME) : "",
-    face: typeof p.face === "string" ? p.face : "🐻",
+    face: migrateFace(p.face),
     grade: Number.isInteger(p.grade) ? p.grade : 1,
     stars: Number.isFinite(p.stars) ? p.stars : 0,
     days: Array.isArray(p.days) ? p.days.filter(d => typeof d === "string").slice(-400) : [],

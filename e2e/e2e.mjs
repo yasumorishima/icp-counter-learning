@@ -2113,6 +2113,84 @@ for (const [file, want, ends] of [
   await en.context.close();
 }
 
+// ---- 画面に 絵文字を 出さない（2026-09-20） ------------------------------
+//
+// 🔴 実測＝画面に 出して いた 絵文字 23 文字を この 走行機で 1 文字ずつ 描き、
+//    「形の 無い 文字（U+FFFF）と 同じ 絵に なるか」で 調べたら
+//    **🐻 🐰 🐶 🦊 🐼 🐸 🐧 🏆 🎉 💪 🤝 の 11 文字が 豆腐**だった。
+//    絵文字の フォントを 持たない 端末では なまえの となりの かおが □ に なる。
+//    ⇒ すべて 自前の SVG へ（`src/faces.js`）。
+//    ★ ♪ ✦ ✕ × □ は ふつうの 記号で どこでも 出るので 対象に しない。
+
+{
+  const noEmoji = await newPage(420, 900);
+  await noEmoji.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
+  await noEmoji.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  await noEmoji.page.fill("#who-input", "ゆうた");
+  await noEmoji.page.click("#who-add");
+  await noEmoji.page.waitForSelector("#drill-main:not(.is-hidden)", { timeout: 30000 });
+
+  const seen = [];
+  for (const hash of ["#/", "#/drill", "#/shogi", "#/asobi", "#/kiroku", "#/shoujou"]) {
+    await noEmoji.page.goto(BASE + hash, { waitUntil: "domcontentloaded" });
+    await noEmoji.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+    const found = await noEmoji.page.evaluate(() => {
+      // 絵の 文字（フォントが 要る もの）だけを 見る。★ ♪ ✦ ✕ は この 範囲に 入らない
+      const pict = /[\u{1F300}-\u{1FAFF}\u{1F004}-\u{1F0CF}\u{2694}-\u{2697}]/u;
+      const out = [];
+      const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walk.nextNode())) {
+        const m = node.nodeValue.match(pict);
+        if (!m) continue;
+        const el = node.parentElement;
+        if (!el || !el.getClientRects().length) continue;   // 出て いない ものは 見ない
+        out.push(m[0] + " @" + (el.id || el.className || el.tagName));
+      }
+      return out;
+    });
+    if (found.length) seen.push(hash + ": " + found.slice(0, 3).join(" "));
+  }
+  check("no picture-character is put on the screen where a font might not have it",
+    seen.length === 0, seen.slice(0, 3).join(" | "));
+
+  // かおは SVG で 出て いる（テキストでは ない）
+  await noEmoji.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
+  await noEmoji.page.waitForSelector("#drill-main:not(.is-hidden)", { timeout: 30000 });
+  const drawn = await noEmoji.page.evaluate(() => ({
+    かお: document.querySelectorAll("#who-face svg").length,
+    えらべる: document.querySelectorAll(".face").length,
+  }));
+  check("the face next to the name is drawn, not typed",
+    drawn.かお === 1, `svg ${drawn.かお} 個`);
+  await noEmoji.context.close();
+}
+
+// 絵文字で 保存して あった 古い なまえも そのまま 開ける（読みかえる）
+{
+  const old = await newPage(420, 900);
+  await old.context.addInitScript(() => {
+    try {
+      localStorage.setItem("drill.records.v1", JSON.stringify({
+        profiles: [{ id: "p1", name: "むかし", face: "🐻", grade: 1, stars: 3, days: [], units: {} }],
+        current: "p1",
+      }));
+    } catch (error) { /* 使えない 端末も ある */ }
+  });
+  await old.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
+  await old.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  const got = await old.page.evaluate(() => ({
+    名: (document.getElementById("who-name") || {}).textContent || "",
+    絵: document.querySelectorAll("#who-face svg").length,
+    字: (document.getElementById("who-face") || {}).textContent || "",
+  }));
+  check("a name saved back when the face was a picture-character still opens",
+    got.名.indexOf("むかし") >= 0, got.名);
+  check("and its face is drawn now instead of typed",
+    got.絵 === 1 && got.字.trim() === "", `svg ${got.絵} / 字 "${got.字.trim()}"`);
+  await old.context.close();
+}
+
 // ---- トップが スマホの 1 画面に 入るか（2026-09-20） ----------------------
 //
 // 🔴 実測で 見つけた 穴＝**スマホでは「あそび」が どの 機種でも 1 画面目に
