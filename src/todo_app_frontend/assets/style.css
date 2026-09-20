@@ -744,6 +744,15 @@ input[readonly] { color: var(--muted); }
 .quiz-feedback { font-weight: 900; font-size: 1.1rem; margin: 10px 0 0; min-height: 1.4em; }
 .quiz-feedback.is-ok { color: var(--ok-strong); }
 .quiz-feedback.is-ng { color: var(--bad-strong); }
+/* まちがえた ときに 出す「どう やって とくか」。答えの 数字だけでは 次も 同じ
+   ところで まちがえるので、しきや きまりを その場で 見せる */
+.quiz-why {
+  margin: 8px 0 0; padding: 10px 14px; border-radius: 14px;
+  background: var(--chip); color: var(--ink);
+  font-weight: 800; font-size: 1rem; line-height: 1.7;
+  word-break: keep-all; text-wrap: pretty;
+}
+.quiz-why.is-hidden { display: none; }
 
 .quiz-choices { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .choice {

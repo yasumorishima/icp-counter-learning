@@ -585,6 +585,8 @@ function renderQuestion() {
   $("quiz-hint").textContent = q.hint || "";
   $("quiz-feedback").textContent = "";
   $("quiz-feedback").className = "quiz-feedback";
+  $("quiz-why").textContent = "";
+  $("quiz-why").classList.add("is-hidden");
   $("quiz-count").textContent = session.time
     ? t("dr_rightCount", session.right)
     : session.at + 1 + " / " + session.list.length;
@@ -647,6 +649,14 @@ function answer(given) {
   feedback.textContent = ok ? t("dr_seikai") : t("dr_theAnswer", q.answer);
   feedback.className = "quiz-feedback " + (ok ? "is-ok" : "is-ng");
 
+  // まちがえた ときは「どう とくか」も 出す。答えの 数字だけを 見せても
+  // 次に 同じ ところで まちがえる（プリントの Math Tips と 同じ ねらい）。
+  // 持って いるのは 文章題だけなので、計算や タイムアタックでは 出ない
+  const why = $("quiz-why");
+  const showWhy = !ok && Boolean(q.why);
+  why.textContent = showWhy ? q.why : "";
+  why.classList.toggle("is-hidden", !showWhy);
+
   // つづけて 正解すると コンボが たまる
   combo = ok ? combo + 1 : 0;
   const comboLabel = $("quiz-combo");
@@ -657,8 +667,13 @@ function answer(given) {
   else sounds.wrong();
   renderDots();
 
-  const wait = session.time ? (ok ? 260 : 700) : ok ? 550 : 1500;
+  // 読む ものが 増えた ぶん、まちがえた ときだけ 長く 止める
+  const wait = session.time ? (ok ? 260 : 700) : ok ? 550 : showWhy ? 3200 : 1500;
+  // やめる を 押すと session が 消え、もう一度 始めると 別の session に なる。
+  // その あいだに この タイマーが 起きても、古い 回には なにも しない
+  const current = session;
   setTimeout(() => {
+    if (session !== current) return;
     session.locked = false;
     if (session.time) {
       if (Date.now() >= session.endsAt) return;
