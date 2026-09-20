@@ -793,6 +793,18 @@ input[readonly] { color: var(--muted); }
   .grade-tab, .cat-tab { min-height: 48px; font-size: 0.9rem; }
 }
 
+/* 文章題を 声で 読んで もらう ボタン。読むのは 端末の きのうなので、
+   声を 持たない 端末では そもそも 出さない（押せない ボタンを 見せない） */
+.quiz-read {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 48px;
+  margin: 4px 0 2px; padding: 0 18px; cursor: pointer;
+  border: 3px solid var(--line-strong); border-radius: 999px;
+  background: var(--card); color: var(--ink); font-weight: 800; font-size: 1rem;
+}
+.quiz-read::before { content: "♪"; font-size: 1.1rem; }
+.quiz-read:hover { border-color: var(--grape); }
+.quiz-read.is-hidden { display: none; }
+
 .quiz-clock { display: block; margin: 4px auto 12px; }
 .quiz-clock.is-hidden { display: none; }
 

@@ -1841,6 +1841,78 @@ for (const [file, want, ends] of [
     await one.context.close();
   }
 
+  // ---- 文章題を 声で 読んで もらう ----------------------------------------
+  // 読むのは 端末の きのうなので、**声を 持たない 端末では ボタンを 出さない**。
+  // 声の 代わりに 上の 偽物を 入れて、渡した 中身を そのまま 見る。
+  const openWordQuiz = async (one, unit) => {
+    await one.page.fill("#who-input", "よむ");
+    await one.page.click("#who-add");
+    await one.page.waitForSelector("#drill-main:not(.is-hidden)", { timeout: 30000 });
+    await one.page.locator('.cat-tab[data-cat="word"]').click();
+    await one.page.locator('.grade-tab[data-grade="2"]').click();
+    await one.page.locator(`.unit-card[data-unit="${unit}"]`).click();
+    await one.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
+  };
+
+  {
+    const one = await openWith("#/drill", { speech: { voices: ["ja-JP"] } });
+    await openWordQuiz(one, "g2w-money");
+    check("a word problem can be read out loud", await one.page.locator("#quiz-read").isVisible());
+    const sentence = (await one.page.locator("#quiz-text").textContent()).trim();
+    await one.page.click("#quiz-read");
+    const spoken = await one.page.evaluate(() => window.__spoken);
+    check("it asks the device to read the sentence itself",
+      spoken.length === 1 && spoken[0].text === sentence, JSON.stringify(spoken).slice(0, 90));
+    // 速さは 端末が 単精度に 丸める（0.8 が 0.800000011920929 で もどる）
+    check("it asks in the language of the screen, slowly",
+      spoken[0] && spoken[0].lang === "ja-JP" && Math.abs(spoken[0].rate - 0.8) < 0.01,
+      JSON.stringify(spoken[0] || {}));
+
+    // 新しい ボタンなので、その 画面で 明暗の 色を 測る
+    const readLight = await contrastSweep(one.page);
+    check("the read button is readable in the light theme", readLight.length === 0, readLight.slice(0, 4).join(" "));
+    await one.page.click("#theme-toggle");
+    const readDark = await contrastSweep(one.page);
+    check("the read button is readable in the dark theme", readDark.length === 0, readDark.slice(0, 4).join(" "));
+    await one.page.click("#theme-toggle");
+
+    // 計算の 問題は 読む ものが 式なので 出さない
+    await one.page.click("#quiz-quit");
+    await one.page.waitForSelector("#view-drill:not(.is-hidden)", { timeout: 20000 });
+    await one.page.locator('.cat-tab[data-cat="calc"]').click();
+    await one.page.locator('.grade-tab[data-grade="1"]').click();
+    await one.page.locator('.unit-card[data-unit="g1-add"]').click();
+    await one.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
+    check("a sum does not offer to be read out loud", await one.page.locator("#quiz-read").isHidden());
+    await one.context.close();
+  }
+
+  {
+    // 声を 持たない 端末＝押しても 何も 起きない ボタンを 見せない
+    const one = await openWith("#/drill", { speech: { none: true } });
+    await openWordQuiz(one, "g2w-money");
+    check("a device with no voice is not shown a dead button",
+      await one.page.locator("#quiz-read").isHidden());
+    await one.context.close();
+  }
+
+  {
+    // 英語の 画面では 英語の 声に たのむ
+    const one = await openWith("#/drill", { lang: "en", speech: { voices: ["en-US"] } });
+    await one.page.fill("#who-input", "read");
+    await one.page.click("#who-add");
+    await one.page.waitForSelector("#drill-main:not(.is-hidden)", { timeout: 30000 });
+    await one.page.locator('.cat-tab[data-cat="word"]').click();
+    await one.page.locator('.grade-tab[data-grade="2"]').click();
+    await one.page.locator('.unit-card[data-unit="g2w-money"]').click();
+    await one.page.waitForSelector("#view-quiz:not(.is-hidden)", { timeout: 30000 });
+    await one.page.click("#quiz-read");
+    const spoken = await one.page.evaluate(() => window.__spoken);
+    check("the English screen asks an English voice",
+      spoken.length === 1 && spoken[0].lang === "en-US", JSON.stringify(spoken).slice(0, 90));
+    await one.context.close();
+  }
+
   // 小さい 画面でも はみ出さない・押す ところは 指の 大きさ
   await kp.setViewportSize({ width: 320, height: 760 });
   for (const hash of ["#/asobi", "#/asobi/mogura", "#/asobi/kotoba", "#/asobi/oekaki", "#/asobi/oto"]) {
