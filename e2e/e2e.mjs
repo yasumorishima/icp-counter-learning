@@ -2163,7 +2163,10 @@ async function lineStarts(width) {
           if (!box.height) continue;
           const top = Math.round(box.top);
           if (lastTop !== null && top > lastTop + 2 && NG.indexOf(text[i]) >= 0) {
-            found.push((el.id || el.className || el.tagName) + " 「" + text[i] + "」");
+            // ⚠️ どの 文か まで 出す。要素の 名前だけだと 走る 機械が ちがった とき
+            //    （フォントが ちがって 別の ところが 割れた とき）に 追えない
+            found.push((el.id || el.className || el.tagName) + " 「" + text[i] + "」 " +
+              text.trim().slice(0, 24));
           }
           lastTop = top;
         }
@@ -2180,6 +2183,30 @@ for (const width of [320, 390]) {
   const bad = await lineStarts(width);
   check(`no line begins with a character that may not start one (${width}px)`,
     bad.length === 0, bad.slice(0, 3).join(" | "));
+}
+
+// 短い 名まえは **ことばの 切れ目でだけ** 折る（「くり上がりの た / しざん」を 防ぐ）。
+// ⚠️ これは **きまりが 当たって いるか**を 見る 検査で、**折れた 結果**は 見て いない。
+//    結果で 見ようと すると「とけい /（なんじ・…」の ように 句読点や かっこでの
+//    正しい 折り返しまで 拾って しまう（2026-09-21 に 測って 確かめた）ので、
+//    ここは 機構の 確認に とどめる。行あたまの きまりの ほうは 上で 結果を 見て いる。
+{
+  const rules = await newPage(390, 844);
+  await rules.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
+  await rules.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  await rules.page.fill("#who-input", "ゆうた");
+  await rules.page.click("#who-add");
+  await rules.page.waitForSelector("#drill-main:not(.is-hidden)", { timeout: 30000 });
+  const applied = await rules.page.evaluate(() => {
+    const want = [".unit-name", ".challenge-line"];
+    return want.map(sel => {
+      const el = document.querySelector(sel);
+      return sel + "=" + (el ? getComputedStyle(el).wordBreak : "なし");
+    });
+  });
+  check("short names are set to break only between words",
+    applied.every(a => a.endsWith("=keep-all")), applied.join(" "));
+  await rules.context.close();
 }
 
 // ---- 画面に 絵文字を 出さない（2026-09-20） ------------------------------

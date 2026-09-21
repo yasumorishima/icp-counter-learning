@@ -559,11 +559,6 @@ input[readonly] { color: var(--muted); }
 
 .support-intro {
   margin: 0 0 22px; color: var(--muted); font-size: 0.96rem;
-  /* 🔴 散文には keep-all を かけない。入らない ときの 逃げ道（break-word）が
-     **行あたまの きまりを 無視して どこでも 割る**ので かえって 悪く なる
-     （2026-09-21 実測＝390px で 0 件 → 2 件に 増えた）。
-     ふつうの 行分けの まま、きまりだけ きびしく する */
-  line-break: strict;
 }
 .support-sub { margin: 26px 0 10px; font-size: 1rem; font-weight: 800; }
 .support-text { margin: 0 0 12px; color: var(--muted); font-size: 1rem; }
@@ -722,7 +717,7 @@ input[readonly] { color: var(--muted); }
    keep-all だけだと 横へ あふれる ので、入らない ときだけ 中で 切る 逃げ道を つける */
 .unit-name {
   font-size: 1.05rem; font-weight: 800; color: var(--ink);
-  word-break: keep-all; line-break: strict; overflow-wrap: break-word;
+  word-break: keep-all; overflow-wrap: break-word;
 }
 .unit-score { font-size: 0.8rem; font-weight: 800; color: var(--ok-strong); background: var(--ok-bg); border-radius: 999px; padding: 4px 10px; }
 .unit-score.is-new { color: var(--muted); background: var(--chip); }
@@ -919,7 +914,15 @@ html[data-zoom="lock"] body { touch-action: pan-x pan-y; }
 .pad, .choice { min-height: 68px; }
 
 /* 読みやすさ: 行の間と 文字の間を すこし広げる */
-body { line-height: 1.75; letter-spacing: 0.02em; }
+body {
+  line-height: 1.75; letter-spacing: 0.02em;
+  /* 🔴 行あたまに 来ては いけない 字（小書きの かな・長音・句読点・とじかっこ）を
+     どこでも 禁じる。要素ごとに 付けて まわると **走る 機械の フォントが ちがう だけで
+     別の ところが 割れる**（2026-09-21＝手元では 0 件なのに CI の しょうぎで 1 件 出た）。
+     ⚠️ これは 日本語の 行分けの きまりで、`word-break: keep-all`（ことばの 切れ目でだけ
+     折る）とは 別もの。keep-all は 短い 名まえにだけ 付ける */
+  line-break: strict;
+}
 .quiz-text { letter-spacing: 0.04em; }
 .unit-name, .who-text b { letter-spacing: 0.03em; }
 
@@ -1016,7 +1019,7 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
    小さい かなが 行あたまに 落ちて いた（2026-09-21 に 機械で 全画面 掃いて 1 か所 見つけた） */
 .challenge-line {
   font-weight: 800; color: var(--amber-ink); margin: 0; font-size: 0.92rem;
-  word-break: keep-all; line-break: strict; overflow-wrap: break-word;
+  word-break: keep-all; overflow-wrap: break-word;
 }
 .challenge-bar { height: 16px; border-radius: 999px; background: var(--card); overflow: hidden; }
 .challenge-fill { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--sun), var(--mint)); }
@@ -1158,7 +1161,7 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
   padding-top: 10px;
   font-size: 2.1rem;
 }
-.pick-name { font-size: 1.3rem; word-break: keep-all; line-break: strict; overflow-wrap: break-word; }
+.pick-name { font-size: 1.3rem; word-break: keep-all; overflow-wrap: break-word; }
 /* 🔴 ボタンの 高さが となりの カードと ずれる 大もとは、説明が 1 行の カードと
    2 行の カードが ならぶ こと（2026-09-20 実測＝768px で 18px・1280px で 33px）。
    **2 行ぶんの 場所を いつも 空けて おく**と、まんなか ぞろえの まま そろう */
@@ -1170,7 +1173,6 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
      小さい かなが 行あたまに 落ちる（2026-09-20 に 実寸で 見て 気づいた）。
      ことばの 切れ目（空白）でだけ 折り返す */
   word-break: keep-all;
-  line-break: strict;
   overflow-wrap: break-word;
   min-height: 2.7em;
   display: -webkit-box;
@@ -1686,7 +1688,6 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
 }
 .pick-help-list li {
   margin: 6px 0;
-  line-break: strict;
 }
 
 /* ==========================================================================
@@ -1956,9 +1957,3 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
   border-top: 3px solid var(--line-strong);
 }
 
-/* 🔴 ささえる ページの 注ぎ先の リンク。せまい 画面で 長音符が 行あたまに
-   落ちて いた（2026-09-21 に 機械で 掃いて 見つけた）。
-   ⚠️ URL を ふくむ ので keep-all だけだと はみ出す＝逃げ道を 必ず つける */
-.ways a, .ways li {
-  line-break: strict;
-}
