@@ -2121,6 +2121,67 @@ for (const [file, want, ends] of [
   await en.context.close();
 }
 
+// ---- 行あたまに 来ては いけない 字（2026-09-21） -------------------------
+//
+// user「以下からについては、境目が分かるようにしてほしい／くっつきすぎ」の
+// 直しの ついでに 実寸を 見たら、説明が「しょうじ / ょうを」と 割れて いた。
+// 🔴 目で 見つけるのを やめて、**描いた あとの 行を 機械で 掃く**。
+//    文字を 1 つずつ Range で 囲んで 上の 位置を 見て、行が 変わった ところの
+//    先頭が 小書きの かな・長音・句読点・とじかっこ なら 落とす。
+//
+// ⚠️ ここで 分かった こと＝**散文に `word-break: keep-all` を かけては いけない**。
+//    入らない ときの 逃げ道（`overflow-wrap: break-word`）が **行あたまの きまりを
+//    無視して どこでも 割る**ので かえって 増える（390px で 0 件 → 2 件に なった）。
+//    短い 名まえ（単元名・カードの 見出し）には keep-all、散文には `line-break: strict` だけ。
+
+async function lineStarts(width) {
+  const one = await newPage(width, 844);
+  const out = [];
+  for (const hash of ["#/", "#/drill", "#/shogi", "#/asobi", "#/support"]) {
+    await one.page.goto(BASE + hash, { waitUntil: "domcontentloaded" });
+    await one.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+    if (hash === "#/drill" && (await one.page.locator("#who-input").count())) {
+      await one.page.fill("#who-input", "ゆうた");
+      await one.page.click("#who-add");
+      await one.page.waitForSelector("#drill-main:not(.is-hidden)", { timeout: 30000 });
+    }
+    const bad = await one.page.evaluate(() => {
+      const NG = "ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮー、。，．・」』）〕｝】〉》！？";
+      const found = [];
+      const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walk.nextNode())) {
+        const text = node.nodeValue;
+        if (!text || text.trim().length < 4) continue;
+        const el = node.parentElement;
+        if (!el || !el.getClientRects().length) continue;
+        const r = document.createRange();
+        let lastTop = null;
+        for (let i = 0; i < text.length; i += 1) {
+          r.setStart(node, i); r.setEnd(node, i + 1);
+          const box = r.getBoundingClientRect();
+          if (!box.height) continue;
+          const top = Math.round(box.top);
+          if (lastTop !== null && top > lastTop + 2 && NG.indexOf(text[i]) >= 0) {
+            found.push((el.id || el.className || el.tagName) + " 「" + text[i] + "」");
+          }
+          lastTop = top;
+        }
+      }
+      return found;
+    });
+    bad.forEach(b => out.push(hash + " " + b));
+  }
+  await one.context.close();
+  return out;
+}
+
+for (const width of [320, 390]) {
+  const bad = await lineStarts(width);
+  check(`no line begins with a character that may not start one (${width}px)`,
+    bad.length === 0, bad.slice(0, 3).join(" | "));
+}
+
 // ---- 画面に 絵文字を 出さない（2026-09-20） ------------------------------
 //
 // 🔴 実測＝画面に 出して いた 絵文字 23 文字を この 走行機で 1 文字ずつ 描き、

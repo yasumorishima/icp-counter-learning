@@ -557,7 +557,14 @@ input[readonly] { color: var(--muted); }
 
 /* --- 支援ページ ---------------------------------------------------------- */
 
-.support-intro { margin: 0 0 22px; color: var(--muted); font-size: 0.96rem; }
+.support-intro {
+  margin: 0 0 22px; color: var(--muted); font-size: 0.96rem;
+  /* 🔴 散文には keep-all を かけない。入らない ときの 逃げ道（break-word）が
+     **行あたまの きまりを 無視して どこでも 割る**ので かえって 悪く なる
+     （2026-09-21 実測＝390px で 0 件 → 2 件に 増えた）。
+     ふつうの 行分けの まま、きまりだけ きびしく する */
+  line-break: strict;
+}
 .support-sub { margin: 26px 0 10px; font-size: 1rem; font-weight: 800; }
 .support-text { margin: 0 0 12px; color: var(--muted); font-size: 1rem; }
 .support-thanks {
@@ -1005,7 +1012,12 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
 }
 .challenge.is-hidden { display: none; }
 .challenge-title { font-weight: 900; font-size: 1.05rem; margin: 0; }
-.challenge-line { font-weight: 800; color: var(--amber-ink); margin: 0; font-size: 0.92rem; }
+/* 🔴 ことばの 切れ目で 折り返す。せまい 画面で「しょうじ / ょうを」と
+   小さい かなが 行あたまに 落ちて いた（2026-09-21 に 機械で 全画面 掃いて 1 か所 見つけた） */
+.challenge-line {
+  font-weight: 800; color: var(--amber-ink); margin: 0; font-size: 0.92rem;
+  word-break: keep-all; line-break: strict; overflow-wrap: break-word;
+}
 .challenge-bar { height: 16px; border-radius: 999px; background: var(--card); overflow: hidden; }
 .challenge-fill { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--sun), var(--mint)); }
 .challenge-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -1672,7 +1684,10 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
   padding-left: 1.2em;
   line-height: 1.8;
 }
-.pick-help-list li { margin: 6px 0; }
+.pick-help-list li {
+  margin: 6px 0;
+  line-break: strict;
+}
 
 /* ==========================================================================
    きせつ（2026-09-20）
@@ -1929,3 +1944,21 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
 /* けっかと しょうぎの おわり。前は 3.4rem の 文字だったので その くらいの 大きさに */
 .result-face { font-size: 3.4rem; line-height: 1.1; display: flex; justify-content: center; }
 .result-face svg { width: 58px; height: 58px; display: block; }
+
+/* --- 単元の あとの まとまり（2026-09-21）---------------------------------
+   user「以下からについては、境目が分かるようにしてほしい／くっつきすぎ、
+   スペースあっていい」。実測＝単元の 一覧の 下ふちと「きょうの 1まい」の
+   上ふちの あきまが **0px** で、つづきの カードに 見えて いた。
+   線と すきまで ひとまとまりだと 分かる ように する。 */
+.drill-extra {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 3px solid var(--line-strong);
+}
+
+/* 🔴 ささえる ページの 注ぎ先の リンク。せまい 画面で 長音符が 行あたまに
+   落ちて いた（2026-09-21 に 機械で 掃いて 見つけた）。
+   ⚠️ URL を ふくむ ので keep-all だけだと はみ出す＝逃げ道を 必ず つける */
+.ways a, .ways li {
+  line-break: strict;
+}
