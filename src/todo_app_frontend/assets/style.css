@@ -557,7 +557,9 @@ input[readonly] { color: var(--muted); }
 
 /* --- 支援ページ ---------------------------------------------------------- */
 
-.support-intro { margin: 0 0 22px; color: var(--muted); font-size: 0.96rem; }
+.support-intro {
+  margin: 0 0 22px; color: var(--muted); font-size: 0.96rem;
+}
 .support-sub { margin: 26px 0 10px; font-size: 1rem; font-weight: 800; }
 .support-text { margin: 0 0 12px; color: var(--muted); font-size: 1rem; }
 .support-thanks {
@@ -715,7 +717,7 @@ input[readonly] { color: var(--muted); }
    keep-all だけだと 横へ あふれる ので、入らない ときだけ 中で 切る 逃げ道を つける */
 .unit-name {
   font-size: 1.05rem; font-weight: 800; color: var(--ink);
-  word-break: keep-all; line-break: strict; overflow-wrap: break-word;
+  word-break: keep-all; overflow-wrap: break-word;
 }
 .unit-score { font-size: 0.8rem; font-weight: 800; color: var(--ok-strong); background: var(--ok-bg); border-radius: 999px; padding: 4px 10px; }
 .unit-score.is-new { color: var(--muted); background: var(--chip); }
@@ -912,7 +914,15 @@ html[data-zoom="lock"] body { touch-action: pan-x pan-y; }
 .pad, .choice { min-height: 68px; }
 
 /* 読みやすさ: 行の間と 文字の間を すこし広げる */
-body { line-height: 1.75; letter-spacing: 0.02em; }
+body {
+  line-height: 1.75; letter-spacing: 0.02em;
+  /* 🔴 行あたまに 来ては いけない 字（小書きの かな・長音・句読点・とじかっこ）を
+     どこでも 禁じる。要素ごとに 付けて まわると **走る 機械の フォントが ちがう だけで
+     別の ところが 割れる**（2026-09-21＝手元では 0 件なのに CI の しょうぎで 1 件 出た）。
+     ⚠️ これは 日本語の 行分けの きまりで、`word-break: keep-all`（ことばの 切れ目でだけ
+     折る）とは 別もの。keep-all は 短い 名まえにだけ 付ける */
+  line-break: strict;
+}
 .quiz-text { letter-spacing: 0.04em; }
 .unit-name, .who-text b { letter-spacing: 0.03em; }
 
@@ -1005,7 +1015,12 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
 }
 .challenge.is-hidden { display: none; }
 .challenge-title { font-weight: 900; font-size: 1.05rem; margin: 0; }
-.challenge-line { font-weight: 800; color: var(--amber-ink); margin: 0; font-size: 0.92rem; }
+/* 🔴 ことばの 切れ目で 折り返す。せまい 画面で「しょうじ / ょうを」と
+   小さい かなが 行あたまに 落ちて いた（2026-09-21 に 機械で 全画面 掃いて 1 か所 見つけた） */
+.challenge-line {
+  font-weight: 800; color: var(--amber-ink); margin: 0; font-size: 0.92rem;
+  word-break: keep-all; overflow-wrap: break-word;
+}
 .challenge-bar { height: 16px; border-radius: 999px; background: var(--card); overflow: hidden; }
 .challenge-fill { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--sun), var(--mint)); }
 .challenge-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -1146,7 +1161,7 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
   padding-top: 10px;
   font-size: 2.1rem;
 }
-.pick-name { font-size: 1.3rem; word-break: keep-all; line-break: strict; overflow-wrap: break-word; }
+.pick-name { font-size: 1.3rem; word-break: keep-all; overflow-wrap: break-word; }
 /* 🔴 ボタンの 高さが となりの カードと ずれる 大もとは、説明が 1 行の カードと
    2 行の カードが ならぶ こと（2026-09-20 実測＝768px で 18px・1280px で 33px）。
    **2 行ぶんの 場所を いつも 空けて おく**と、まんなか ぞろえの まま そろう */
@@ -1158,7 +1173,6 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
      小さい かなが 行あたまに 落ちる（2026-09-20 に 実寸で 見て 気づいた）。
      ことばの 切れ目（空白）でだけ 折り返す */
   word-break: keep-all;
-  line-break: strict;
   overflow-wrap: break-word;
   min-height: 2.7em;
   display: -webkit-box;
@@ -1672,7 +1686,9 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
   padding-left: 1.2em;
   line-height: 1.8;
 }
-.pick-help-list li { margin: 6px 0; }
+.pick-help-list li {
+  margin: 6px 0;
+}
 
 /* ==========================================================================
    きせつ（2026-09-20）
@@ -1929,3 +1945,15 @@ body { line-height: 1.75; letter-spacing: 0.02em; }
 /* けっかと しょうぎの おわり。前は 3.4rem の 文字だったので その くらいの 大きさに */
 .result-face { font-size: 3.4rem; line-height: 1.1; display: flex; justify-content: center; }
 .result-face svg { width: 58px; height: 58px; display: block; }
+
+/* --- 単元の あとの まとまり（2026-09-21）---------------------------------
+   user「以下からについては、境目が分かるようにしてほしい／くっつきすぎ、
+   スペースあっていい」。実測＝単元の 一覧の 下ふちと「きょうの 1まい」の
+   上ふちの あきまが **0px** で、つづきの カードに 見えて いた。
+   線と すきまで ひとまとまりだと 分かる ように する。 */
+.drill-extra {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 3px solid var(--line-strong);
+}
+

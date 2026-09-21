@@ -2121,6 +2121,94 @@ for (const [file, want, ends] of [
   await en.context.close();
 }
 
+// ---- 行あたまに 来ては いけない 字（2026-09-21） -------------------------
+//
+// user「以下からについては、境目が分かるようにしてほしい／くっつきすぎ」の
+// 直しの ついでに 実寸を 見たら、説明が「しょうじ / ょうを」と 割れて いた。
+// 🔴 目で 見つけるのを やめて、**描いた あとの 行を 機械で 掃く**。
+//    文字を 1 つずつ Range で 囲んで 上の 位置を 見て、行が 変わった ところの
+//    先頭が 小書きの かな・長音・句読点・とじかっこ なら 落とす。
+//
+// ⚠️ ここで 分かった こと＝**散文に `word-break: keep-all` を かけては いけない**。
+//    入らない ときの 逃げ道（`overflow-wrap: break-word`）が **行あたまの きまりを
+//    無視して どこでも 割る**ので かえって 増える（390px で 0 件 → 2 件に なった）。
+//    短い 名まえ（単元名・カードの 見出し）には keep-all、散文には `line-break: strict` だけ。
+
+async function lineStarts(width) {
+  const one = await newPage(width, 844);
+  const out = [];
+  for (const hash of ["#/", "#/drill", "#/shogi", "#/asobi", "#/support"]) {
+    await one.page.goto(BASE + hash, { waitUntil: "domcontentloaded" });
+    await one.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+    if (hash === "#/drill" && (await one.page.locator("#who-input").count())) {
+      await one.page.fill("#who-input", "ゆうた");
+      await one.page.click("#who-add");
+      await one.page.waitForSelector("#drill-main:not(.is-hidden)", { timeout: 30000 });
+    }
+    const bad = await one.page.evaluate(() => {
+      const NG = "ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮー、。，．・」』）〕｝】〉》！？";
+      const found = [];
+      const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walk.nextNode())) {
+        const text = node.nodeValue;
+        if (!text || text.trim().length < 4) continue;
+        const el = node.parentElement;
+        if (!el || !el.getClientRects().length) continue;
+        const r = document.createRange();
+        let lastTop = null;
+        for (let i = 0; i < text.length; i += 1) {
+          r.setStart(node, i); r.setEnd(node, i + 1);
+          const box = r.getBoundingClientRect();
+          if (!box.height) continue;
+          const top = Math.round(box.top);
+          if (lastTop !== null && top > lastTop + 2 && NG.indexOf(text[i]) >= 0) {
+            // ⚠️ どの 文か まで 出す。要素の 名前だけだと 走る 機械が ちがった とき
+            //    （フォントが ちがって 別の ところが 割れた とき）に 追えない
+            found.push((el.id || el.className || el.tagName) + " 「" + text[i] + "」 " +
+              text.trim().slice(0, 24));
+          }
+          lastTop = top;
+        }
+      }
+      return found;
+    });
+    bad.forEach(b => out.push(hash + " " + b));
+  }
+  await one.context.close();
+  return out;
+}
+
+for (const width of [320, 390]) {
+  const bad = await lineStarts(width);
+  check(`no line begins with a character that may not start one (${width}px)`,
+    bad.length === 0, bad.slice(0, 3).join(" | "));
+}
+
+// 短い 名まえは **ことばの 切れ目でだけ** 折る（「くり上がりの た / しざん」を 防ぐ）。
+// ⚠️ これは **きまりが 当たって いるか**を 見る 検査で、**折れた 結果**は 見て いない。
+//    結果で 見ようと すると「とけい /（なんじ・…」の ように 句読点や かっこでの
+//    正しい 折り返しまで 拾って しまう（2026-09-21 に 測って 確かめた）ので、
+//    ここは 機構の 確認に とどめる。行あたまの きまりの ほうは 上で 結果を 見て いる。
+{
+  const rules = await newPage(390, 844);
+  await rules.page.goto(`${BASE}#/drill`, { waitUntil: "domcontentloaded" });
+  await rules.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  await rules.page.fill("#who-input", "ゆうた");
+  await rules.page.click("#who-add");
+  await rules.page.waitForSelector("#drill-main:not(.is-hidden)", { timeout: 30000 });
+  const applied = await rules.page.evaluate(() => {
+    const want = [".unit-name", ".challenge-line"];
+    return want.map(sel => {
+      const el = document.querySelector(sel);
+      return sel + "=" + (el ? getComputedStyle(el).wordBreak : "なし");
+    });
+  });
+  check("short names are set to break only between words",
+    applied.every(a => a.endsWith("=keep-all")), applied.join(" "));
+  await rules.context.close();
+}
+
 // ---- 画面に 絵文字を 出さない（2026-09-20） ------------------------------
 //
 // 🔴 実測＝画面に 出して いた 絵文字 23 文字を この 走行機で 1 文字ずつ 描き、

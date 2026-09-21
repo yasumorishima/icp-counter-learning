@@ -259,19 +259,24 @@
                          user「これらは、以下より下の方がよくない？メインは以下なんだから」。
                          実測で、この 3 枚が 上に あると 390x844 で **単元の 一覧が 上から 889px**＝
                          1 画面目に 1 つも 出なかった（3 枚で 381px 使って いた）。 -->
-                    <button type="button" id="daily-card" class="daily-card">
-                        <span class="daily-label" data-t="c_dailyLabel">きょうの 1まい</span>
-                        <span id="daily-state" class="daily-state"></span>
-                        <span class="daily-go" data-t="c_go">やる</span>
-                    </button>
+                    <!-- 🔴 単元の すぐ下に つづくと 境目が 分からない（2026-09-21 実測＝あきま 0px）。
+                         ひとまとまりに 包んで、上に 線と すきまを 入れる。user 指示「境目が 分かるように／
+                         くっつきすぎ、スペースあっていい」 -->
+                    <div class="drill-extra">
+                        <button type="button" id="daily-card" class="daily-card">
+                            <span class="daily-label" data-t="c_dailyLabel">きょうの 1まい</span>
+                            <span id="daily-state" class="daily-state"></span>
+                            <span class="daily-go" data-t="c_go">やる</span>
+                        </button>
 
-                    <button type="button" id="time-card" class="time-card">
-                        <span class="time-label" data-t="c_timeLabel">タイムアタック</span>
-                        <span id="time-best" class="time-best"></span>
-                        <span class="time-go" data-t="c_timeGo">60びょう</span>
-                    </button>
+                        <button type="button" id="time-card" class="time-card">
+                            <span class="time-label" data-t="c_timeLabel">タイムアタック</span>
+                            <span id="time-best" class="time-best"></span>
+                            <span class="time-go" data-t="c_timeGo">60びょう</span>
+                        </button>
 
-                    <div id="challenge-box" class="challenge is-hidden"></div>
+                        <div id="challenge-box" class="challenge is-hidden"></div>
+                    </div>
                 </div>
             </section>
 
