@@ -2006,6 +2006,23 @@ for (const [file, want, ends] of [
   check("the help covers all four things",
     ["さんすう", "しょうぎ", "そら", "あそび"].every(w => helpText.includes(w)));
 
+  // おとなの 方へ：日記アプリ（Android だけ）への 導線が 1 本、Play ストアへ 別タブで 出る
+  const diary = kp.locator("#view-pick a.pick-adult-link");
+  check("the top screen has one link to the diary app", (await diary.count()) === 1);
+  check("the diary link goes to its Google Play page",
+    (await diary.getAttribute("href")) === "https://play.google.com/store/apps/details?id=com.diary.daily",
+    await diary.getAttribute("href"));
+  check("the diary link opens in a new tab without handing over this page",
+    (await diary.getAttribute("target")) === "_blank" && /noopener/.test(await diary.getAttribute("rel") || ""));
+  const diaryText = await diary.textContent();
+  check("the diary link says it is only for Android", /Android/.test(diaryText), diaryText);
+  // 子どもの カードの 中や 上に 出さない（見た目の 位置で 測る）
+  const lastCard = await kp.locator(".pick-card").last().boundingBox();
+  const diaryBox = await diary.boundingBox();
+  check("the diary link sits below the four cards, not among them",
+    !!lastCard && !!diaryBox && diaryBox.y >= lastCard.y + lastCard.height,
+    JSON.stringify({ card: lastCard, link: diaryBox }));
+
   await kid.context.close();
 }
 

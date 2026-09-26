@@ -1690,6 +1690,28 @@ body {
   margin: 6px 0;
 }
 
+/* えらぶ 画面の いちばん下「おとなの 方へ」。子どもの カードより 目立たせない。
+   色は .pick-help と 同じ 考え（押せる ものは --ink＋下線で、明暗で 反転する） */
+.pick-adult {
+  max-width: 720px;
+  margin: 8px auto 0;
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0.6em;
+}
+.pick-adult-link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-weight: 800;
+  color: var(--ink);
+  text-decoration: underline;
+}
+
 /* ==========================================================================
    きせつ（2026-09-20）
 
