@@ -171,6 +171,14 @@ export const coreEn = {
   wayCycleops: "CycleOps — keeps a canister topped up automatically.",
   wayDex: "ICPSwap — a DEX, if you need to get ICP first.",
   supportThanks: "Thank you for keeping it running.",
+  // 支援ページ：アクセス解析（Google アナリティクス）の 開示と 止める ボタン
+  gaHeading: "Visit statistics",
+  gaText:
+    "This site uses Google Analytics to see which screens are used and how often. Google sets a cookie (_ga) to recognise this device and receives the screens opened, time spent, rough region and the kind of device and browser. Drill records, names and answers are never sent. The button below stops it on this device.",
+  gaStop: "Stop measuring on this device",
+  gaResume: "Measure again",
+  gaOn: "Measuring is on.",
+  gaOff: "Measuring is stopped on this device.",
   backHome: "Back",
   counterNote: "This site used to be a counter. It is still here.",
 };
@@ -341,6 +349,14 @@ export const coreJa = {
   wayCycleops: "CycleOps — 残りが減ったら自動で足してくれるサービス。",
   wayDex: "ICPSwap — 先に ICP を用意するための取引所（DEX）。",
   supportThanks: "動かし続けてくださって、ありがとうございます。",
+  // 支援ページ：アクセス解析（Google アナリティクス）の 開示と 止める ボタン
+  gaHeading: "アクセス解析",
+  gaText:
+    "このサイトは、どの画面がどれくらい使われているかを知るために Google アナリティクスを使っています。Google は Cookie（_ga）でこの端末を見分け、開いた画面・滞在時間・おおよその地域・端末やブラウザの種類などを受け取ります。ドリルの記録・名前・答えは送りません。下のボタンで、この端末からの計測を止められます。",
+  gaStop: "この端末では計測しない",
+  gaResume: "計測を再開する",
+  gaOn: "計測しています。",
+  gaOff: "この端末では計測を止めています。",
   backHome: "戻る",
   counterNote: "このサイトは元々カウンターでした。まだここにいます。",
 };

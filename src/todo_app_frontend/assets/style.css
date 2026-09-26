@@ -1690,6 +1690,18 @@ body {
   margin: 6px 0;
 }
 
+/* 支援ページの アクセス解析の 止める ボタンと いまの 状態 */
+.ga-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.ga-state {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 /* えらぶ 画面の いちばん下の 日記アプリへの リンク。
    色は .pick-help と 同じ 考え（押せる ものは --ink＋下線で、明暗で 反転する） */
 .pick-adult {
