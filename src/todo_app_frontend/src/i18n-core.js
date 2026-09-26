@@ -96,6 +96,8 @@ export const coreEn = {
   c_a11yAsobi: "Play: Tab moves between things, Enter or Space touches them. Moles and balloons make a small sound when they appear.",
   c_a11yShogi: "Shogi: every square is a button, named like \"5e black pawn\".",
   c_a11ySound: "The note button at the top turns sound off. Next to it, text size has three steps.",
+  // えらぶ 画面の いちばん下：日記アプリ（Android だけ）
+  c_diaryLink: "A diary app (Android only, on Google Play)",
   c_whoStart: "Start",
   c_dailyLabel: "Today's sheet",
   c_timeLabel: "Time attack",
@@ -263,6 +265,8 @@ export const coreJa = {
   c_a11yAsobi: "あそび＝タブで うつり、エンターか スペースで さわれます。もぐらと ふうせんは 出た ときに 音が 鳴ります",
   c_a11yShogi: "しょうぎ＝ますは ぜんぶ ボタンです。「５五 先手歩」のように 名前が つきます",
   c_a11ySound: "音は 上の 音符ボタンで 切れます。文字の 大きさは その となりで 3 だんかい",
+  // えらぶ 画面の いちばん下：日記アプリ（Android だけ）
+  c_diaryLink: "日記を つける アプリ（Android のみ・Google Play）",
   c_whoStart: "はじめる",
   c_dailyLabel: "きょうの 1まい",
   c_timeLabel: "タイムアタック",
