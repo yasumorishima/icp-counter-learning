@@ -2015,6 +2015,35 @@ for (const [file, want, ends] of [
   check("the diary link opens in a new tab without handing over this page",
     (await diary.getAttribute("target")) === "_blank" && /noopener/.test(await diary.getAttribute("rel") || ""));
   const diaryText = await diary.textContent();
+  // アクセス解析は 本番の ホストだけ。CI の ホストでは Google へ 1 本も 出さない
+  const gaHits = [];
+  kp.on("request", r => { if (/googletagmanager|google-analytics/.test(r.url())) gaHits.push(r.url()); });
+  await kp.goto(BASE + "#/support", { waitUntil: "domcontentloaded" });
+  await kp.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  await kp.goto(BASE + "#/sky", { waitUntil: "domcontentloaded" });
+  await kp.goto(BASE + "#/support", { waitUntil: "domcontentloaded" });
+  await kp.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  check("no analytics request leaves a non-production host", gaHits.length === 0, gaHits.slice(0, 2).join(" "));
+  check("nothing named gtag is set up off production",
+    await kp.evaluate(() => typeof window.gtag === "undefined" && !document.querySelector('script[src*="googletagmanager"]')));
+  const gaBtn = kp.locator("#ga-toggle");
+  const gaBefore = await gaBtn.textContent();
+  await gaBtn.click();
+  const gaAfter = await gaBtn.textContent();
+  const gaStored = await kp.evaluate(() => localStorage.getItem("analytics-optout"));
+  check("the support page can stop analytics on this device",
+    gaBefore !== gaAfter && gaStored === "true" && (await gaBtn.getAttribute("aria-pressed")) === "true",
+    `${gaBefore} -> ${gaAfter} / ${gaStored}`);
+  await kp.reload({ waitUntil: "domcontentloaded" });
+  await kp.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  check("the stop is remembered after reload", (await gaBtn.getAttribute("aria-pressed")) === "true");
+  await gaBtn.click();
+  check("analytics can be turned back on",
+    (await kp.evaluate(() => localStorage.getItem("analytics-optout"))) === null
+    && (await gaBtn.getAttribute("aria-pressed")) === "false");
+  await kp.goto(BASE + "#/", { waitUntil: "domcontentloaded" });
+  await kp.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+
   check("the diary link says it is only for Android", /Android\s*(only|のみ)/.test(diaryText), diaryText);
   // カードの 中や 上に 出さない（見た目の 位置で 測る）
   const lastCard = await kp.locator(".pick-card").last().boundingBox();

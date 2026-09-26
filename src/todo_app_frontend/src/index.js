@@ -6,6 +6,7 @@ import { initShogi, renderShogi } from "./shogi";
 import { initSky, renderSky, stopSky } from "./sky";
 import { renderAsobi, stopAsobi } from "./asobi";
 import { applySeason, syncThemeColor, watchSeason } from "./season";
+import { startAnalytics, trackPage, isAnalyticsOptedOut, setAnalyticsOptOut } from "./analytics";
 
 // --- 接続 -------------------------------------------------------------------
 
@@ -53,6 +54,23 @@ function applyLang() {
   setMeta('meta[property="og:description"]', t("c_ogDesc"));
 
   $("legacy-counter").title = t("counterNote");
+  renderAnalyticsToggle();
+}
+
+// --- アクセス解析の 止める ボタン（支援ページ） ------------------------------
+
+function renderAnalyticsToggle() {
+  const off = isAnalyticsOptedOut();
+  $("ga-toggle").textContent = t(off ? "gaResume" : "gaStop");
+  $("ga-toggle").setAttribute("aria-pressed", off ? "true" : "false");
+  $("ga-state").textContent = t(off ? "gaOff" : "gaOn");
+}
+
+function setupAnalyticsToggle() {
+  $("ga-toggle").addEventListener("click", () => {
+    setAnalyticsOptOut(!isAnalyticsOptedOut());
+    renderAnalyticsToggle();
+  });
 }
 
 function setMeta(selector, value) {
@@ -380,6 +398,10 @@ async function init() {
   initSky();
   setupSameHashLinks();
   window.addEventListener("hashchange", route);
+  // 本番の ホストで、止めて いない ときだけ 読む（CI・ローカルでは 何も しない）
+  setupAnalyticsToggle();
+  startAnalytics();
+  window.addEventListener("hashchange", trackPage);
 
   // ドリルは通信が要らない。つながらなくても画面は出す
   // （問い合わせが要るのは フッターの小さなカウンターだけ）
@@ -391,6 +413,7 @@ async function init() {
 
   document.body.dataset.ready = "1";
   await route();
+  trackPage();
 
   try {
     await setupLegacyCounter();
