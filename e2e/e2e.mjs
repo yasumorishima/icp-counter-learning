@@ -2015,7 +2015,7 @@ for (const [file, want, ends] of [
   check("the diary link opens in a new tab without handing over this page",
     (await diary.getAttribute("target")) === "_blank" && /noopener/.test(await diary.getAttribute("rel") || ""));
   const diaryText = await diary.textContent();
-  check("the diary link says it is only for Android", /Androids*(only|のみ)/.test(diaryText), diaryText);
+  check("the diary link says it is only for Android", /Android\s*(only|のみ)/.test(diaryText), diaryText);
   // 子どもの カードの 中や 上に 出さない（見た目の 位置で 測る）
   const lastCard = await kp.locator(".pick-card").last().boundingBox();
   const diaryBox = await diary.boundingBox();
