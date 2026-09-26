@@ -9,7 +9,7 @@
  * - 送るのは 見た 画面の 種類だけ。ドリルの 記録・なまえ・こたえは 送らない
  */
 
-export const GA_MEASUREMENT_ID = "";
+export const GA_MEASUREMENT_ID = "G-4SB3C15DTZ";
 
 const PROD_HOSTS = [
   "iqjbc-7aaaa-aaaaj-qnnsa-cai.icp0.io",
