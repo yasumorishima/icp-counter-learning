@@ -174,7 +174,7 @@ export const coreEn = {
   // 支援ページ：アクセス解析（Google アナリティクス）の 開示と 止める ボタン
   gaHeading: "Visit statistics",
   gaText:
-    "This site uses Google Analytics to see which screens are used and how often. It sends only which screen was opened, plus what a browser normally sends (rough region, kind of device and so on). Drill records, names and answers are never sent. The button below stops it on this device.",
+    "This site uses Google Analytics to see which screens are used and how often. Google sets a cookie (_ga) to recognise this device and receives the screens opened, time spent, rough region and the kind of device and browser. Drill records, names and answers are never sent. The button below stops it on this device.",
   gaStop: "Stop measuring on this device",
   gaResume: "Measure again",
   gaOn: "Measuring is on.",
@@ -352,7 +352,7 @@ export const coreJa = {
   // 支援ページ：アクセス解析（Google アナリティクス）の 開示と 止める ボタン
   gaHeading: "アクセス解析",
   gaText:
-    "このサイトは、どの画面がどれくらい使われているかを知るために Google アナリティクスを使っています。送るのは開いた画面の種類と、ブラウザがふつうに送る情報（おおよその地域・端末の種類など）だけです。ドリルの記録・名前・答えは送りません。下のボタンで、この端末からの計測を止められます。",
+    "このサイトは、どの画面がどれくらい使われているかを知るために Google アナリティクスを使っています。Google は Cookie（_ga）でこの端末を見分け、開いた画面・滞在時間・おおよその地域・端末やブラウザの種類などを受け取ります。ドリルの記録・名前・答えは送りません。下のボタンで、この端末からの計測を止められます。",
   gaStop: "この端末では計測しない",
   gaResume: "計測を再開する",
   gaOn: "計測しています。",

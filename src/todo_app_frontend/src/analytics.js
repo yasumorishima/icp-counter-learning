@@ -37,11 +37,23 @@ export function setAnalyticsOptOut(off) {
   if (off) {
     // gtag の 公式の 止め方。読みこみ済みでも 以後は 送らない
     if (GA_MEASUREMENT_ID) window["ga-disable-" + GA_MEASUREMENT_ID] = true;
+    clearGaCookies();
   } else {
     if (GA_MEASUREMENT_ID) window["ga-disable-" + GA_MEASUREMENT_ID] = false;
     startAnalytics();
     trackPage();
   }
+}
+
+/** 止めたら、GA が この ホストに 置いた Cookie（_ga / _ga_*）も 消す */
+export function clearGaCookies() {
+  if (typeof document === "undefined" || typeof document.cookie !== "string") return;
+  document.cookie.split(";").forEach(part => {
+    const name = part.split("=")[0].trim();
+    if (name === "_ga" || name.indexOf("_ga_") === 0) {
+      document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+    }
+  });
 }
 
 let started = false;
@@ -61,7 +73,15 @@ export function startAnalytics() {
   window.dataLayer = window.dataLayer || [];
   window.gtag = function gtag() { window.dataLayer.push(arguments); };
   window.gtag("js", new Date());
-  window.gtag("config", GA_MEASUREMENT_ID, { send_page_view: false });
+  window.gtag("config", GA_MEASUREMENT_ID, {
+    send_page_view: false,
+    // 子どもも 使う サイトなので、Google の 広告・シグナルとは つなげない
+    allow_google_signals: false,
+    allow_ad_personalization_signals: false,
+    // Cookie は この ホストだけに 置く（ic0.app は 共有 ドメインで、
+    // 省略すると 他の canister と 同じ 親ドメインに 付きうる。icp0.io は PSL に 載っている）
+    cookie_domain: "none",
+  });
   const script = document.createElement("script");
   script.async = true;
   script.src = "https://www.googletagmanager.com/gtag/js?id=" + GA_MEASUREMENT_ID;

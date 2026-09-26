@@ -76,6 +76,11 @@ check("on production it loads once and sends one page_view per screen", () => {
   ga.startAnalytics();
   ga.startAnalytics();
   assert.equal(appended.length, 1);
+  const cfg = window.dataLayer.find(a => a[0] === "config")[2];
+  assert.equal(cfg.allow_google_signals, false);
+  assert.equal(cfg.allow_ad_personalization_signals, false);
+  assert.equal(cfg.cookie_domain, "none");
+  assert.equal(cfg.send_page_view, false);
   assert.match(appended[0].src, new RegExp("id=" + ga.GA_MEASUREMENT_ID + "$"));
   const views = () => window.dataLayer.filter(a => a[0] === "event" && a[1] === "page_view");
   location.hash = "#/sky"; ga.trackPage(); ga.trackPage();
@@ -87,6 +92,22 @@ check("on production it loads once and sends one page_view per screen", () => {
   assert.equal(views().length, 2);
   assert.equal(window["ga-disable-" + ga.GA_MEASUREMENT_ID], true);
   ga.setAnalyticsOptOut(false);
+});
+
+check("stopping clears the _ga cookies and nothing else", () => {
+  const jar = new Map([["_ga", "GA1.1.1"], ["_ga_ABC123", "GS1.1"], ["keep", "1"]]);
+  const saved = globalThis.document;
+  globalThis.document = {
+    get cookie() { return [...jar].map(([k, v]) => `${k}=${v}`).join("; "); },
+    set cookie(line) { const name = line.split("=")[0]; if (/expires=Thu, 01 Jan 1970/.test(line)) jar.delete(name); },
+  };
+  try {
+    ga.setAnalyticsOptOut(true);
+    assert.deepEqual([...jar.keys()], ["keep"]);
+  } finally {
+    globalThis.document = saved;
+    ga.setAnalyticsOptOut(false);
+  }
 });
 
 console.log(failed ? `${failed} failed` : "analytics: all passed");
