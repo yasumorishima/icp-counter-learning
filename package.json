@@ -18,7 +18,7 @@
     "@dfinity/agent": "^3.4.3",
     "@dfinity/candid": "^3.4.3",
     "@dfinity/principal": "^3.4.3",
-    "@icp-sdk/core": "^6.1.0",
+    "@icp-sdk/core": "^6.1.1",
     "assert": "^2.0.0",
     "buffer": "^6.0.3",
     "copy-webpack-plugin": "^14.0.0",
