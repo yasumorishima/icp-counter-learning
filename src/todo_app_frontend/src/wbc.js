@@ -47,10 +47,15 @@ function teamCard(team, lang) {
   return card;
 }
 
-/** 「キューバ vs パナマ(3/6 12pm AST)」の かっこ（現地時間）は 小さく 出す */
+/**
+ * 「キューバ vs パナマ(3/6 12pm AST)」の かっこ（現地時間）だけを 小さく 出す。
+ * 曜日の「(木)」「(Sat)」や 見出しの「(San Juan)」「(JST)」は そのまま。
+ */
+const LOCAL_TIME = /^(.+?)(\(\d{1,2}\/\d{1,2} [^)]*\b(?:AST|CT|ET)\))$/;
+
 function cell(tag, text) {
   const node = el(tag);
-  const local = text.match(/^(.*?)(\(.+\))$/);
+  const local = text.match(LOCAL_TIME);
   if (local) {
     node.append(local[1]);
     node.append(el("small", "wbc-local", local[2]));
@@ -76,10 +81,20 @@ function scheduleTable(rows, labelKey) {
   });
   head.append(headRow);
   const body = el("tbody");
-  rows.slice(1).forEach(row => {
+  const games = rows.slice(1);
+  games.forEach((row, index) => {
     const tr = el("tr");
-    if (row[0]) tr.className = "wbc-day";
-    row.forEach((text, i) => tr.append(cell(i < 2 ? "th" : "td", text)));
+    if (row[0]) {
+      // その日の 試合の 行を まとめて 見出しに する（空の 見出しを 読み上げさせない）
+      let span = 1;
+      while (index + span < games.length && !games[index + span][0]) span += 1;
+      tr.className = "wbc-day";
+      const day = cell("th", row[0]);
+      day.scope = "rowgroup";
+      day.rowSpan = span;
+      tr.append(day);
+    }
+    row.slice(1).forEach(text => tr.append(cell("td", text)));
     body.append(tr);
   });
   table.append(head, body);
@@ -91,10 +106,12 @@ export function renderWbc() {
   const body = document.getElementById("wbc-body");
   if (!body) return;
   const lang = currentLang() === "ja" ? "ja" : "en";
+  const wasOpen = Boolean(body.querySelector("details.wbc-sched[open]"));
   body.replaceChildren();
 
   // 日程（大会は 終わって いるので たたんで おく）
   const schedule = el("details", "wbc-sched");
+  schedule.open = wasOpen;
   schedule.append(el("summary", "wbc-sched-sum", t("wb_schedule")));
   schedule.append(el("h3", "wbc-sub", t("wb_round1")));
   schedule.append(el("p", "wbc-small", t("wb_tz")));

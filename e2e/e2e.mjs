@@ -1961,7 +1961,7 @@ for (const [file, want, ends] of [
   // 名前が 付いて いるかを 画面ごとに 総なめする（1 つでも 無ければ そこで 詰む）。
   const NAME_SCREENS = ["#/", "#/drill", "#/kiroku", "#/shogi", "#/sky", "#/asobi",
     "#/asobi/mogura", "#/asobi/fuusen", "#/asobi/kotoba", "#/asobi/sakana",
-    "#/asobi/oekaki", "#/asobi/oto", "#/shien"];
+    "#/asobi/oekaki", "#/asobi/oto", "#/shien", "#/wbc"];
   let namedTotal = 0;
   const unnamed = [];
   for (const hash of NAME_SCREENS) {
@@ -2155,7 +2155,7 @@ for (const [file, want, ends] of [
 
   // ことばは 2 つ、どの 画面からでも 選べる
   check("both languages are offered", (await ep.locator("#lang-select option").count()) === 2);
-  for (const hash of ["#/", "#/drill", "#/kiroku", "#/shogi", "#/sky", "#/asobi", "#/support"]) {
+  for (const hash of ["#/", "#/drill", "#/kiroku", "#/shogi", "#/sky", "#/asobi", "#/support", "#/wbc"]) {
     await ep.goto(BASE + hash, { waitUntil: "domcontentloaded" });
     await ep.waitForSelector("body[data-ready='1']", { timeout: 30000 });
     if (!(await ep.locator("#lang-select").isVisible())) {
@@ -2183,8 +2183,9 @@ for (const [file, want, ends] of [
 async function lineStarts(width) {
   const one = await newPage(width, 844);
   const out = [];
-  for (const hash of ["#/", "#/drill", "#/shogi", "#/asobi", "#/support"]) {
+  for (const hash of ["#/", "#/drill", "#/shogi", "#/asobi", "#/support", "#/wbc"]) {
     await one.page.goto(BASE + hash, { waitUntil: "domcontentloaded" });
+    if (hash === "#/wbc") await one.page.locator("#view-wbc details.wbc-sched > summary").click();
     await one.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
     if (hash === "#/drill" && (await one.page.locator("#who-input").count())) {
       await one.page.fill("#who-input", "ゆうた");
@@ -2273,7 +2274,7 @@ for (const width of [320, 390]) {
   await noEmoji.page.waitForSelector("#drill-main:not(.is-hidden)", { timeout: 30000 });
 
   const seen = [];
-  for (const hash of ["#/", "#/drill", "#/shogi", "#/asobi", "#/kiroku", "#/shoujou"]) {
+  for (const hash of ["#/", "#/drill", "#/shogi", "#/asobi", "#/kiroku", "#/shoujou", "#/wbc"]) {
     await noEmoji.page.goto(BASE + hash, { waitUntil: "domcontentloaded" });
     await noEmoji.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
     const found = await noEmoji.page.evaluate(() => {
@@ -2652,8 +2653,12 @@ check("opening the same season again lays it out the same way",
   await entry.click();
   await w.page.waitForFunction(() => !document.getElementById("view-wbc").classList.contains("is-hidden"));
   check("the WBC page opens from the top screen", await w.page.locator("#view-wbc").isVisible());
+  const zoom = await w.page.evaluate(() => ({
+    flag: document.documentElement.dataset.zoom,
+    meta: document.querySelector('meta[name="viewport"]').getAttribute("content"),
+  }));
   check("the WBC page can be zoomed (it is for grown-ups)",
-    (await w.page.evaluate(() => document.documentElement.dataset.zoom)) === "free");
+    zoom.flag === "free" && !/user-scalable=no/.test(zoom.meta), `${zoom.flag} / ${zoom.meta}`);
 
   const links = await w.page.$$eval("#view-wbc a.wbc-link", as => as.map(a => ({
     href: a.getAttribute("href"), target: a.getAttribute("target"), rel: a.getAttribute("rel") || "" })));
@@ -2668,6 +2673,11 @@ check("opening the same season again lays it out the same way",
   check("Brazil and Czechia say there is no data instead of linking",
     !slugs.some(s => /^(bra|cze)-/.test(s)) && (await w.page.locator("#view-wbc p.wbc-none").count()) === 2);
   check("the pools are A to D plus the quarterfinal", (await w.page.locator("#view-wbc .wbc-pool").count()) === 5);
+  const source = w.page.locator("#view-wbc a.wbc-source");
+  check("the source link opens GitHub in a new tab without handing over this page",
+    (await source.count()) === 1 && (await source.getAttribute("href")) === "https://github.com/yasumorishima/wbc-scouting"
+      && (await source.getAttribute("target")) === "_blank" && /noopener/.test(await source.getAttribute("rel") || ""));
+  check("there is a way back to the top", (await w.page.locator('#view-wbc a[href="#/"]').count()) === 1);
   check("no flag emoji (they turn into boxes on some devices); the three-letter codes are shown",
     (await w.page.locator("#view-wbc .wbc-code").count()) === 21);
 
@@ -2675,6 +2685,16 @@ check("opening the same season again lays it out the same way",
   const rowCounts = await w.page.$$eval("#view-wbc .wbc-table", tables => tables.map(t => t.rows.length));
   check("the schedule has the 35 first-round slots and the 7 knockout games",
     rowCounts.length === 2 && rowCounts[0] === 36 && rowCounts[1] === 8, rowCounts.join(","));
+  const locals = await w.page.$$eval("#view-wbc .wbc-local", nodes => nodes.map(n => n.textContent));
+  check("only the local times are set small (30 games in the US), not weekdays or headings",
+    locals.length === 30 && locals.every(text => /^\(\d{1,2}\/\d{1,2} .*(AST|CT|ET)\)$/.test(text)),
+    `${locals.length}: ${locals.filter(text => !/(AST|CT|ET)\)$/.test(text)).slice(0, 4).join(" ")}`);
+  const dayHeads = await w.page.$$eval("#view-wbc .wbc-table tbody th", nodes =>
+    nodes.map(n => ({ text: n.textContent.trim(), scope: n.getAttribute("scope"), span: n.rowSpan })));
+  check("each day is one row header over its games (no empty headers for the screen reader)",
+    dayHeads.length === 13 && dayHeads.every(d => d.text && d.scope === "rowgroup")
+      && dayHeads.reduce((sum, d) => sum + d.span, 0) === 42,
+    `${dayHeads.length} heads, ${dayHeads.reduce((sum, d) => sum + d.span, 0)} rows`);
   const jaCell = await w.page.locator("#view-wbc .wbc-table").first().locator("tbody tr").first().textContent();
   check("the schedule is copied as it was (first game: Chinese Taipei vs Australia, 3/5 12:00 JST)",
     /3\/5\(木\)\s*12:00.*台湾 vs オーストラリア/.test(jaCell.replace(/\s+/g, " ")), jaCell);
@@ -2702,6 +2722,12 @@ check("opening the same season again lays it out the same way",
   const enCell = await en.page.locator("#view-wbc .wbc-table").first().locator("tbody tr").first().textContent();
   check("the English schedule is the English one from the old page",
     /3\/5\(Thu\)\s*12:00.*Chinese Taipei vs Australia/.test(enCell.replace(/\s+/g, " ")), enCell);
+  await en.page.selectOption("#lang-select", "ja");
+  check("the schedule stays open when the language changes",
+    await en.page.locator("#view-wbc details.wbc-sched").evaluate(d => d.open));
+  check("the page itself switches to Japanese",
+    (await en.page.locator("#view-wbc h2").textContent()).trim() === "WBC 2026 スカウティングダッシュボード");
+  await en.page.selectOption("#lang-select", "en");
   const enLeft = await japaneseLeftovers(en.page);
   check("no Japanese is left on the English WBC page", enLeft.length === 0, enLeft.slice(0, 6).join(" "));
   const wbcOverflow = await en.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

@@ -2030,7 +2030,14 @@ body {
   color: var(--ink);
   cursor: pointer;
 }
+.wbc-sched-sum::before {
+  content: "▸";
+  margin-right: 8px;
+  transition: transform 0.2s ease;
+}
+.wbc-sched[open] > .wbc-sched-sum::before { transform: rotate(90deg); }
 .wbc-sched[open] { padding-bottom: 12px; }
+.wbc { line-break: strict; }
 .wbc-sched > .wbc-sub,
 .wbc-sched > .wbc-small { padding: 0 14px; }
 .wbc-sub { margin: 14px 0 6px; font-size: 1.05rem; color: var(--ink); }
@@ -2056,7 +2063,7 @@ body {
   color: var(--ink);
 }
 .wbc-table thead th { color: var(--muted); font-weight: 800; }
-.wbc-table tr.wbc-day th:first-child { font-weight: 800; }
+.wbc-table tbody th { font-weight: 800; vertical-align: top; }
 .wbc-local { margin-left: 4px; color: var(--muted); }
 .wbc-pool { margin: 18px 0 0; }
 .wbc-pool-title {
