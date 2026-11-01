@@ -1998,14 +1998,23 @@ body {
    大会中に Caffeine で 作った 目次を 移した。色は この サイトの トークンだけを 使い、
    明暗・きせつで 一緒に 変わる。押せる ものは 44px 以上。
    ========================================================================== */
+/* .panel-title は この サイトでは 小さな ラベルの 見た目＝この 画面だけ 題名として 大きく する
+   （本番で 見たら 題名が 小さく 説明文が いちばん 大きく 見えて いた・2026-11-02） */
 .wbc-kicker {
   margin: 0;
-  color: var(--muted);
+  color: var(--grape-ink);
+  font-size: 0.78rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.18em;
 }
-.wbc-title { margin-top: 2px; }
-.wbc-lede { margin: 0 0 6px; font-weight: 700; color: var(--ink); }
+.wbc .wbc-title {
+  margin: 4px 0 10px;
+  color: var(--ink);
+  font-size: clamp(1.5rem, 4.4vw, 2rem);
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+}
+.wbc-lede { margin: 0 0 6px; font-weight: 700; color: var(--ink); font-size: 1rem; }
 .wbc-small { margin: 4px 0; color: var(--muted); font-size: 0.9rem; }
 .wbc-wait {
   margin: 12px 0 18px;
