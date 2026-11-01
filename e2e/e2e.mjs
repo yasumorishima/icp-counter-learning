@@ -2631,6 +2631,86 @@ check("opening the same season again lays it out the same way",
   await hover.context.close();
 }
 
+// ---- WBC 2026 スカウティング（#/wbc・おとな向けの 目次・2026-11-02） --------
+// 大会中に Caffeine で 作った 目次を この サイトへ 移した。ダッシュボードは GitHub Pages に ある。
+{
+  const PAGES = "https://yasumorishima.github.io/wbc-scouting/";
+  // GitHub Pages に ある ページ（wbc-scouting の scripts/build_pages.py が 作る 37 本）
+  const KNOWN = new Set([
+    "pr", "cuba", "can", "pan", "col", "usa", "mex", "ita", "gb", "bra",
+    "japan", "kor", "aus", "dr", "venezuela", "ned", "isr",
+  ].flatMap(c => [c + "-batters", c + "-pitchers"]).concat(["twn-batters", "nic-batters", "qf-jpn-ven"]));
+
+  const w = await newPage(1280, 900);
+  await w.page.goto(BASE, { waitUntil: "domcontentloaded" });
+  await w.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  const entry = w.page.locator("#view-pick a.pick-wbc-link");
+  check("the top screen has one link to the WBC page", (await entry.count()) === 1);
+  check("the WBC link goes to its own page in this site", (await entry.getAttribute("href")) === "#/wbc");
+  const entryBox = await entry.boundingBox();
+  check("the WBC link is big enough to tap", entryBox && entryBox.height >= 44, entryBox ? String(entryBox.height) : "none");
+  await entry.click();
+  await w.page.waitForFunction(() => !document.getElementById("view-wbc").classList.contains("is-hidden"));
+  check("the WBC page opens from the top screen", await w.page.locator("#view-wbc").isVisible());
+  check("the WBC page can be zoomed (it is for grown-ups)",
+    (await w.page.evaluate(() => document.documentElement.dataset.zoom)) === "free");
+
+  const links = await w.page.$$eval("#view-wbc a.wbc-link", as => as.map(a => ({
+    href: a.getAttribute("href"), target: a.getAttribute("target"), rel: a.getAttribute("rel") || "" })));
+  const slugs = links.map(l => l.href.startsWith(PAGES) ? l.href.slice(PAGES.length).replace(/\.html$/, "") : l.href);
+  check("34 team dashboards and the quarterfinal are linked", links.length === 35, String(links.length));
+  check("every dashboard link points at a page that exists on GitHub Pages",
+    links.every(l => l.href.startsWith(PAGES) && l.href.endsWith(".html")) && slugs.every(s => KNOWN.has(s)),
+    slugs.filter(s => !KNOWN.has(s)).join(" "));
+  check("no dashboard is linked twice", new Set(slugs).size === slugs.length);
+  check("every dashboard opens in a new tab without handing over this page",
+    links.every(l => l.target === "_blank" && /noopener/.test(l.rel)));
+  check("Brazil and Czechia say there is no data instead of linking",
+    !slugs.some(s => /^(bra|cze)-/.test(s)) && (await w.page.locator("#view-wbc p.wbc-none").count()) === 2);
+  check("the pools are A to D plus the quarterfinal", (await w.page.locator("#view-wbc .wbc-pool").count()) === 5);
+  check("no flag emoji (they turn into boxes on some devices); the three-letter codes are shown",
+    (await w.page.locator("#view-wbc .wbc-code").count()) === 21);
+
+  await w.page.locator("#view-wbc details.wbc-sched > summary").click();
+  const rowCounts = await w.page.$$eval("#view-wbc .wbc-table", tables => tables.map(t => t.rows.length));
+  check("the schedule has the 35 first-round slots and the 7 knockout games",
+    rowCounts.length === 2 && rowCounts[0] === 36 && rowCounts[1] === 8, rowCounts.join(","));
+  const jaCell = await w.page.locator("#view-wbc .wbc-table").first().locator("tbody tr").first().textContent();
+  check("the schedule is copied as it was (first game: Chinese Taipei vs Australia, 3/5 12:00 JST)",
+    /3\/5\(木\)\s*12:00.*台湾 vs オーストラリア/.test(jaCell.replace(/\s+/g, " ")), jaCell);
+
+  const tapSmall = await w.page.evaluate(() => [...document.querySelectorAll("#view-wbc a, #view-wbc summary")]
+    .filter(el => { const b = el.getBoundingClientRect(); return (b.width || b.height) && b.height < 44; })
+    .map(el => el.className + "=" + Math.round(el.getBoundingClientRect().height)));
+  check("everything you tap on the WBC page is big enough", tapSmall.length === 0, tapSmall.slice(0, 5).join(" "));
+  const wbcLight = await contrastSweep(w.page);
+  check("every text on the WBC page is readable in the light theme", wbcLight.length === 0, wbcLight.slice(0, 6).join(" "));
+  await w.page.screenshot({ path: `${shots}/wbc-ja-light.png`, fullPage: true });
+  await w.page.click("#theme-toggle");
+  const wbcDark = await contrastSweep(w.page);
+  check("every text on the WBC page is readable in the dark theme", wbcDark.length === 0, wbcDark.slice(0, 6).join(" "));
+  await w.page.screenshot({ path: `${shots}/wbc-ja-dark.png`, fullPage: true });
+  await w.context.close();
+
+  const en = await newPage(390, 844, { lang: "en" });
+  await en.page.goto(`${BASE}#/wbc`, { waitUntil: "domcontentloaded" });
+  await en.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  check("the WBC page opens directly from its address", await en.page.locator("#view-wbc").isVisible());
+  check("the WBC page is in English when English is chosen",
+    (await en.page.locator("#view-wbc h2").textContent()).trim() === "WBC 2026 Scouting Dashboard");
+  await en.page.locator("#view-wbc details.wbc-sched > summary").click();
+  const enCell = await en.page.locator("#view-wbc .wbc-table").first().locator("tbody tr").first().textContent();
+  check("the English schedule is the English one from the old page",
+    /3\/5\(Thu\)\s*12:00.*Chinese Taipei vs Australia/.test(enCell.replace(/\s+/g, " ")), enCell);
+  const enLeft = await japaneseLeftovers(en.page);
+  check("no Japanese is left on the English WBC page", enLeft.length === 0, enLeft.slice(0, 6).join(" "));
+  const wbcOverflow = await en.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  check("the WBC page does not overflow sideways on a phone (the schedule scrolls in its own box)",
+    wbcOverflow <= 0, `overflowX=${wbcOverflow}px`);
+  await en.page.screenshot({ path: `${shots}/wbc-en-phone.png`, fullPage: true });
+  await en.context.close();
+}
+
 // 動きを 減らす 設定の 端末では 舞わせない（色だけ きせつの まま）
 {
   const calm = await newPage(420, 900, { reducedMotion: "reduce", timezoneId: "Asia/Tokyo" });

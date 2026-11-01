@@ -4,6 +4,7 @@ import { LANGS, RTL, t, setLang, currentLang, detectLang, saveLang } from "./i18
 import { initDrill, renderHome as renderDrillHome, renderKiroku, renderAward } from "./drill";
 import { initShogi, renderShogi } from "./shogi";
 import { initSky, renderSky, stopSky } from "./sky";
+import { renderWbc } from "./wbc";
 import { renderAsobi, stopAsobi } from "./asobi";
 import { applySeason, syncThemeColor, watchSeason } from "./season";
 import { startAnalytics, trackPage, isAnalyticsOptedOut, setAnalyticsOptOut } from "./analytics";
@@ -262,7 +263,7 @@ async function setupLegacyCounter() {
 // --- 画面切り替え -----------------------------------------------------------
 
 const VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view-kiroku", "view-award",
-  "view-shogi", "view-sky", "view-asobi", "view-support"];
+  "view-shogi", "view-sky", "view-asobi", "view-support", "view-wbc"];
 
 const KIDS_VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view-kiroku", "view-award",
   "view-shogi", "view-sky", "view-asobi"];
@@ -277,6 +278,7 @@ const KIDS_VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view
  * のこすのは 2 つだけ:
  *   そら  = 星が 1 つぶ ずつ 小さいので 近づいて 見たい
  *   ささえる = おとなが 読む ページ（キャニスターの 番号など 細かい 字が ある）
+ *   WBC    = おとなが 読む 野球の データの 目次（日程の 表が 細かい）
  *
  * 止め方は 3 つ かさねる。1 つでは どの 端末でも 止まらないため:
  *   1. meta viewport の user-scalable=no   … Android の Chrome に 効く
@@ -284,7 +286,7 @@ const KIDS_VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view
  *   3. gesture* の うちけし                 … iOS の Safari は 1 を 見ない
  * ブラウザの メニューや Ctrl+ホイール からの 拡大は そのまま（おとなの 手は のこす）。
  */
-const ZOOM_FREE_VIEWS = ["view-sky", "view-support"];
+const ZOOM_FREE_VIEWS = ["view-sky", "view-support", "view-wbc"];
 const VIEWPORT_FREE = "width=device-width, initial-scale=1.0";
 const VIEWPORT_LOCKED = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
 
@@ -346,6 +348,12 @@ async function route() {
   if (hash === "#/shogi") {
     showView("view-shogi");
     renderShogi();
+    return;
+  }
+
+  if (hash === "#/wbc") {
+    showView("view-wbc");
+    renderWbc();
     return;
   }
 
