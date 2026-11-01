@@ -1961,7 +1961,7 @@ for (const [file, want, ends] of [
   // 名前が 付いて いるかを 画面ごとに 総なめする（1 つでも 無ければ そこで 詰む）。
   const NAME_SCREENS = ["#/", "#/drill", "#/kiroku", "#/shogi", "#/sky", "#/asobi",
     "#/asobi/mogura", "#/asobi/fuusen", "#/asobi/kotoba", "#/asobi/sakana",
-    "#/asobi/oekaki", "#/asobi/oto", "#/shien"];
+    "#/asobi/oekaki", "#/asobi/oto", "#/shien", "#/wbc"];
   let namedTotal = 0;
   const unnamed = [];
   for (const hash of NAME_SCREENS) {
@@ -2155,7 +2155,7 @@ for (const [file, want, ends] of [
 
   // ことばは 2 つ、どの 画面からでも 選べる
   check("both languages are offered", (await ep.locator("#lang-select option").count()) === 2);
-  for (const hash of ["#/", "#/drill", "#/kiroku", "#/shogi", "#/sky", "#/asobi", "#/support"]) {
+  for (const hash of ["#/", "#/drill", "#/kiroku", "#/shogi", "#/sky", "#/asobi", "#/support", "#/wbc"]) {
     await ep.goto(BASE + hash, { waitUntil: "domcontentloaded" });
     await ep.waitForSelector("body[data-ready='1']", { timeout: 30000 });
     if (!(await ep.locator("#lang-select").isVisible())) {
@@ -2183,8 +2183,9 @@ for (const [file, want, ends] of [
 async function lineStarts(width) {
   const one = await newPage(width, 844);
   const out = [];
-  for (const hash of ["#/", "#/drill", "#/shogi", "#/asobi", "#/support"]) {
+  for (const hash of ["#/", "#/drill", "#/shogi", "#/asobi", "#/support", "#/wbc"]) {
     await one.page.goto(BASE + hash, { waitUntil: "domcontentloaded" });
+    if (hash === "#/wbc") await one.page.locator("#view-wbc details.wbc-sched > summary").click();
     await one.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
     if (hash === "#/drill" && (await one.page.locator("#who-input").count())) {
       await one.page.fill("#who-input", "ゆうた");
@@ -2273,7 +2274,7 @@ for (const width of [320, 390]) {
   await noEmoji.page.waitForSelector("#drill-main:not(.is-hidden)", { timeout: 30000 });
 
   const seen = [];
-  for (const hash of ["#/", "#/drill", "#/shogi", "#/asobi", "#/kiroku", "#/shoujou"]) {
+  for (const hash of ["#/", "#/drill", "#/shogi", "#/asobi", "#/kiroku", "#/shoujou", "#/wbc"]) {
     await noEmoji.page.goto(BASE + hash, { waitUntil: "domcontentloaded" });
     await noEmoji.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
     const found = await noEmoji.page.evaluate(() => {
@@ -2629,6 +2630,111 @@ check("opening the same season again lays it out the same way",
   check("touching a card gives the same nudge every time, not whatever the bobbing was doing",
     held.name === "none" && Math.abs(held.scale - 1.1) < 0.001, `${held.name} scale=${held.scale}`);
   await hover.context.close();
+}
+
+// ---- WBC 2026 スカウティング（#/wbc・おとな向けの 目次・2026-11-02） --------
+// 大会中に Caffeine で 作った 目次を この サイトへ 移した。ダッシュボードは GitHub Pages に ある。
+{
+  const PAGES = "https://yasumorishima.github.io/wbc-scouting/";
+  // GitHub Pages に ある ページ（wbc-scouting の scripts/build_pages.py が 作る 37 本）
+  const KNOWN = new Set([
+    "pr", "cuba", "can", "pan", "col", "usa", "mex", "ita", "gb", "bra",
+    "japan", "kor", "aus", "dr", "venezuela", "ned", "isr",
+  ].flatMap(c => [c + "-batters", c + "-pitchers"]).concat(["twn-batters", "nic-batters", "qf-jpn-ven"]));
+
+  const w = await newPage(1280, 900);
+  await w.page.goto(BASE, { waitUntil: "domcontentloaded" });
+  await w.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  const entry = w.page.locator("#view-pick a.pick-wbc-link");
+  check("the top screen has one link to the WBC page", (await entry.count()) === 1);
+  check("the WBC link goes to its own page in this site", (await entry.getAttribute("href")) === "#/wbc");
+  const entryBox = await entry.boundingBox();
+  check("the WBC link is big enough to tap", entryBox && entryBox.height >= 44, entryBox ? String(entryBox.height) : "none");
+  await entry.click();
+  await w.page.waitForFunction(() => !document.getElementById("view-wbc").classList.contains("is-hidden"));
+  check("the WBC page opens from the top screen", await w.page.locator("#view-wbc").isVisible());
+  const zoom = await w.page.evaluate(() => ({
+    flag: document.documentElement.dataset.zoom,
+    meta: document.querySelector('meta[name="viewport"]').getAttribute("content"),
+  }));
+  check("the WBC page can be zoomed (it is for grown-ups)",
+    zoom.flag === "free" && !/user-scalable=no/.test(zoom.meta), `${zoom.flag} / ${zoom.meta}`);
+
+  const links = await w.page.$$eval("#view-wbc a.wbc-link", as => as.map(a => ({
+    href: a.getAttribute("href"), target: a.getAttribute("target"), rel: a.getAttribute("rel") || "" })));
+  const slugs = links.map(l => l.href.startsWith(PAGES) ? l.href.slice(PAGES.length).replace(/\.html$/, "") : l.href);
+  check("34 team dashboards and the quarterfinal are linked", links.length === 35, String(links.length));
+  check("every dashboard link points at a page that exists on GitHub Pages",
+    links.every(l => l.href.startsWith(PAGES) && l.href.endsWith(".html")) && slugs.every(s => KNOWN.has(s)),
+    slugs.filter(s => !KNOWN.has(s)).join(" "));
+  check("no dashboard is linked twice", new Set(slugs).size === slugs.length);
+  check("every dashboard opens in a new tab without handing over this page",
+    links.every(l => l.target === "_blank" && /noopener/.test(l.rel)));
+  check("Brazil and Czechia say there is no data instead of linking",
+    !slugs.some(s => /^(bra|cze)-/.test(s)) && (await w.page.locator("#view-wbc p.wbc-none").count()) === 2);
+  check("the pools are A to D plus the quarterfinal", (await w.page.locator("#view-wbc .wbc-pool").count()) === 5);
+  const source = w.page.locator("#view-wbc a.wbc-source");
+  check("the source link opens GitHub in a new tab without handing over this page",
+    (await source.count()) === 1 && (await source.getAttribute("href")) === "https://github.com/yasumorishima/wbc-scouting"
+      && (await source.getAttribute("target")) === "_blank" && /noopener/.test(await source.getAttribute("rel") || ""));
+  check("there is a way back to the top", (await w.page.locator('#view-wbc a[href="#/"]').count()) === 1);
+  check("no flag emoji (they turn into boxes on some devices); the three-letter codes are shown",
+    (await w.page.locator("#view-wbc .wbc-code").count()) === 21);
+
+  await w.page.locator("#view-wbc details.wbc-sched > summary").click();
+  const rowCounts = await w.page.$$eval("#view-wbc .wbc-table", tables => tables.map(t => t.rows.length));
+  check("the schedule has the 35 first-round slots and the 7 knockout games",
+    rowCounts.length === 2 && rowCounts[0] === 36 && rowCounts[1] === 8, rowCounts.join(","));
+  const locals = await w.page.$$eval("#view-wbc .wbc-local", nodes => nodes.map(n => n.textContent));
+  check("only the local times are set small (30 games in the US), not weekdays or headings",
+    locals.length === 30 && locals.every(text => /^\(\d{1,2}\/\d{1,2} .*(AST|CT|ET)\)$/.test(text)),
+    `${locals.length}: ${locals.filter(text => !/(AST|CT|ET)\)$/.test(text)).slice(0, 4).join(" ")}`);
+  const dayHeads = await w.page.$$eval("#view-wbc .wbc-table tbody th", nodes =>
+    nodes.map(n => ({ text: n.textContent.trim(), scope: n.getAttribute("scope"), span: n.rowSpan })));
+  check("each day is one row header over its games (no empty headers for the screen reader)",
+    dayHeads.length === 13 && dayHeads.every(d => d.text && d.scope === "rowgroup")
+      && dayHeads.reduce((sum, d) => sum + d.span, 0) === 42,
+    `${dayHeads.length} heads, ${dayHeads.reduce((sum, d) => sum + d.span, 0)} rows`);
+  const jaCell = await w.page.locator("#view-wbc .wbc-table").first().locator("tbody tr").first().textContent();
+  check("the schedule is copied as it was (first game: Chinese Taipei vs Australia, 3/5 12:00 JST)",
+    /3\/5\(木\)\s*12:00.*台湾 vs オーストラリア/.test(jaCell.replace(/\s+/g, " ")), jaCell);
+
+  const tapSmall = await w.page.evaluate(() => [...document.querySelectorAll("#view-wbc a, #view-wbc summary")]
+    .filter(el => { const b = el.getBoundingClientRect(); return (b.width || b.height) && b.height < 44; })
+    .map(el => el.className + "=" + Math.round(el.getBoundingClientRect().height)));
+  check("everything you tap on the WBC page is big enough", tapSmall.length === 0, tapSmall.slice(0, 5).join(" "));
+  const wbcLight = await contrastSweep(w.page);
+  check("every text on the WBC page is readable in the light theme", wbcLight.length === 0, wbcLight.slice(0, 6).join(" "));
+  await w.page.screenshot({ path: `${shots}/wbc-ja-light.png`, fullPage: true });
+  await w.page.click("#theme-toggle");
+  const wbcDark = await contrastSweep(w.page);
+  check("every text on the WBC page is readable in the dark theme", wbcDark.length === 0, wbcDark.slice(0, 6).join(" "));
+  await w.page.screenshot({ path: `${shots}/wbc-ja-dark.png`, fullPage: true });
+  await w.context.close();
+
+  const en = await newPage(390, 844, { lang: "en" });
+  await en.page.goto(`${BASE}#/wbc`, { waitUntil: "domcontentloaded" });
+  await en.page.waitForSelector("body[data-ready='1']", { timeout: 30000 });
+  check("the WBC page opens directly from its address", await en.page.locator("#view-wbc").isVisible());
+  check("the WBC page is in English when English is chosen",
+    (await en.page.locator("#view-wbc h2").textContent()).trim() === "WBC 2026 Scouting Dashboard");
+  await en.page.locator("#view-wbc details.wbc-sched > summary").click();
+  const enCell = await en.page.locator("#view-wbc .wbc-table").first().locator("tbody tr").first().textContent();
+  check("the English schedule is the English one from the old page",
+    /3\/5\(Thu\)\s*12:00.*Chinese Taipei vs Australia/.test(enCell.replace(/\s+/g, " ")), enCell);
+  await en.page.selectOption("#lang-select", "ja");
+  check("the schedule stays open when the language changes",
+    await en.page.locator("#view-wbc details.wbc-sched").evaluate(d => d.open));
+  check("the page itself switches to Japanese",
+    (await en.page.locator("#view-wbc h2").textContent()).trim() === "WBC 2026 スカウティングダッシュボード");
+  await en.page.selectOption("#lang-select", "en");
+  const enLeft = await japaneseLeftovers(en.page);
+  check("no Japanese is left on the English WBC page", enLeft.length === 0, enLeft.slice(0, 6).join(" "));
+  const wbcOverflow = await en.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  check("the WBC page does not overflow sideways on a phone (the schedule scrolls in its own box)",
+    wbcOverflow <= 0, `overflowX=${wbcOverflow}px`);
+  await en.page.screenshot({ path: `${shots}/wbc-en-phone.png`, fullPage: true });
+  await en.context.close();
 }
 
 // 動きを 減らす 設定の 端末では 舞わせない（色だけ きせつの まま）
