@@ -141,7 +141,7 @@ export function renderWbc() {
   qfHead.append(el("span", "wbc-code", "QF"), el("b", "wbc-name", t("wb_qfName")));
   const qfLinks = el("div", "wbc-links");
   qfLinks.append(dashLink(WBC_QF_SLUG, t("wb_qfOpen")));
-  qfCard.append(qfHead, qfLinks, el("p", "wbc-small", t("wb_qfSlow")));
+  qfCard.append(qfHead, qfLinks);
   qfList.append(qfCard);
   qf.append(qfList);
   body.append(qf);
