@@ -98,7 +98,6 @@ export const coreEn = {
   c_a11ySound: "The note button at the top turns sound off. Next to it, text size has three steps.",
   // えらぶ 画面の いちばん下：日記アプリ（Android だけ）
   c_diaryLink: "A diary app (Android only, on Google Play)",
-  c_wbcLink: "WBC 2026 scouting (baseball data)",
   c_whoStart: "Start",
   c_dailyLabel: "Today's sheet",
   c_timeLabel: "Time attack",
@@ -276,7 +275,6 @@ export const coreJa = {
   c_a11ySound: "音は 上の 音符ボタンで 切れます。文字の 大きさは その となりで 3 だんかい",
   // えらぶ 画面の いちばん下：日記アプリ（Android だけ）
   c_diaryLink: "日記を つける アプリ（Android のみ・Google Play）",
-  c_wbcLink: "WBC 2026 スカウティング（野球のデータ）",
   c_whoStart: "はじめる",
   c_dailyLabel: "きょうの 1まい",
   c_timeLabel: "タイムアタック",
