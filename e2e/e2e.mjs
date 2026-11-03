@@ -2646,6 +2646,13 @@ check("opening the same season again lays it out the same way",
   await w.page.waitForURL(PAGES, { timeout: 30000 }).catch(() => {});
   check("the old #/wbc address forwards to the WBC index on GitHub Pages", w.page.url() === PAGES, w.page.url());
   await w.context.close();
+  // 住所を 直接 開いた とき（最初の 読み込みの 道すじ）も 送られる
+  const cold = await newPage(390, 844);
+  await cold.page.route(PAGES + "**", route => route.fulfill({ status: 200, contentType: "text/html", body: "<title>wbc</title>" }));
+  await cold.page.goto(BASE + "#/wbc", { waitUntil: "commit" });
+  await cold.page.waitForURL(PAGES, { timeout: 30000 }).catch(() => {});
+  check("opening #/wbc directly also forwards to the WBC index", cold.page.url() === PAGES, cold.page.url());
+  await cold.context.close();
 }
 
 // 動きを 減らす 設定の 端末では 舞わせない（色だけ きせつの まま）
