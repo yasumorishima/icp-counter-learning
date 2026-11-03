@@ -4,7 +4,6 @@ import { LANGS, RTL, t, setLang, currentLang, detectLang, saveLang } from "./i18
 import { initDrill, renderHome as renderDrillHome, renderKiroku, renderAward } from "./drill";
 import { initShogi, renderShogi } from "./shogi";
 import { initSky, renderSky, stopSky } from "./sky";
-import { renderWbc } from "./wbc";
 import { renderAsobi, stopAsobi } from "./asobi";
 import { applySeason, syncThemeColor, watchSeason } from "./season";
 import { startAnalytics, trackPage, isAnalyticsOptedOut, setAnalyticsOptOut } from "./analytics";
@@ -263,7 +262,7 @@ async function setupLegacyCounter() {
 // --- 画面切り替え -----------------------------------------------------------
 
 const VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view-kiroku", "view-award",
-  "view-shogi", "view-sky", "view-asobi", "view-support", "view-wbc"];
+  "view-shogi", "view-sky", "view-asobi", "view-support"];
 
 const KIDS_VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view-kiroku", "view-award",
   "view-shogi", "view-sky", "view-asobi"];
@@ -278,7 +277,6 @@ const KIDS_VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view
  * のこすのは 2 つだけ:
  *   そら  = 星が 1 つぶ ずつ 小さいので 近づいて 見たい
  *   ささえる = おとなが 読む ページ（キャニスターの 番号など 細かい 字が ある）
- *   WBC    = おとなが 読む 野球の データの 目次（日程の 表が 細かい）
  *
  * 止め方は 3 つ かさねる。1 つでは どの 端末でも 止まらないため:
  *   1. meta viewport の user-scalable=no   … Android の Chrome に 効く
@@ -286,7 +284,9 @@ const KIDS_VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view
  *   3. gesture* の うちけし                 … iOS の Safari は 1 を 見ない
  * ブラウザの メニューや Ctrl+ホイール からの 拡大は そのまま（おとなの 手は のこす）。
  */
-const ZOOM_FREE_VIEWS = ["view-sky", "view-support", "view-wbc"];
+const WBC_INDEX = "https://yasumorishima.github.io/wbc-scouting/";
+
+const ZOOM_FREE_VIEWS = ["view-sky", "view-support"];
 const VIEWPORT_FREE = "width=device-width, initial-scale=1.0";
 const VIEWPORT_LOCKED = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
 
@@ -351,9 +351,10 @@ async function route() {
     return;
   }
 
+  // WBC 2026 の 目次は 野球の サイト（GitHub Pages）へ 移した（2026-11-03）。
+  // 前の 住所で 開いた 人は そちらへ 送る（戻るボタンで ここへ 戻らない よう replace）
   if (hash === "#/wbc") {
-    showView("view-wbc");
-    renderWbc();
+    window.location.replace(WBC_INDEX);
     return;
   }
 

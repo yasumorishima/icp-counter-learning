@@ -1,16 +1,16 @@
 # CLAUDE.md
 
-こども向けの学習サイト「キマル」（さんすうドリル・しょうぎ・そら・あそび・WBC スカウティング）。
+こども向けの学習サイト「キマル」（さんすうドリル・しょうぎ・そら・あそび）。
 Internet Computer 上で動く。バックエンドは Motoko、フロントは素の JS（webpack）。
 詳しい設計と方針は README.md。応答・コミットメッセージ・コメントは日本語。
 
 ## 構成
 
 - `src/todo_app_backend/main.mo` — バックエンド（カウンターなど。保存量が増えない作り）
-- `src/todo_app_frontend/src/` — 画面。機能ごとに `drill*.js` `shogi*.js/.mjs` `sky*.js/.mjs` `asobi*.js` `wbc*.js`、
+- `src/todo_app_frontend/src/` — 画面。機能ごとに `drill*.js` `shogi*.js/.mjs` `sky*.js/.mjs` `asobi*.js`、
   ことばは `i18n-*.js`（英語と日本語で同じキー）
 - `src/todo_app_frontend/assets/` — CSS・SW・manifest・アイコン（そのまま配る）
-- `tests/*.test.mjs` — node だけで回る検算。`e2e/e2e.mjs` — 実ブラウザの通しテスト（391 項目）
+- `tests/*.test.mjs` — node だけで回る検算。`e2e/e2e.mjs` — 実ブラウザの通しテスト（366 項目）
 - `.github/workflows/ci.yml` — CI。何を確かめているかの正はここ
 
 ## 検査の回しかた
@@ -43,4 +43,4 @@ bash scripts/cloud-check.sh --quick   # node の検算だけ（数十秒）
 
 ## コミット
 
-`feat(wbc): …` `fix(drill): …` `chore(deps): …` の形で、要約は日本語。
+`feat(sky): …` `fix(drill): …` `chore(deps): …` の形で、要約は日本語。
