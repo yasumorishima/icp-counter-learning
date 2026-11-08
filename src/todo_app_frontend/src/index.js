@@ -284,8 +284,6 @@ const KIDS_VIEWS = ["view-pick", "view-drill", "view-quiz", "view-result", "view
  *   3. gesture* の うちけし                 … iOS の Safari は 1 を 見ない
  * ブラウザの メニューや Ctrl+ホイール からの 拡大は そのまま（おとなの 手は のこす）。
  */
-const WBC_INDEX = "https://yasumorishima.github.io/wbc-scouting/";
-
 const ZOOM_FREE_VIEWS = ["view-sky", "view-support"];
 const VIEWPORT_FREE = "width=device-width, initial-scale=1.0";
 const VIEWPORT_LOCKED = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
@@ -348,13 +346,6 @@ async function route() {
   if (hash === "#/shogi") {
     showView("view-shogi");
     renderShogi();
-    return;
-  }
-
-  // WBC 2026 の 目次は 野球の サイト（GitHub Pages）へ 移した（2026-11-03）。
-  // 前の 住所で 開いた 人は そちらへ 送る（戻るボタンで ここへ 戻らない よう replace）
-  if (hash === "#/wbc") {
-    window.location.replace(WBC_INDEX);
     return;
   }
 
