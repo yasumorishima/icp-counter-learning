@@ -34,6 +34,8 @@ bash scripts/cloud-check.sh --quick   # node の検算だけ（数十秒）
 ## 守ること
 
 - **配備しない。** `scripts/deploy.sh` は人が RPi5 から実行する（配備鍵は外に出さない）。`--network ic` の dfx コマンドも打たない
+  - 配備を頼まれたら、RPi5 の ローカル Claude Code に 渡す 依頼文を 書く: `git checkout main && git pull` → `KIMARU_IDENTITY=kimaru-deploy bash scripts/deploy.sh`（フロントだけなら オプション なし。`--reset-backend` は データが 消える）。
+    確かめは 本番の `index.js` を curl して、消した／足した 文字の 有無を 数える。画面は SW が 古い ことが あるので 2 回 読み込む
 - **こどものデータを外に出さない。** 記録は `localStorage` だけ。サーバーへ送る処理を足さない
 - **外部の CDN・フォント・画像を読み込まない。** すべて自前
 - **画面に絵文字を出さない**（端末によって豆腐になる）。顔などは自前の SVG（`faces.js`）。コメント中の 🔴 ⚠️ は可
