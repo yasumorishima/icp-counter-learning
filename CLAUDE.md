@@ -10,7 +10,7 @@ Internet Computer 上で動く。バックエンドは Motoko、フロントは�
 - `src/todo_app_frontend/src/` — 画面。機能ごとに `drill*.js` `shogi*.js/.mjs` `sky*.js/.mjs` `asobi*.js`、
   ことばは `i18n-*.js`（英語と日本語で同じキー）
 - `src/todo_app_frontend/assets/` — CSS・SW・manifest・アイコン（そのまま配る）
-- `tests/*.test.mjs` — node だけで回る検算。`e2e/e2e.mjs` — 実ブラウザの通しテスト（366 項目）
+- `tests/*.test.mjs` — node だけで回る検算。`e2e/e2e.mjs` — 実ブラウザの通しテスト（364 項目）
 - `.github/workflows/ci.yml` — CI。何を確かめているかの正はここ
 
 ## 検査の回しかた
